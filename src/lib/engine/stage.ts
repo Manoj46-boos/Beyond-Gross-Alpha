@@ -14,6 +14,9 @@ export interface StageOpts {
   grid?: number;         // lattice strength 0..1
   floor?: boolean;       // perspective floor
   sheen?: number;        // marble sheen strength 0..1
+  /** dim the horizon hairline behind a standing figure (D2) — the line stops
+   *  reading as a 'skateboard' he straddles and reads as depth behind him */
+  horizonFade?: { x: number; r: number };
 }
 
 export function paintStage(
@@ -100,15 +103,31 @@ export function paintStage(
     ctx.restore();
   }
 
-  // 5. gold horizon hairline with glow
+  // 5. gold horizon hairline with glow — dimmed behind the figure when
+  // horizonFade is set (D2): the hairline dips to near-zero around him
+  const fade = opts.horizonFade;
+  const fm = fade ? clamp01(fade.x / W) : 0.5;
+  const f0 = fade ? clamp01((fade.x - fade.r) / W) : 0.28;
+  const f1 = fade ? clamp01((fade.x + fade.r) / W) : 0.72;
   const hg = ctx.createLinearGradient(0, hy, W, hy);
   hg.addColorStop(0, rgba(PALETTE.gold, 0));
-  hg.addColorStop(0.28, rgba(PALETTE.gold, 0.34));
-  hg.addColorStop(0.72, rgba(PALETTE.gold, 0.34));
+  hg.addColorStop(Math.max(0.02, f0 * 0.82), rgba(PALETTE.gold, 0.34));
+  if (fade) {
+    // ensure monotonic stop order even when the figure sits near an edge
+    const a = Math.min(f0, Math.max(0.02, fm - 0.055));
+    const b = Math.max(a + 0.001, fm);
+    const c = Math.min(0.98, Math.max(b + 0.001, fm + 0.055));
+    const d = Math.min(0.99, Math.max(c + 0.001, f1));
+    hg.addColorStop(a, rgba(PALETTE.gold, 0.26));
+    hg.addColorStop(b, rgba(PALETTE.gold, 0.05));
+    hg.addColorStop(c, rgba(PALETTE.gold, 0.05));
+    hg.addColorStop(d, rgba(PALETTE.gold, 0.26));
+  }
+  hg.addColorStop(0.72 + (1 - 0.72) * 0.25, rgba(PALETTE.gold, 0.34));
   hg.addColorStop(1, rgba(PALETTE.gold, 0));
   ctx.fillStyle = hg;
   ctx.fillRect(0, hy - 0.8, W, 1.6);
-  glowBlob(ctx, W * 0.5, hy, W * 0.5, '#D4AF37', 0.045);
+  glowBlob(ctx, W * 0.5, hy, W * 0.5, '#D4AF37', fade ? 0.03 : 0.045);
 
   // 6. drifting marble sheen
   if (sheen > 0) {

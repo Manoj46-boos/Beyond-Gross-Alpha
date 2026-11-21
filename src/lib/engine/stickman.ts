@@ -15,7 +15,7 @@ import { clamp01, clamp, lerp, springTo, hashStr, hash01, easeOutCubic, easeInOu
 // ── rig constants ────────────────────────────────────────────────────────────
 const U_LEG = 58, L_LEG = 52, TORSO = 86, NECK = 11;
 const U_ARM = 54, L_ARM = 50;
-const HEAD_R = 25.5; // half-height of head oval
+const HEAD_R = 23.4; // 64% of the shoulder line — adult gentleman ratio (was 25.5: chibi)
 const SHOULDER_HW = 30, HIP_HW = 13;
 
 const SUIT = { lit: '#43598A', mid: '#2C3B63', dark: '#161F3A', ink: '#0E1426' };
@@ -42,6 +42,7 @@ export interface Pose {
   surprise: number;
   blink: number;       // external 0..1 override
   mouth: number;       // computed talk envelope 0..1
+  hand: 'open' | 'point'; // near-hand shape — point is the data-contact hand
   walkPhase: number;   // <0 = standing
   walkSpeed: number;
   look: number;        // -1..1 gaze
@@ -53,6 +54,7 @@ export function basePose(): Pose {
     rAU: 6, rAL: 8, lAU: -6, lAL: 8,
     rKnee: 4, rAnkle: 0, lKnee: 4, lAnkle: 0,
     brow: 0, lid: 0, smile: 0.18, surprise: 0, blink: 0, mouth: 0,
+    hand: 'open',
     walkPhase: -1, walkSpeed: 0, look: 0,
   };
 }
@@ -64,7 +66,11 @@ function pt(x: number, y: number, angDeg: number, len: number): { x: number; y: 
   return { x: x + Math.sin(a) * len, y: y + Math.cos(a) * len };
 }
 
-/** closed-form 2-bone IK → { aU, aL } degrees */
+/** closed-form 2-bone IK → { aU, aL } degrees. aL is the RELATIVE forearm
+ *  bend (= 180° − elbow interior angle) so that forearm = aU + aL lands the
+ *  wrist exactly on the target (fixed: the old chain never closed the
+ *  triangle — the wrist fell ~70px short). bend=1 drops the elbow below the
+ *  shoulder→target line (natural arm carriage). */
 export function armIk(sx: number, sy: number, tx: number, ty: number, lenU: number, lenL: number, bend: 1 | -1 = 1): { aU: number; aL: number } {
   const dx = tx - sx, dy = ty - sy;
   let d = Math.hypot(dx, dy);
@@ -72,9 +78,11 @@ export function armIk(sx: number, sy: number, tx: number, ty: number, lenU: numb
   const base = Math.atan2(dx, dy) / D2R; // angle from vertical-down
   const cosA = clamp((lenU * lenU + d * d - lenL * lenL) / (2 * lenU * d), -1, 1);
   const a1 = Math.acos(cosA) / D2R;
-  const cosB = clamp((lenL * lenL + d * d - lenU * lenU) / (2 * lenL * d), -1, 1);
-  const a2 = Math.acos(cosB) / D2R;
-  return { aU: base - a1 * bend, aL: base + a2 * bend * -1 + a1 * bend };
+  const cosElbow = clamp((lenU * lenU + lenL * lenL - d * d) / (2 * lenU * lenL), -1, 1);
+  const elbowInterior = Math.acos(cosElbow) / D2R;   // interior elbow angle
+  const aU = base - a1 * bend;
+  const aL = (180 - elbowInterior) * bend;           // relative forearm bend — closes the triangle
+  return { aU, aL };
 }
 
 // ── shaded tapered bone ──────────────────────────────────────────────────────
@@ -155,11 +163,11 @@ function joint(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, f
   ctx.arc(x, y, r, 0, Math.PI * 2);
   ctx.fillStyle = g;
   ctx.fill();
-  ctx.beginPath();
-  ctx.arc(x - r * 0.32, y - r * 0.36, r * 0.16, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(244,229,191,0.75)';
-  ctx.fill();
-}
+    ctx.beginPath();
+    ctx.arc(x - r * 0.32, y - r * 0.36, r * 0.12, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(244,229,191,0.4)';
+    ctx.fill();
+  }
 
 // ── talk + viseme ────────────────────────────────────────────────────────────
 export function talkAt(t: number, wordTimes: number[]): number {
@@ -210,6 +218,32 @@ const GESTURES: Gesture[] = [
 
 const STOPWORDS = new Set(['the', 'and', 'a', 'an', 'of', 'to', 'in', 'is', 'it', 'that', 'you', 'your', 'for', 'on', 'with', 'as', 'are', 'this', 'but', 'not', 'at', 'be', 'we', 'so', 'if', 'one', 'what']);
 
+/**
+ * applyMood — the face is an instrument keyed to the narration (D6).
+ * Maps the script's voStyle to a resting expression: 'reveal' opens the face,
+ * 'urgent' narrows it, 'calm'/'neutral' quiet the grin to a professional rest.
+ * Called by host scenes AFTER poseAt, BEFORE gesture overrides.
+ */
+export function applyMood(p: Pose, voStyle?: string): void {
+  switch (voStyle) {
+    case 'reveal':
+      p.brow = 0.55; p.lid = 0.12; p.smile = 0.02; p.surprise = 0.14;
+      break;
+    case 'urgent':
+      p.brow = -0.45; p.lid = 0.2; p.smile = -0.14; p.lean += 1.2;
+      break;
+    case 'quote':
+      p.brow = 0.16; p.lid = 0.1; p.smile = 0.08; p.look = 0.45;
+      break;
+    case 'calm':
+      p.brow = 0.04; p.lid = 0.06; p.smile = 0.05;
+      break;
+    default: // neutral — quiet, professional rest; the grin is gone
+      p.brow = 0.02; p.lid = 0.04; p.smile = 0.07;
+      break;
+  }
+}
+
 function sentenceHash(id: string): number {
   return hashStr(id || 'x');
 }
@@ -259,6 +293,17 @@ export function poseAt(
   p.brow = g.brow;
   p.smile = g.smile;
 
+  // anticipation — the channels counter-move first, then commit (D4 windup)
+  const antBell = st < 140 ? Math.sin((st / 140) * Math.PI) : 0;
+  const antic = (to: number, from: number, mag = 6) =>
+    -Math.sign(to - from) * Math.min(mag, Math.abs(to - from) * 0.35) * antBell;
+  p.rAU += antic(g.rAU, gPrev.rAU);
+  p.rAL += antic(g.rAL, gPrev.rAL, 9);
+  p.lAU += antic(g.lAU, gPrev.lAU);
+  p.lAL += antic(g.lAL, gPrev.lAL, 9);
+  p.lean += antic(g.lean, gPrev.lean, 3);
+  p.shoulderTilt += antic(g.shoulderTilt, gPrev.shoulderTilt, 4);
+
   // word accent strikes the right forearm (and counter-leans the torso)
   const acc = accentEnv(t, wordTimes, wordTexts);
   p.rAL += acc * 26;
@@ -266,6 +311,9 @@ export function poseAt(
   p.lean += acc * 2.2;
   p.shoulderTilt += acc * 4;
   p.headNod = Math.max(0, acc * 0.35);
+  // the face leads the strike — brows lift on content words, lids narrow
+  p.brow += acc * 0.5;
+  p.lid += Math.max(0, acc) * 0.18;
 
   // idle life
   const br = Math.sin(t / 2400);
@@ -296,22 +344,26 @@ export function poseAt(
   return p;
 }
 
-/** smooth walk cycle — pose for a walk phase 0..1 */
+/** smooth walk cycle — pose for a walk phase 0..1.
+ * Anatomy: support leg straight through stance (sp 0.25–0.75), deep knee flexion
+ * mid-swing, pelvis high at mid-stance and low at double support (D5). */
 export function walkPose(phase: number, speed: number): Pose {
   const p = basePose();
   const ph = phase % 1;
-  const s = Math.sin(ph * Math.PI * 2);
-  const s2 = Math.sin(ph * Math.PI * 2 + Math.PI); // other leg
-  const c = Math.cos(ph * Math.PI * 2);
+  const pp = ph * Math.PI * 2;
+  const s = Math.sin(pp);
+  const s2 = Math.sin(pp + Math.PI); // other leg
+  // arm carriage: swing with the stride, elbows easing as the arm passes the body
   p.rAU = 8 + s * 24 * speed;
-  p.rAL = 12 + Math.max(0, -s) * 20 * speed;
+  p.rAL = 14 + Math.max(0, -s) * 16 * speed;
   p.lAU = -8 + s2 * 24 * speed;
-  p.lAL = 12 + Math.max(0, -s2) * 20 * speed;
-  p.rKnee = 6 + Math.max(0, -c) * 44 * speed;
-  p.lKnee = 6 + Math.max(0, c) * 44 * speed;
-  p.rAnkle = s * 8 * speed;
-  p.lAnkle = s2 * 8 * speed;
-  p.rootY = -(U_LEG + L_LEG) * 0.00 + Math.abs(Math.sin(ph * Math.PI * 2)) * -5 * speed + (1 - speed) * 0;
+  p.lAL = 14 + Math.max(0, -s2) * 16 * speed;
+  // (legs are driven from walkPhase inside legDraw — same phase, same source of truth)
+  p.rKnee = Math.max(0, Math.cos(pp)) * 44 * speed + 5;
+  p.lKnee = Math.max(0, -Math.cos(pp)) * 44 * speed + 5;
+  p.rAnkle = 0; p.lAnkle = 0;
+  // pelvis height: LOW at double support (ph .25/.75), HIGH at mid-stance (ph 0/.5)
+  p.rootY = -6 * (0.5 + 0.5 * Math.cos(pp * 2)) * speed;
   p.lean = 1.5 * speed;
   p.torsoTilt = 1.5 * speed;
   p.shoulderTilt = -s * 4 * speed;
@@ -547,12 +599,14 @@ export function groundShadow(ctx: CanvasRenderingContext2D, cx: number, groundY:
   ctx.save();
   ctx.translate(cx, groundY);
   ctx.scale(scale, scale);
-  const g = ctx.createRadialGradient(0, 0, 2, 0, 0, 92);
-  g.addColorStop(0, 'rgba(0,0,0,0.5)');
-  g.addColorStop(0.55, 'rgba(0,0,0,0.22)');
+  // tight contact shadow (D2): dark core under the feet, fast falloff —
+  // reads as contact, not as a hover-glow
+  const g = ctx.createRadialGradient(0, 2, 2, 0, 2, 62);
+  g.addColorStop(0, 'rgba(0,0,0,0.55)');
+  g.addColorStop(0.5, 'rgba(0,0,0,0.26)');
   g.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.beginPath();
-  ctx.ellipse(-6, 6, 88, 15, 0, 0, Math.PI * 2);
+  ctx.ellipse(-6, 5, 62, 10.5, 0, 0, Math.PI * 2);
   ctx.fillStyle = g;
   ctx.fill();
   ctx.restore();
@@ -580,26 +634,30 @@ export function drawReflection(
   ctx.quadraticCurveTo(0, hipY + 14, -HIP_HW - 6, hipY + 8);
   ctx.closePath();
   ctx.fill();
-  // legs
+  // legs — same FK as the figure above (the mirror tells the truth, D2)
   for (const s of [-1, 1] as const) {
-    const knee = pt(s * HIP_HW * 0.7, hipY, p.rKnee * s > 0 ? p.rKnee : p.lKnee, 0);
-    ctx.save();
+    const near = s === 1;
+    const hipX = s * HIP_HW * 0.72;
+    let thighAng: number, kneeBend: number;
+    if (p.walkPhase >= 0) {
+      const wph = p.walkPhase * Math.PI * 2 + (near ? 0 : Math.PI);
+      thighAng = Math.sin(wph) * 26 * p.walkSpeed + (near ? 0.5 : -0.5);
+      const swing = Math.max(0, Math.cos(wph));
+      kneeBend = swing * 44 * p.walkSpeed + (1 - swing) * 5 * p.walkSpeed + 2;
+    } else {
+      thighAng = s * 2.2 + (near ? p.rKnee * 0.06 : -p.lKnee * 0.06);
+      kneeBend = near ? p.rKnee : p.lKnee;
+    }
+    const knee = pt(hipX, hipY, thighAng, U_LEG);
+    const ankle = pt(knee.x, knee.y, thighAng + kneeBend, L_LEG);
     ctx.beginPath();
-    const hipX = s * HIP_HW * 0.7;
-    const kneeAng = (s < 0 ? p.lKnee : p.rKnee);
-    const ankleAng = (s < 0 ? p.lAnkle : p.rAnkle);
-    const kx = hipX + Math.sin((kneeAng) * D2R * 0.14 + (s < 0 ? 0.04 : -0.04)) * U_LEG;
-    const ky = hipY + Math.cos((kneeAng) * D2R * 0.14) * U_LEG;
     ctx.moveTo(hipX, hipY);
-    ctx.lineTo(kx, ky);
-    const ax = kx + Math.sin((ankleAng) * D2R * 0.1) * L_LEG * 0.98;
-    const ay = Math.min(0, ky + Math.cos((ankleAng) * D2R * 0.1) * L_LEG * 0.98);
-    ctx.lineTo(ax, ay);
+    ctx.lineTo(knee.x, knee.y);
+    ctx.lineTo(ankle.x, ankle.y);
     ctx.lineWidth = 11;
     ctx.strokeStyle = '#16203A';
     ctx.lineCap = 'round';
     ctx.stroke();
-    ctx.restore();
   }
   // head
   ctx.beginPath();
@@ -622,6 +680,9 @@ export interface RenderOpts {
   beatT?: number;
   scale?: number;
   rimBoost?: number;
+  /** finite-difference velocities (per ~90ms) — drive head lag, tie pendulum,
+   *  wrist follow-through. Compute as pose(t) − pose(t−90) in the scene (D4). */
+  vel?: { lean?: number; rootY?: number; rAL?: number; rAU?: number };
 }
 
 export function drawStickman(
@@ -642,8 +703,13 @@ export function drawStickman(
   if (r.flip) ctx.scale(-1, 1);
   ctx.scale(scale, scale);
   if (p.walkPhase >= 0) {
-    // squash into the walk bob
-    ctx.translate(0, 0);
+    // squash & stretch — volume-preserving, keyed to the stride's support events (D3).
+    // Contact (double support, ph .25/.75) squashes; mid-stance push-off stretches.
+    // Pivot is the origin = the feet, so the shoes stay planted on the floor.
+    const contact = Math.max(0, -Math.cos(p.walkPhase * Math.PI * 4));
+    const push = Math.max(0, Math.cos(p.walkPhase * Math.PI * 4));
+    const sy = 1 - contact * 0.05 * p.walkSpeed + push * 0.03 * p.walkSpeed;
+    ctx.scale(1 / Math.max(0.9, sy), sy);
   }
 
   const breath = 1 + 0.006 * Math.sin(t / 2400);
@@ -657,11 +723,22 @@ export function drawStickman(
     const hipX = side * HIP_HW * 0.72;
     let thighAng: number, kneeBend: number, ankleAng: number;
     if (p.walkPhase >= 0) {
-      const s = Math.sin(p.walkPhase * Math.PI * 2 + (side === 1 ? 0 : Math.PI));
-      const c = Math.cos(p.walkPhase * Math.PI * 2 + (side === 1 ? 0 : Math.PI));
-      thighAng = s * 26 * p.walkSpeed + (near ? 0.5 : -0.5);
-      kneeBend = Math.max(0, -c) * 46 * p.walkSpeed + 6;
-      ankleAng = s * 10 * p.walkSpeed;
+      const wph = p.walkPhase * Math.PI * 2 + (side === 1 ? 0 : Math.PI);
+      const sp = ((wph / (Math.PI * 2)) % 1 + 1) % 1;
+      thighAng = Math.sin(wph) * 26 * p.walkSpeed + (near ? 0.5 : -0.5);
+      // knee: deep flexion mid-swing (foot clears the floor), straight support
+      // through stance — the visible weight (D5)
+      const swing = Math.max(0, Math.cos(wph));
+      kneeBend = swing * 44 * p.walkSpeed + (1 - swing) * 5 * p.walkSpeed + 2;
+      // heel-strike → foot-flat → toe-off foot pitch (D5)
+      let footPitch: number;
+      if (sp < 0.25) footPitch = -5;
+      else if (sp < 0.33) footPitch = lerp(-5, -11, (sp - 0.25) / 0.08);
+      else if (sp < 0.5) footPitch = lerp(-11, 0, (sp - 0.33) / 0.17);
+      else if (sp < 0.68) footPitch = lerp(0, 15, (sp - 0.5) / 0.18);
+      else if (sp < 0.8) footPitch = lerp(15, -6, (sp - 0.68) / 0.12);
+      else footPitch = lerp(-6, -5, (sp - 0.8) / 0.2);
+      ankleAng = footPitch * p.walkSpeed;
     } else {
       thighAng = side * 2.2 + (near ? p.rKnee * 0.06 : -p.lKnee * 0.06);
       kneeBend = near ? p.rKnee : p.lKnee;
@@ -670,23 +747,42 @@ export function drawStickman(
     const knee = pt(hipX, hipY, thighAng, U_LEG);
     const knee2 = pt(knee.x, knee.y, thighAng + kneeBend, L_LEG);
     const foot = pt(knee2.x, knee2.y, thighAng + kneeBend + 90 + ankleAng, 7.5);
-    const W = near ? 12.5 : 10.5;
+    const W = near ? 13.6 : 11.6;
     bone(ctx, hipX, hipY, knee.x, knee.y, 2.5, { w0: W, w1: W * 0.82, lit: SUIT.lit, dark: SUIT.dark, rim: near ? rim * 0.7 : 0, far: !near });
     bone(ctx, knee.x, knee.y, knee2.x, knee2.y, 2, { w0: W * 0.8, w1: W * 0.6, lit: SUIT.lit, dark: SUIT.dark, rim: near ? rim * 0.5 : 0, far: !near });
-    // shoe
+    // shoe — tailored profile: heel, vamp, toe cap, sole line, gold welt (D2).
+    // No more gold-outlined ellipse: the 'hoverboard ring' read is dead.
     ctx.save();
-    const sg = ctx.createLinearGradient(foot.x - 8, foot.y - 6, foot.x + 10, foot.y + 4);
+    ctx.translate(knee2.x + side * 1.1, knee2.y);
+    ctx.rotate(Math.atan2(foot.y - knee2.y, foot.x - knee2.x));
+    const sg = ctx.createLinearGradient(0, -5, 12, 5);
     sg.addColorStop(0, SHOE.lit);
     sg.addColorStop(1, SHOE.dark);
     ctx.beginPath();
-    ctx.ellipse((knee2.x + foot.x) / 2 + 2.5, (knee2.y + foot.y) / 2 + 1.5, 12, 5.2, 0.12, 0, Math.PI * 2);
+    ctx.moveTo(-3, -4.2);
+    ctx.quadraticCurveTo(6, -5.4, 11, -3.2);
+    ctx.quadraticCurveTo(15.5, -1.4, 15.5, 1.2);
+    ctx.quadraticCurveTo(15.5, 3.4, 12, 3.6);
+    ctx.lineTo(-4.5, 3.9);
+    ctx.quadraticCurveTo(-6.5, 3.8, -6, 1.5);
+    ctx.quadraticCurveTo(-5.5, -2.5, -3, -4.2);
+    ctx.closePath();
     ctx.fillStyle = sg;
     ctx.fill();
-    ctx.strokeStyle = 'rgba(212,175,55,0.35)';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(5,8,16,0.8)';
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    ctx.moveTo(-6, 3.2);
+    ctx.lineTo(15, 2.9);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(212,175,55,0.5)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(-5.5, 1.6);
+    ctx.lineTo(14.8, 1.3);
     ctx.stroke();
     ctx.restore();
-    if (near) joint(ctx, knee.x, knee.y, 4.6, false);
+    if (near) joint(ctx, knee.x, knee.y, 3.4, false);
   };
   legDraw(-1);
   legDraw(1);
@@ -698,7 +794,7 @@ export function drawStickman(
   pg.addColorStop(0, SUIT.mid);
   pg.addColorStop(1, SUIT.dark);
   ctx.beginPath();
-  ctx.ellipse(0, hipY + 2, HIP_HW + 9, 13, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, hipY + 2, HIP_HW + 4, 10.5, 0, 0, Math.PI * 2);
   ctx.fillStyle = pg;
   ctx.fill();
   ctx.restore();
@@ -718,12 +814,11 @@ export function drawStickman(
   ctx.quadraticCurveTo(-shW * 1.04, shY - 9, -shW * 0.62, shY - 13);
   ctx.quadraticCurveTo(0, shY - 17, shW * 0.62, shY - 13);
   ctx.quadraticCurveTo(shW * 1.04, shY - 9, shW * 0.92, shY + 4);
-  // right side down to hip
-  ctx.quadraticCurveTo(shW * 0.55, shY + (hipY - shY) * 0.45, shW * 0.42, shY + (hipY - shY) * 0.72);
-  ctx.lineTo(HIP_HW + 8, hipY + 6);
-  ctx.quadraticCurveTo(0, hipY + 13, -HIP_HW - 8, hipY + 6);
-  ctx.lineTo(-shW * 0.42, shY + (hipY - shY) * 0.72);
-  ctx.quadraticCurveTo(-shW * 0.55, shY + (hipY - shY) * 0.45, -shW * 0.92, shY + 4);
+  // straight-cut sides — tailoring, not a corset (D7)
+  ctx.lineTo(shW * 0.86, shY + (hipY - shY) * 0.52);
+  ctx.lineTo(HIP_HW + 10, hipY + 6);
+  ctx.quadraticCurveTo(0, hipY + 12, -HIP_HW - 10, hipY + 6);
+  ctx.lineTo(-shW * 0.86, shY + (hipY - shY) * 0.52);
   ctx.closePath();
   ctx.fillStyle = tg;
   ctx.fill();
@@ -747,19 +842,27 @@ export function drawStickman(
   ctx.closePath();
   ctx.fillStyle = 'rgba(226,232,242,0.92)';
   ctx.fill();
-  // tie
+  // tie — a 1-segment pendulum driven by torso motion (D4 follow-through):
+  // the blade trails the lean and swings with the vertical bob
+  const velLean = r.vel?.lean ?? 0;
+  const velBob = r.vel?.rootY ?? 0;
+  const tieSwayDeg = clamp(velLean * -0.9 + velBob * -0.5, -8, 8);
+  ctx.save();
+  ctx.translate(0, shY - 8);
+  ctx.rotate(tieSwayDeg * D2R);
   ctx.beginPath();
-  ctx.moveTo(-3.2, shY - 8);
-  ctx.lineTo(3.2, shY - 8);
-  ctx.lineTo(4.4, shY + 8);
-  ctx.lineTo(0, shY + 34);
-  ctx.lineTo(-4.4, shY + 8);
+  ctx.moveTo(-3.2, 0);
+  ctx.lineTo(3.2, 0);
+  ctx.lineTo(4.4, 16);
+  ctx.lineTo(0, 42);
+  ctx.lineTo(-4.4, 16);
   ctx.closePath();
-  const tieG = ctx.createLinearGradient(0, shY - 8, 0, shY + 34);
+  const tieG = ctx.createLinearGradient(0, 0, 0, 42);
   tieG.addColorStop(0, PALETTE.goldBright);
   tieG.addColorStop(1, PALETTE.goldDeep);
   ctx.fillStyle = tieG;
   ctx.fill();
+  ctx.restore();
   // collar
   ctx.beginPath();
   ctx.moveTo(-10, shY - 12); ctx.lineTo(-3, shY - 8); ctx.lineTo(-6.5, shY - 2); ctx.closePath();
@@ -768,10 +871,11 @@ export function drawStickman(
   ctx.beginPath();
   ctx.moveTo(10, shY - 12); ctx.lineTo(3, shY - 8); ctx.lineTo(6.5, shY - 2); ctx.closePath();
   ctx.fill();
-  // pocket square (his left = screen right)
+  // pocket square (his left = screen right) — INSIDE the chest line (D7),
+  // with a micro-lag off the torso motion (D4 follow-through)
   ctx.save();
-  ctx.translate(shW * 0.52, shY + 16);
-  ctx.rotate(-0.12);
+  ctx.translate(shW * 0.40, shY + 18);
+  ctx.rotate(-0.12 + tieSwayDeg * 0.12 * D2R);
   ctx.beginPath();
   ctx.moveTo(-7, -5); ctx.lineTo(7, -5); ctx.lineTo(3, 4); ctx.lineTo(-3, 4); ctx.closePath();
   ctx.fillStyle = PALETTE.goldBright;
@@ -782,14 +886,22 @@ export function drawStickman(
   ctx.restore();
   ctx.restore(); // torso detail
 
-  // lapel shade
-  ctx.beginPath();
-  ctx.moveTo(-12, shY - 11);
-  ctx.quadraticCurveTo(-20, shY + 12, -14, shY + 34);
-  ctx.quadraticCurveTo(-8, shY + 14, -4, shY - 8);
-  ctx.closePath();
-  ctx.fillStyle = 'rgba(10,14,26,0.35)';
-  ctx.fill();
+  // lapels — the suit's tailoring signature (D7): two long panels collar→button stance
+  const lapel = (s: -1 | 1) => {
+    ctx.beginPath();
+    ctx.moveTo(s * 10, shY - 11);
+    ctx.lineTo(s * (shW * 0.46), shY - 4);
+    ctx.lineTo(s * (shW * 0.30), shY + 32);
+    ctx.lineTo(s * 5.5, shY + 3);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(13,19,36,0.5)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(244,229,191,0.22)';
+    ctx.lineWidth = 0.9;
+    ctx.stroke();
+  };
+  lapel(-1);
+  lapel(1);
   ctx.restore(); // torso
 
   // ── arms ──
@@ -801,26 +913,34 @@ export function drawStickman(
     const shY2 = shY + 2;
     const elbow = pt(shX2, shY2, aU, U_ARM);
     const wrist = pt(elbow.x, elbow.y, aU + aL, L_ARM);
-    const W = near ? 11.5 : 9.5;
+    const W = near ? 12.4 : 10.4;
     bone(ctx, shX2, shY2, elbow.x, elbow.y, 2.2, { w0: W, w1: W * 0.8, lit: SUIT.lit, dark: SUIT.dark, rim: near ? rim * 0.75 : 0, far: !near });
     bone(ctx, elbow.x, elbow.y, wrist.x, wrist.y, 1.6, { w0: W * 0.78, w1: W * 0.52, lit: SUIT.lit, dark: SUIT.dark, rim: near ? rim * 0.5 : 0, far: !near });
-    // shirt cuff + gold watch on near wrist
-    const cuffX = lerp(elbow.x, wrist.x, 0.82), cuffY = lerp(elbow.y, wrist.y, 0.82);
+    // shirt cuff — a band across the wrist, not a ball (D7)
+    const cuffX = lerp(elbow.x, wrist.x, 0.86), cuffY = lerp(elbow.y, wrist.y, 0.86);
+    const cdx = wrist.x - elbow.x, cdy = wrist.y - elbow.y;
+    const cl = Math.hypot(cdx, cdy) || 1;
+    const cnx = -cdy / cl, cny = cdx / cl;
     ctx.beginPath();
-    ctx.arc(cuffX, cuffY, W * 0.5, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(226,232,242,0.9)';
-    ctx.fill();
+    ctx.moveTo(cuffX - cnx * W * 0.5, cuffY - cny * W * 0.5);
+    ctx.lineTo(cuffX + cnx * W * 0.5, cuffY + cny * W * 0.5);
+    ctx.strokeStyle = 'rgba(226,232,242,0.92)';
+    ctx.lineWidth = 2.6;
+    ctx.lineCap = 'round';
+    ctx.stroke();
     if (near) {
+      // gold watch
       ctx.beginPath();
-      ctx.arc(lerp(elbow.x, wrist.x, 0.55), lerp(elbow.y, wrist.y, 0.55), 2.6, 0, Math.PI * 2);
+      ctx.arc(lerp(elbow.x, wrist.x, 0.6), lerp(elbow.y, wrist.y, 0.6), 2.6, 0, Math.PI * 2);
       ctx.fillStyle = PALETTE.goldBright;
       ctx.fill();
     }
-    // hand
-    const handAng = aU + aL;
-    drawHand(ctx, wrist.x, wrist.y, handAng, near ? 7.4 : 6.4, near);
-    if (near) joint(ctx, elbow.x, elbow.y, 4.4, false);
-    else joint(ctx, elbow.x, elbow.y, 3.8, true);
+    // hand — wrist follow-through: the hand keeps moving after the forearm
+    // settles (D4), and points when the scene asks it to touch data (D1)
+    const handAng = aU + aL - (near ? (r.vel?.rAL ?? 0) * 0.9 : 0);
+    drawHand(ctx, wrist.x, wrist.y, handAng, near ? 7.2 : 6.2, near, p.hand ?? 'open');
+    if (near) joint(ctx, elbow.x, elbow.y, 3.2, false);
+    else joint(ctx, elbow.x, elbow.y, 3.0, true);
     return { wrist: { x: wrist.x, y: wrist.y } };
   };
   armDraw(-1);
@@ -830,39 +950,79 @@ export function drawStickman(
   const neckX2 = shX, neckY2 = shY - 2;
   bone(ctx, neckX2, neckY2, neckX2, neckY2 - NECK, 0, { w0: 9.5, w1: 8.5, lit: hexLerp(SKIN.lit, SKIN.dark, 0.35), dark: SKIN.deep, rim: rim * 0.4 });
   const headY = neckY2 - NECK - HEAD_R * 0.92 + p.headNod * -3;
-  const headX = neckX2 + Math.sin((p.headTilt + p.lean) * D2R) * 6;
+  // overlapping action (D4): the head trails the torso — it arrives ~80ms late,
+  // which is the classic animator's tell that the body has weight
+  const lagLean = p.lean - (r.vel?.lean ?? 0) * 1.6;
+  const headX = neckX2 + Math.sin((p.headTilt + lagLean) * D2R) * 6;
 
   // shoulders caps
   joint(ctx, shX - shW * 0.74, shY + 2, 7.2, false);
   joint(ctx, shX + shW * 0.74, shY + 2, 7.2, false);
 
-  drawFace(ctx, headX, headY, p.headTilt * 0.6 + p.lean * 0.4, p, t, r.faceScale ?? 1, r.wordTexts ?? [], r.wordTimes ?? [], r.beatT ?? 0, p.look);
+  drawFace(ctx, headX, headY, p.headTilt * 0.6 + lagLean * 0.4, p, t, r.faceScale ?? 1, r.wordTexts ?? [], r.wordTimes ?? [], r.beatT ?? 0, p.look);
 
   ctx.restore();
 }
 
-/** simple elegant hand — tapered mitt with a hint of fingers */
-function drawHand(ctx: CanvasRenderingContext2D, x: number, y: number, angDeg: number, size: number, near: boolean): void {
+/** tailored hand (D7) — palm wedge with fanned fingers; mode 'point' (D1)
+ *  extends the index so the figure can actually touch what it narrates. */
+function drawHand(
+  ctx: CanvasRenderingContext2D, x: number, y: number, angDeg: number,
+  size: number, near: boolean, mode: 'open' | 'point' = 'open'
+): void {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate((angDeg + 90) * D2R);
   const g = ctx.createLinearGradient(-size, 0, size, 0);
   g.addColorStop(0, hexLerp(SKIN.lit, SKIN.dark, 0.15));
   g.addColorStop(1, SKIN.dark);
-  ctx.beginPath();
-  ctx.ellipse(size * 0.15, 0, size, size * 0.62, 0, 0, Math.PI * 2);
   ctx.fillStyle = g;
-  ctx.fill();
-  // finger hint
+  // palm — rounded wedge along the arm axis
   ctx.beginPath();
-  ctx.ellipse(size * 0.85, 0, size * 0.42, size * 0.34, 0, 0, Math.PI * 2);
-  ctx.fillStyle = hexLerp(SKIN.lit, SKIN.dark, near ? 0.3 : 0.55);
+  ctx.moveTo(-size * 0.55, -size * 0.5);
+  ctx.quadraticCurveTo(size * 0.5, -size * 0.62, size * 0.72, -size * 0.3);
+  ctx.lineTo(size * 0.72, size * 0.3);
+  ctx.quadraticCurveTo(size * 0.4, size * 0.64, -size * 0.4, size * 0.56);
+  ctx.quadraticCurveTo(-size * 0.72, size * 0.28, -size * 0.55, -size * 0.5);
+  ctx.closePath();
   ctx.fill();
+  const fk = hexLerp(SKIN.lit, SKIN.dark, near ? 0.3 : 0.55);
+  ctx.strokeStyle = fk;
+  ctx.lineCap = 'round';
+  if (mode === 'point') {
+    // index extended along the arm axis — the data-contact hand
+    ctx.lineWidth = size * 0.34;
+    ctx.beginPath();
+    ctx.moveTo(size * 0.5, -size * 0.16);
+    ctx.quadraticCurveTo(size * 1.15, -size * 0.2, size * 1.8, -size * 0.24);
+    ctx.stroke();
+    // folded middle/ring/pinky knuckle + thumb
+    ctx.fillStyle = fk;
+    ctx.beginPath();
+    ctx.ellipse(size * 0.42, size * 0.22, size * 0.3, size * 0.24, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = size * 0.3;
+    ctx.beginPath();
+    ctx.moveTo(size * 0.08, -size * 0.34);
+    ctx.quadraticCurveTo(size * 0.5, -size * 0.72, size * 0.6, -size * 0.36);
+    ctx.stroke();
+  } else {
+    // three soft fingers fanned from the palm edge
+    for (const [fy, fl] of [[-0.32, 0.85], [0.02, 0.95], [0.36, 0.8]] as const) {
+      ctx.lineWidth = size * 0.3;
+      ctx.beginPath();
+      ctx.moveTo(size * 0.55, fy * size);
+      ctx.quadraticCurveTo(size * (0.55 + fl * 0.7), fy * size * 1.3, size * (0.5 + fl), fy * size * 1.55);
+      ctx.stroke();
+    }
+  }
   ctx.restore();
 }
 
 // ── walk helper ──────────────────────────────────────────────────────────────
-/** trapezoid-eased walk from→to; zero foot slide. Returns pose + phase. */
+/** trapezoid-eased walk from→to. Stride is phase-locked to the VISUAL stride
+ *  (2·sin(thigh swing)·leg length in px) so the feet track the ground exactly —
+ *  zero slide (D5). Returns pose + phase. */
 export function walkIn(
   t: number, fromX: number, toX: number, durMs: number,
   rigScale = 1, seed = 0
@@ -870,11 +1030,32 @@ export function walkIn(
   const p = clamp01(t / durMs);
   const ease = p < 0.22 ? easeInOutSine(p / 0.22) * 0.22 : p > 0.8 ? 0.22 + easeInOutSine((p - 0.8) / 0.2) * 0.78 : 0.22 + (p - 0.22) / 0.58 * 0.78;
   const dist = Math.abs(toX - fromX);
-  const stride = 150 * (0.92 + 0.16 * hash01(seed)) * rigScale;
+  const stride = 2 * Math.sin(26 * D2R) * (U_LEG + L_LEG) * rigScale;
   const walking = p > 0.02 && p < 0.985 && dist > 4;
   const speed = walking ? clamp01(dist / 320 + 0.55) : 0;
   const phase = ((ease * dist) / stride) % 1;
   const pose = walking ? walkPose(phase, speed) : poseAt(`arrive-${seed}`, t, t, [], []);
   const x = fromX + (toX - fromX) * ease;
   return { x, pose, walking, phase };
+}
+
+// ── D1: the companion contract ───────────────────────────────────────────────
+/** Aim the near hand at a scene prop with 2-bone IK and lead the gaze to it.
+ *  Target is in SCENE pixels; the rig math is done in local units. This is what
+ *  makes the figure touch the data it narrates instead of gesturing into air. */
+export function companionArm(
+  pose: Pose, px: number, groundY: number, rigScale: number,
+  target: { x: number; y: number }, mode: 'point' | 'present' = 'point'
+): void {
+  const shx = px + Math.sin((pose.lean + pose.torsoTilt) * D2R) * TORSO * rigScale;
+  const shy = groundY + (-(U_LEG + L_LEG) + pose.rootY - TORSO) * rigScale;
+  const dx = (target.x - shx) / rigScale;
+  const dy = (target.y - shy) / rigScale;
+  const ik = armIk(0, 0, dx, dy, U_ARM, L_ARM, 1);
+  pose.rAU = ik.aU;
+  pose.rAL = ik.aL;
+  pose.hand = mode === 'point' ? 'point' : 'open';
+  // the eyes and head lead the hand to the prop
+  pose.look = clamp((target.x - px) / 420, -1, 1);
+  pose.headTilt += clamp((target.y - shy * rigScale) / 900, -2, 2);
 }

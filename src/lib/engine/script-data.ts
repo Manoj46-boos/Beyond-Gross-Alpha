@@ -76,7 +76,7 @@ export const SCRIPT: ChapterSpec[] = [
         vo: 'Today: the four levers that close the gap, the real numbers behind each one, and where the tax-alpha industry is selling you something — because some of it is. Stay to the end for five questions to ask whoever manages your money, and the one case where the best tax strategy is to do nothing at all.',
         pauseAfter: 420,
         voStyle: 'neutral',
-        scene: { type: 'host', sceneKey: 'c0-intro', headline: 'Four levers. Real numbers. Both sides.', kicker: 'Episode 3 · After-Tax Returns', gesture: 'present' },
+        scene: { type: 'host', sceneKey: 'c0-intro', headline: 'Four levers. Real numbers. Both sides.', kicker: 'Episode 3 · After-Tax Returns', gesture: 'present', entrance: 'walk', walkMs: 1600 },
       },
     ],
   },
