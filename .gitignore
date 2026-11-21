@@ -1,0 +1,11 @@
+node_modules/
+.next/
+.qa-build/
+.render-assets/
+tts-cache/
+*.log
+.DS_Store
+
+evidence/
+evidence2/
+evidence3/

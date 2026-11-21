@@ -1,0 +1,357 @@
+/**
+ * AURUM scenes — openings, statements and the closing movement.
+ * coldOpen · gapBars · titleCard · statement · turnCard · quietBeat ·
+ * policyRisk · finalLines · circleBack · stampCard
+ */
+
+import { SceneCtx } from './scene-context';
+import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, goldRule, chip, fitText } from './theme';
+import { clamp01, easeOutCubic, easeInOutCubic, springTo, hash01, fmtMoney } from './easing';
+import { goldDust, impactRing, softBloom, microShake, spinToken, floatY } from './fx';
+import { drawStatement } from './textfx';
+import { panelTitle, barRow } from './charts';
+import { paintStage } from './stage';
+
+// ── G1 — the split statement (cold open + full-circle close) ────────────────
+function splitStatement(ctx: CanvasRenderingContext2D, W: number, H: number, t: number, alpha: number, mode: 'full' | 'compact'): void {
+  const cardW = mode === 'full' ? 660 : 560;
+  const cardH = 330;
+  const gap = 90;
+  const x0 = (W - cardW * 2 - gap) / 2;
+  const y0 = mode === 'full' ? 300 : 330;
+  const e = easeOutCubic(clamp01(t / 900));
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  for (let i = 0; i < 2; i++) {
+    const ent = easeOutCubic(clamp01((t - 200 - i * 320) / 800));
+    if (ent <= 0) continue;
+    const x = x0 + i * (cardW + gap);
+    const good = i === 0;
+    ctx.save();
+    ctx.globalAlpha = alpha * ent;
+    ctx.translate(0, (1 - ent) * 34);
+    glassCard(ctx, x, y0, cardW, cardH, { r: 20, goldEdge: good, border: good ? rgba(PALETTE.gold, 0.35) : rgba(PALETTE.down, 0.4) });
+    // statement header
+    setFont(ctx, 24, 700, FONT_UI);
+    try { (ctx as any).letterSpacing = '4px'; } catch { /* noop */ }
+    ctx.fillStyle = PALETTE.inkFaint;
+    ctx.textAlign = 'center';
+    ctx.fillText('PORTFOLIO STATEMENT', x + cardW / 2, y0 + 52);
+    try { (ctx as any).letterSpacing = '0px'; } catch { /* noop */ }
+    setFont(ctx, 26, 600, FONT_UI);
+    ctx.fillStyle = PALETTE.inkSoft;
+    ctx.fillText('$2,000,000 · 8% gross · 25 years', x + cardW / 2, y0 + 92);
+    // the number
+    const countP = clamp01((t - 500 - i * 320) / 1100);
+    const value = good ? 13700000 : 8600000;
+    const shown = fmtMoney(value * countP, 1);
+    setFont(ctx, 96, 800, FONT_DISPLAY);
+    ctx.textAlign = 'center';
+    if (good) {
+      goldFillText(ctx, shown, x + cardW / 2, y0 + 205, 96, 800, FONT_DISPLAY, 'center');
+    } else {
+      const g = ctx.createLinearGradient(0, y0 + 130, 0, y0 + 220);
+      g.addColorStop(0, '#F08A8D');
+      g.addColorStop(1, PALETTE.down);
+      ctx.fillStyle = g;
+      ctx.fillText(shown, x + cardW / 2, y0 + 205);
+    }
+    ctx.textAlign = 'left';
+    // gross-return line
+    setFont(ctx, 22, 600, FONT_UI);
+    ctx.fillStyle = PALETTE.inkFaint;
+    ctx.textAlign = 'center';
+    ctx.fillText(good ? 'after-tax compounding intact' : 'after 2%/yr tax drag', x + cardW / 2, y0 + 250);
+    ctx.textAlign = 'left';
+    ctx.restore();
+  }
+  // center stamp — SAME PORTFOLIO (above the cards, never overlapping them)
+  const stampT = t - 1500;
+  if (stampT > 0) {
+    const stampE = clamp01(stampT / 260);
+    const shake = microShake(t, 1500, 7);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(W / 2 + shake.dx, (mode === 'full' ? 214 : 244) + shake.dy);
+    ctx.rotate(-0.035);
+    ctx.scale(stampE, stampE);
+    setFont(ctx, 34, 800, FONT_UI);
+    try { (ctx as any).letterSpacing = '6px'; } catch { /* noop */ }
+    const label = 'SAME PORTFOLIO · SAME MARKET · 25 YEARS';
+    const tw = ctx.measureText(label).width + 64;
+    ctx.strokeStyle = rgba(PALETTE.gold, 0.9);
+    ctx.lineWidth = 2.6;
+    roundRect(ctx, -tw / 2, -34, tw, 68, 8);
+    ctx.stroke();
+    ctx.fillStyle = rgba(PALETTE.gold, 0.14);
+    ctx.fill();
+    ctx.fillStyle = PALETTE.goldBright;
+    ctx.textAlign = 'center';
+    ctx.fillText(label, 0, 12);
+    try { (ctx as any).letterSpacing = '0px'; } catch { /* noop */ }
+    ctx.restore();
+    void e;
+  }
+  // footnote
+  ctx.globalAlpha = alpha * 0.8;
+  setFont(ctx, 20, 500, FONT_UI);
+  ctx.fillStyle = PALETTE.inkFaint;
+  ctx.textAlign = 'center';
+  ctx.fillText('Illustration: $2M × 1.08²⁵ vs $2M × 1.06²⁵ — 2% annual tax drag', W / 2, y0 + cardH + 56);
+  ctx.textAlign = 'left';
+  ctx.restore();
+}
+
+export function coldOpenScene(g: SceneCtx): void {
+  const { ctx, W, H, t, s } = g;
+  const mode = s.mode ?? 'numbers';
+  if (mode === 'numbers') {
+    // a single white number fades in from the dark
+    const a1 = clamp01((t - 200) / 900);
+    const a2 = clamp01((t - 2100) / 900);
+    ctx.save();
+    ctx.textAlign = 'center';
+    // $13.7M
+    if (a1 > 0) {
+      ctx.globalAlpha = a1;
+      goldFillText(ctx, '$13,700,000', W / 2, H * 0.40, 110, 800, FONT_DISPLAY, 'center');
+      setFont(ctx, 24, 600, FONT_UI);
+      ctx.fillStyle = PALETTE.inkFaint;
+      ctx.fillText('INVESTOR ONE', W / 2, H * 0.40 - 110);
+    }
+    if (a2 > 0) {
+      ctx.globalAlpha = a2;
+      const g2 = ctx.createLinearGradient(0, H * 0.52, 0, H * 0.66);
+      g2.addColorStop(0, '#F08A8D');
+      g2.addColorStop(1, PALETTE.down);
+      setFont(ctx, 110, 800, FONT_DISPLAY);
+      ctx.fillStyle = g2;
+      ctx.fillText('$8,600,000', W / 2, H * 0.64);
+      setFont(ctx, 24, 600, FONT_UI);
+      ctx.fillStyle = PALETTE.inkFaint;
+      ctx.fillText('INVESTOR TWO', W / 2, H * 0.64 - 112);
+      // hairline between
+      ctx.strokeStyle = rgba(PALETTE.inkSoft, 0.2);
+      ctx.beginPath();
+      ctx.moveTo(W * 0.32, H * 0.475);
+      ctx.lineTo(W * 0.68, H * 0.475);
+      ctx.stroke();
+    }
+    ctx.restore();
+    void mode;
+  } else {
+    splitStatement(ctx, W, H, t, 1, 'full');
+  }
+}
+
+// ── G2 — the gap bars ────────────────────────────────────────────────────────
+export function gapBarsScene(g: SceneCtx): void {
+  const { ctx, W, t } = g;
+  panelTitle(ctx, 'The most expensive silence in wealth management', W / 2 - 560, 240, 1120, t / 2400, {
+    kickerText: 'BlackRock 2026 · advisor survey',
+  });
+  const x = 240, w = W - 700, y = 400, rh = 130;
+  barRow(ctx, { x, y, w, h: rh, label: 'Asked for tax guidance', value: 92, maxV: 100, p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'gold', valueText: '92%', tag: 'constantly asked' });
+  barRow(ctx, { x, y: y + rh + 70, w, h: rh, label: 'After-tax drives decisions', value: 17, maxV: 100, p: clamp01((t - 1300) / 900), t, landT: 2250, tone: 'down', valueText: '17%' });
+  // the gap annotation
+  const gp = clamp01((t - 2400) / 700);
+  if (gp > 0) {
+    ctx.save();
+    ctx.globalAlpha = gp;
+    setFont(ctx, 34, 700, FONT_DISPLAY);
+    ctx.fillStyle = PALETTE.goldBright;
+    ctx.textAlign = 'center';
+    ctx.fillText('the 75-point gap', x + w * 0.545, y + rh + 55);
+    ctx.textAlign = 'left';
+    ctx.restore();
+  }
+  void fmtMoney;
+}
+
+// ── minimal title card ───────────────────────────────────────────────────────
+export function titleCardScene(g: SceneCtx): void {
+  const { ctx, W, H, t, s } = g;
+  const a = clamp01(t / 500) * clamp01((g.d - t) / 400);
+  ctx.save();
+  ctx.globalAlpha = a;
+  ctx.textAlign = 'center';
+  goldFillText(ctx, s.title ?? 'AFTER-TAX RETURNS', W / 2, H * 0.47, 104, 800, FONT_DISPLAY, 'center');
+  goldRule(ctx, W / 2, H * 0.47 + 48, 620, clamp01((t - 300) / 600));
+  setFont(ctx, 30, 600, FONT_UI);
+  try { (ctx as any).letterSpacing = '5px'; } catch { /* noop */ }
+  ctx.fillStyle = PALETTE.inkSoft;
+  ctx.fillText((s.sub ?? '').toUpperCase(), W / 2, H * 0.47 + 110);
+  try { (ctx as any).letterSpacing = '0px'; } catch { /* noop */ }
+  ctx.textAlign = 'left';
+  ctx.restore();
+}
+
+// ── full-frame statement (serif) ─────────────────────────────────────────────
+export function statementScene(g: SceneCtx): void {
+  const { ctx, W, H, t, s } = g;
+  drawStatement(ctx, W, H, t, s.lines ?? ['—'], { accentWords: s.accent ?? [], sub: s.sub, ghost: s.ghost, size: s.size });
+}
+
+// ── turn card ("Research, not vibes.") ──────────────────────────────────────
+export function turnCardScene(g: SceneCtx): void {
+  const { ctx, W, H, t, s } = g;
+  const lines = s.lines ?? ['—'];
+  ctx.save();
+  ctx.textAlign = 'center';
+  lines.forEach((ln: string, i: number) => {
+    const local = t - 150 - i * 420;
+    const a = clamp01(local / 500);
+    const sc = springTo(0.94, 1, Math.max(0, local), 150, 16);
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.translate(W / 2, H * 0.44 + i * 120);
+    ctx.scale(sc, sc);
+    if (i === lines.length - 1) {
+      goldFillText(ctx, ln, 0, 0, 120, 800, FONT_DISPLAY, 'center');
+    } else {
+      setFont(ctx, 120, 800, FONT_DISPLAY);
+      ctx.fillStyle = PALETTE.ink;
+      ctx.fillText(ln, 0, 0);
+    }
+    ctx.restore();
+  });
+  // gold underline draws under the last line
+  const up = clamp01((t - 900) / 700);
+  goldRule(ctx, W / 2, H * 0.44 + lines.length * 120 - 60, 480, up);
+  ctx.restore();
+  void easeInOutCubic;
+}
+
+// ── quiet beat (held silence with a whisper line) ────────────────────────────
+export function quietBeatScene(g: SceneCtx): void {
+  const { ctx, W, H, t, s } = g;
+  const a = clamp01(t / 700) * clamp01((g.d - t) / 500);
+  ctx.save();
+  ctx.globalAlpha = a * 0.85;
+  setFont(ctx, 44, 500, FONT_DISPLAY);
+  ctx.fillStyle = PALETTE.inkMuted;
+  ctx.textAlign = 'center';
+  ctx.fillText(s.label ?? '', W / 2, H * 0.52);
+  ctx.textAlign = 'left';
+  ctx.restore();
+}
+
+// ── policy risk statement (Build on it. Don't worship it.) ───────────────────
+export function policyRiskScene(g: SceneCtx): void {
+  const { ctx, W, H, t, s } = g;
+  drawStatement(ctx, W, H, t, s.lines ?? ['—'], { accentWords: s.accent ?? [], size: 104, sub: '$48B is a policy choice, not a law of physics.' });
+}
+
+// ── the final lines (earned vs kept) ─────────────────────────────────────────
+export function finalLinesScene(g: SceneCtx): void {
+  const { ctx, W, H, t } = g;
+  // near-silent room: dimmer stage, dust only
+  ctx.save();
+  ctx.fillStyle = rgba('#05080F', 0.25);
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+  const rows: { text: string; accent?: boolean }[] = [
+    { text: 'Gross returns are what you brag about.' },
+    { text: 'After-tax returns are what you spend.' },
+    { text: 'The market doesn’t keep score of what you earned.' },
+    { text: 'Only what you kept.', accent: true },
+  ];
+  ctx.save();
+  ctx.textAlign = 'center';
+  rows.forEach((r, i) => {
+    const local = t - 100 - i * 950;
+    const a = clamp01(local / 600);
+    if (a <= 0) return;
+    const rise = springTo(22, 0, Math.max(0, local), 130, 15);
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.translate(0, rise);
+    setFont(ctx, i >= 2 ? 78 : 84, 700, FONT_DISPLAY);
+    if (r.accent) {
+      goldFillText(ctx, r.text, W / 2, H * 0.30 + i * 118, 84, 800, FONT_DISPLAY, 'center');
+    } else {
+      ctx.fillStyle = i >= 2 ? PALETTE.ink : PALETTE.inkSoft;
+      ctx.fillText(r.text, W / 2, H * 0.30 + i * 118);
+    }
+    ctx.restore();
+  });
+  ctx.restore();
+}
+
+// ── circle back to G1 + comment prompt ───────────────────────────────────────
+export function circleBackScene(g: SceneCtx): void {
+  const { ctx, W, H, t, s } = g;
+  if ((s.mode ?? 'comments') === 'comments') {
+    panelTitle(ctx, 'Ask question one. Report back.', W / 2 - 520, 250, 1040, t / 2400, { kickerText: 'Your turn' });
+    // floating comment bubbles
+    const bubbles = [
+      { text: 'My advisor sent the after-tax report in an hour.', x: W * 0.30, tone: 'gold' },
+      { text: '“What distributions cost me?” — he had to check.', x: W * 0.62, tone: 'platinum' },
+      { text: 'Question 5: $412K embedded gains. Plan made.', x: W * 0.44, tone: 'up' },
+    ];
+    bubbles.forEach((b, i) => {
+      const ent = clamp01((t - 300 - i * 420) / 600);
+      if (ent <= 0) return;
+      ctx.save();
+      ctx.globalAlpha = ent;
+      ctx.translate(0, (1 - easeOutCubic(ent)) * 30 + floatY(t, i, 6, 4200));
+      const bw = 560, bh = 120;
+      glassCard(ctx, b.x - bw / 2, 380 + i * 150, bw, bh, { r: 60, goldEdge: b.tone === 'gold' });
+      setFont(ctx, 26, 600, FONT_UI);
+      ctx.fillStyle = PALETTE.inkSoft;
+      wrapText(ctx, b.text, bw - 80, 26, 600, FONT_UI).forEach((ln, li) => {
+        ctx.fillText(ln, b.x - bw / 2 + 44, 380 + i * 150 + 52 + li * 34);
+      });
+      ctx.restore();
+    });
+  } else {
+    splitStatement(ctx, W, H, t, 1, 'compact');
+  }
+}
+
+// ── stamp card (verdict slam) ────────────────────────────────────────────────
+export function stampCardScene(g: SceneCtx): void {
+  const { ctx, W, H, t, s } = g;
+  const label = s.label ?? 'NOT REPORTED';
+  const sub = s.sub ?? '';
+  const stampT = t - 350;
+  if (stampT < 0) return;
+  const e = easeOutCubic(clamp01(stampT / 240));
+  const shake = microShake(t, 350, 9);
+  ctx.save();
+  ctx.translate(W / 2 + shake.dx, H * 0.42 + shake.dy);
+  ctx.rotate(-0.03);
+  ctx.scale(2.6 * e + 0.4, 2.6 * e + 0.4);
+  setFont(ctx, 56, 800, FONT_UI);
+  try { (ctx as any).letterSpacing = '8px'; } catch { /* noop */ }
+  const tw = ctx.measureText(label).width + 90;
+  ctx.strokeStyle = rgba(PALETTE.down, 0.92);
+  ctx.lineWidth = 5;
+  roundRect(ctx, -tw / 2, -62, tw, 124, 14);
+  ctx.stroke();
+  ctx.fillStyle = rgba(PALETTE.down, 0.12);
+  ctx.fill();
+  ctx.fillStyle = '#F08A8D';
+  ctx.textAlign = 'center';
+  ctx.fillText(label, 0, 20);
+  try { (ctx as any).letterSpacing = '0px'; } catch { /* noop */ }
+  ctx.restore();
+  if (sub) {
+    ctx.save();
+    ctx.globalAlpha = clamp01((t - 900) / 400);
+    setFont(ctx, 30, 600, FONT_UI);
+    ctx.fillStyle = PALETTE.inkSoft;
+    ctx.textAlign = 'center';
+    ctx.fillText(sub, W / 2, H * 0.42 + 130);
+    ctx.textAlign = 'left';
+    ctx.restore();
+  }
+  softBloom(ctx, W, H, t - 350, 320, 0.10);
+  impactRing(ctx, W / 2, H * 0.42, t, 350, 240, 1.4, PALETTE.down);
+}
+
+// shared painter for scenes that want the stage under their content
+export function defaultStage(g: SceneCtx, opts: any = {}): void {
+  paintStage(g.ctx, g.W, g.H, g.t, opts);
+}
