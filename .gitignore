@@ -9,3 +9,4 @@ tts-cache/
 evidence/
 evidence2/
 evidence3/
+*.tsbuildinfo
