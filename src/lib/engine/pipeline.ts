@@ -34,13 +34,15 @@ export interface PreparedProject {
 
 const TTS_BATCH = 8;
 
-/** per-beat vocal direction → TTS rate/pitch offsets (measured, dry register) */
+/** per-beat vocal direction → TTS rate/pitch offsets.
+ *  Values identical to the K-Shaped engine, so the narration reads with
+ *  exactly the same vocal behaviour as the previous film. */
 export const VO_STYLE_DELTAS: Record<string, { rate: number; pitch: number }> = {
   neutral: { rate: 0, pitch: 0 },
-  calm: { rate: -4, pitch: 0 },
-  urgent: { rate: 5, pitch: 1 },
-  reveal: { rate: -9, pitch: -2 },
-  quote: { rate: -2, pitch: 2 },
+  calm: { rate: -6, pitch: 0 },
+  urgent: { rate: 6, pitch: 1 },
+  reveal: { rate: -10, pitch: -2 },
+  quote: { rate: -2, pitch: 3 },
 };
 
 function audioCtxShared(): AudioContext {
