@@ -17,6 +17,9 @@ export interface StageOpts {
   /** dim the horizon hairline behind a standing figure (D2) — the line stops
    *  reading as a 'skateboard' he straddles and reads as depth behind him */
   horizonFade?: { x: number; r: number };
+  /** large soft key-light pool behind the figure (D13) — separates the
+   *  character from the room so the frame never reads as figures on a void */
+  keyLight?: { x: number; y: number; r: number };
 }
 
 export function paintStage(
@@ -40,12 +43,21 @@ export function paintStage(
   const toneTint = tone === 'gold' ? '#B08A28' : tone === 'down' ? '#5A2A32' : tone === 'up' ? '#1F5A4C' : '#2A4470';
   glowBlob(ctx, W * 0.84, H * 0.14, W * 0.55, toneTint, 0.115 + 0.028 * breathe);
   glowBlob(ctx, W * 0.10, H * 0.88, W * 0.42, tone === 'down' ? '#3A1A22' : '#8A6D1F', 0.075 + 0.022 * breathe2);
+  // D13: the key-light pool — one large soft radial behind the subject so the
+  // figure separates from the room at a glance
+  if (opts.keyLight) {
+    const k = opts.keyLight;
+    glowBlob(ctx, k.x, k.y, k.r, '#3D5578', 0.30);
+    glowBlob(ctx, k.x, k.y, k.r * 0.55, '#C8A94E', 0.10);
+  }
 
-  // 3. blueprint lattice (above horizon) — dots + hairlines, whisper quiet
+  // 3. blueprint lattice (above horizon) — dots + hairlines.
+  // D13: raised from 0.05 to 0.10 — the old alpha was sub-perceptual at 12
+  // Mbps, so the 'Midnight Ledger' identity paid a complexity cost for nothing.
   if (grid > 0) {
     const step = 96;
     ctx.save();
-    ctx.globalAlpha = 0.05 * grid;
+    ctx.globalAlpha = 0.10 * grid;
     ctx.strokeStyle = PALETTE.inkSoft;
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -59,7 +71,7 @@ export function paintStage(
     for (let i = 0; i < 26; i++) {
       const gx = Math.floor(hash01(i * 7.3 + 11) * (W / step)) * step + step / 2;
       const gy = Math.floor(hash01(i * 3.1 + 5) * 7) * step + step / 2;
-      const a = 0.10 + 0.10 * Math.sin(t / 1800 + i * 2.1);
+      const a = 0.16 + 0.14 * Math.sin(t / 1800 + i * 2.1);
       if (a <= 0) continue;
       ctx.save();
       ctx.translate(gx, gy);
@@ -83,7 +95,8 @@ export function paintStage(
     ctx.fillRect(0, hy, W, H - hy);
 
     const vpX = W * 0.5 + drift(t / 1000, 3) * 20;
-    ctx.strokeStyle = rgba(PALETTE.steel, 0.075);
+    // D13: floor grid raised from 0.075 to 0.14 — the room must be felt in one glance
+    ctx.strokeStyle = rgba(PALETTE.steel, 0.14);
     ctx.lineWidth = 1;
     ctx.beginPath();
     for (let i = -8; i <= 8; i++) {
@@ -96,7 +109,9 @@ export function paintStage(
     for (let i = 1; i <= rows; i++) {
       const p = i / rows;
       const y = hy + (H - hy) * p * p;
-      ctx.globalAlpha = 0.10 - p * 0.055;
+      // D13: rows keep ~55-100% of the grid alpha (they used to multiply down
+      // to 0.007 effective — genuinely invisible)
+      ctx.globalAlpha = 1 - p * 0.45;
       ctx.moveTo(0, y); ctx.lineTo(W, y);
     }
     ctx.stroke();
@@ -137,7 +152,7 @@ export function paintStage(
     ctx.globalAlpha = 0.5 * sheen;
     const sg = ctx.createLinearGradient(sx - 260, 0, sx + 260, H);
     sg.addColorStop(0, 'rgba(210,225,255,0)');
-    sg.addColorStop(0.5, 'rgba(210,225,255,0.028)');
+    sg.addColorStop(0.5, 'rgba(210,225,255,0.055)');
     sg.addColorStop(1, 'rgba(210,225,255,0)');
     ctx.fillStyle = sg;
     ctx.fillRect(0, 0, W, H);

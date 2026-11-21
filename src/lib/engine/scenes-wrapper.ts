@@ -224,22 +224,24 @@ export function pitchDeckScene(g: SceneCtx): void {
     ctx.fillText(['screenshot slide 04', 'slide 11 · confidential', 'slide 17 · draft'][i], x + 48, y + 180);
     ctx.restore();
   });
-  // red pen swoosh
+  // red pen swoosh — D12: the annotation runs along the BOTTOM MARGIN under
+  // the three slides (it used to slash straight through all three card
+  // interiors with its caption sitting on the stroke)
   const pa = clamp01((t - 2100) / 600);
   if (pa > 0) {
     ctx.save();
     ctx.globalAlpha = pa;
     ctx.beginPath();
-    const startX = W * 0.10 + 40, startY = 660;
+    const startX = W * 0.10 + 20, startY = 726;
     ctx.moveTo(startX, startY);
-    ctx.quadraticCurveTo(W * 0.5, 620, W * 0.86, 668);
+    ctx.quadraticCurveTo(W * 0.5, 706, W * 0.86, 724);
     ctx.strokeStyle = rgba(PALETTE.down, 0.85);
-    ctx.lineWidth = 5;
+    ctx.lineWidth = 4.4;
     ctx.lineCap = 'round';
     ctx.stroke();
     setFont(ctx, 26, 700, FONT_UI);
     ctx.fillStyle = '#F08A8D';
-    ctx.fillText('separate the engineering from the sales deck', W * 0.30, 712);
+    ctx.fillText('separate the engineering from the sales deck', W * 0.30, 768);
     ctx.restore();
   }
 }
@@ -261,12 +263,26 @@ export function diMosaicScene(g: SceneCtx): void {
   ctx.fillText('ONE ETF', bx + bw / 2, by + bh / 2);
   ctx.textAlign = 'left';
   ctx.restore();
-  // mosaic of small tiles
+  // mosaic of small tiles — D12: every tile carries its ticker (real liquid
+  // names), and a 2×2 featured centerpiece gives the concept a face
   const cols = 10, rows = 8;
   const mx = W * 0.44, my = 380;
   const tw = 44, th = 40;
+  const TICKERS = [
+    'AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL', 'META', 'BRK.B', 'LLY', 'AVGO', 'JPM',
+    'V', 'UNH', 'XOM', 'MA', 'JNJ', 'PG', 'HD', 'COST', 'ABBV', 'WMT',
+    'MRK', 'CVX', 'PEP', 'ADBE', 'KO', 'CSCO', 'ACN', 'MCD', 'NFLX', 'LIN',
+    'ABT', 'CRM', 'ORCL', 'TMO', 'DIS', 'NKE', 'VZ', 'AMD', 'QCOM', 'TXN',
+    'CAT', 'AMGN', 'IBM', 'GE', 'CVS', 'PFE', 'SBUX', 'MMM', 'BLK', 'ELV',
+    'MDT', 'SYK', 'BKNG', 'ISRG', 'GILD', 'PLD', 'ADP', 'MS', 'COF', 'TJX',
+    'VRTX', 'REGN', 'USB', 'PNC', 'ITW', 'FDX', 'UPS', 'LMT', 'RTX', 'HON',
+    'DHR', 'CL', 'EMR', 'AJG', 'AON', 'PH', 'BSX', 'ETN', 'CME', 'ICE',
+  ];
+  // the featured 2×2 centerpiece occupies tiles 33-34 and 43-44 (rows 3-4, cols 3-4)
+  const featured = (c: number, r: number) => (r === 3 || r === 4) && (c === 3 || c === 4);
   for (let i = 0; i < cols * rows; i++) {
     const c = i % cols, r = Math.floor(i / cols);
+    if (featured(c, r)) continue;
     const ent = clamp01((shatter * cols * rows - i) / 3);
     if (ent <= 0) continue;
     const down = i % 7 === 3; // ~50 down stocks
@@ -284,6 +300,31 @@ export function diMosaicScene(g: SceneCtx): void {
       ctx.lineWidth = 1.6;
       ctx.stroke();
     }
+    // ticker label
+    ctx.fillStyle = 'rgba(8,12,22,0.85)';
+    setFont(ctx, 12, 800, FONT_UI);
+    ctx.textAlign = 'center';
+    ctx.fillText(TICKERS[i % TICKERS.length], 0, 4);
+    ctx.textAlign = 'left';
+    ctx.restore();
+  }
+  // featured centerpiece — the face of the concept (enters with the tiles)
+  const fent = clamp01((shatter * cols * rows - 33) / 4);
+  if (fent > 0) {
+    ctx.save();
+    ctx.globalAlpha = fent;
+    const fx = mx + 3 * (tw + 6), fy = my + 3 * (th + 6);
+    const fw = tw * 2 + 6, fh = th * 2 + 6;
+    glassCard(ctx, fx, fy, fw, fh, { r: 8, goldEdge: true, fill: 'rgba(8,12,22,0.9)' });
+    setFont(ctx, 15, 800, FONT_UI);
+    ctx.fillStyle = PALETTE.goldBright;
+    ctx.textAlign = 'center';
+    ctx.fillText('DIRECT', fx + fw / 2, fy + fh / 2 - 8);
+    ctx.fillText('INDEXING', fx + fw / 2, fy + fh / 2 + 10);
+    setFont(ctx, 11, 600, FONT_UI);
+    ctx.fillStyle = PALETTE.inkMuted;
+    ctx.fillText('one account · many lots', fx + fw / 2, fy + fh / 2 + 26);
+    ctx.textAlign = 'left';
     ctx.restore();
   }
   // legend
@@ -434,9 +475,9 @@ export function longShortScene(g: SceneCtx): void {
       { tone: 'down', points: ptsS, width: 4.6 },
     ],
     p: clamp01(t / 2200), t,
-    yMin: 60, yMax: 140, yFormat: () => '',
-    xLabels: ['', '', '', ''],
-    gridLines: 3, showAxis: false,
+    yMin: 60, yMax: 140, yFormat: (v) => `${Math.round(v)}`,
+    xLabels: ['Y1', 'Y3', 'Y6', 'Y9', 'Y12'],
+    gridLines: 4, showAxis: true,
   });
   setFont(ctx, 24, 700, FONT_UI);
   ctx.fillStyle = PALETTE.up;
@@ -468,6 +509,13 @@ export function elmVerdictScene(g: SceneCtx): void {
   paintStage(ctx, W, H, t, { tone: 'down', grid: 0.5, sheen: 0.3 });
   panelTitle(ctx, 'The strongest counterpoint in this video', W * 0.10, 240, W * 0.8, t / 2400, { kickerText: 'Lever 4 · Elm Wealth, Apr 2026' });
   const x = W * 0.14, y = 360, w = W * 0.72, h = 420;
+  // D17 cadence wiring: the narration walks the panel — headline → mechanics →
+  // verdict — so the emphasis moves with the sentence index instead of the
+  // layout holding static for 34.9s.
+  const stage = g.sentenceIdx != null
+    ? (g.sentenceIdx >= 4 ? 2 : g.sentenceIdx >= 2 ? 1 : 0)
+    : (t < 8000 ? 0 : t < 16000 ? 1 : 2);
+  const emA = (st: number) => 1 - (st === stage ? 0 : 0.42);
   const ent = springTo(0.92, 1, Math.min(800, t), 150, 15);
   ctx.save();
   ctx.globalAlpha = clamp01(t / 300);
@@ -476,20 +524,26 @@ export function elmVerdictScene(g: SceneCtx): void {
   ctx.translate(-w / 2, -h / 2);
   glassCard(ctx, 0, 0, w, h, { r: 20, border: rgba(PALETTE.down, 0.4) });
   setFont(ctx, 36, 700, FONT_DISPLAY);
+  ctx.save();
+  ctx.globalAlpha *= emA(0);
   ctx.fillStyle = PALETTE.ink;
   wrapText(ctx, 'Fees consumed more than half the tax benefit.', w - 120, 36, 700, FONT_DISPLAY).forEach((ln, i) => {
     ctx.fillText(ln, 60, 110 + i * 52);
   });
+  ctx.restore();
   setFont(ctx, 30, 600, FONT_UI);
+  ctx.save();
+  ctx.globalAlpha *= emA(1);
   ctx.fillStyle = PALETTE.inkSoft;
   wrapText(ctx, 'The investor ended with a lower after-tax expected return than if she had just sold the stock, paid the tax, and bought an index fund.', w - 120, 30, 600, FONT_UI).forEach((ln, i) => {
     ctx.fillText(ln, 60, 230 + i * 44);
   });
-  // coin flip verdict
-  const ca = clamp01((t - 2200) / 600);
+  ctx.restore();
+  // coin flip verdict — emphasized in the final stage
+  const ca = clamp01((t - 2200) / 600) * emA(2);
   if (ca > 0) {
     ctx.save();
-    ctx.globalAlpha = ca;
+    ctx.globalAlpha *= ca;
     ctx.beginPath();
     ctx.arc(w - 160, 300, 46, 0, Math.PI * 2);
     const cg = ctx.createLinearGradient(w - 200, 260, w - 120, 340);

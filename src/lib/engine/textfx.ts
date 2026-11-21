@@ -4,7 +4,7 @@
  * signature reading experience of this film.
  */
 
-import { PALETTE, rgba, setFont, roundRect, glassCard, wrapText, FONT_DISPLAY, FONT_UI, fitText, goldRule, diamond, hexLerp } from './theme';
+import { PALETTE, rgba, setFont, roundRect, glassCard, wrapText, FONT_DISPLAY, FONT_UI, fitText, goldRule, diamond, hexLerp, drawAlphaGlyph } from './theme';
 import { clamp01, easeOutCubic, easeInOutSine, springTo, hash01, hashStr } from './easing';
 import { goldDust } from './fx';
 
@@ -24,7 +24,10 @@ export function drawCaptions(
   lines: CaptionLine[], style: CaptionStyle
 ): void {
   if (style.mode === 'off') return;
-  const maxWords = style.maxWords ?? 8;
+  // D15: caption engineering sized for mobile — 52px type (4.8% of frame
+  // height, the YouTube mobile convention zone), a 10-word window so the pill
+  // re-flows less mid-sentence, and a weightier karaoke sweep.
+  const maxWords = style.maxWords ?? 10;
   const maxRows = style.maxRows ?? 2;
   // active line = last with t in [start-120, end+260]
   let line: CaptionLine | null = null;
@@ -38,7 +41,7 @@ export function drawCaptions(
   const words = line.words.slice(winStart, winStart + maxWords);
 
   // build rows (break on clause punctuation near the middle, else greedy)
-  setFont(ctx, 44, 700, FONT_UI);
+  setFont(ctx, 52, 700, FONT_UI);
   const maxW = Math.min(W - 480, W * 0.64);
   const spaceW = ctx.measureText(' ').width;
   const items = words.map((w) => ({ ...w, ww: ctx.measureText(w.w).width }));
@@ -58,7 +61,7 @@ export function drawCaptions(
     rows.push(items);
   }
 
-  const rowH = 58, padX = 34, padY = 22;
+  const rowH = 66, padX = 38, padY = 24;
   const widest = Math.max(...rows.map((r) => r.reduce((a, i) => a + i.ww, 0) + (r.length - 1) * spaceW));
   const pillW = widest + padX * 2;
   const pillH = rows.length * rowH + padY * 2 - 8;
@@ -96,14 +99,14 @@ export function drawCaptions(
   rows.forEach((row, ri) => {
     const rowW = row.reduce((a, i) => a + i.ww, 0) + (row.length - 1) * spaceW;
     let cx = px + (pillW - rowW) / 2;
-    const cy = py + padY + ri * rowH + 40;
+    const cy = py + padY + ri * rowH + 46;
     for (const item of row) {
       const idx = spokenGlobalIdx++;
       const active = idx === lastSpoken;
       const spoken = idx <= lastSpoken;
       let fill = spoken ? PALETTE.ink : rgba(PALETTE.inkMuted, 0.72);
       if (active) fill = PALETTE.goldBright;
-      setFont(ctx, 44, 700, FONT_UI);
+      setFont(ctx, 52, 700, FONT_UI);
       ctx.fillStyle = fill;
       const punch = active ? 1 + 0.06 * (1 - clamp01((tMs - item.t) / 260)) : 1;
       if (punch !== 1) {
@@ -120,7 +123,7 @@ export function drawCaptions(
         const prog = clamp01((tMs - item.t) / Math.max(1, item.d));
         const ux = cx, uw = item.ww * easeOutCubic(prog);
         ctx.fillStyle = rgba(PALETTE.goldBright, 0.9);
-        ctx.fillRect(ux, cy + 12, uw, 3);
+        ctx.fillRect(ux, cy + 13, uw, 4.5);
       }
       cx += item.ww + spaceW;
     }
@@ -175,15 +178,8 @@ export function drawWatermark(ctx: CanvasRenderingContext2D, W: number, channelN
   const tw = ctx.measureText(name).width;
   ctx.fillText(name, 64, 64);
   try { (ctx as any).letterSpacing = '0px'; } catch { /* noop */ }
-  // gold alpha glyph mark
-  ctx.strokeStyle = rgba(PALETTE.gold, 0.9);
-  ctx.lineWidth = 3.4;
-  ctx.beginPath();
-  // small stylised α
-  ctx.arc(44, 56, 9, Math.PI * 0.7, Math.PI * 2.25);
-  ctx.moveTo(37, 62);
-  ctx.lineTo(52, 64);
-  ctx.stroke();
+  // gold alpha glyph mark — the ONE shared brand vector (D16)
+  drawAlphaGlyph(ctx, 26, 72, 30, rgba(PALETTE.gold, 0.9), 3.4);
   ctx.restore();
 }
 
@@ -317,21 +313,68 @@ export function sceneTransition(ctx: CanvasRenderingContext2D, W: number, H: num
 }
 
 // ── big statement text (full-frame serif) ────────────────────────────────────
+/** D11 — typographic rest beats still anchor the frame: a ghost chapter
+ *  numeral, a ruled hairline frame with gold corner ticks, and one breathing
+ *  gold object. Without it the statement family is two dim lines on a void,
+ *  which on a phone in daylight reads as a playback error. */
+export function statementAnchor(
+  ctx: CanvasRenderingContext2D, W: number, H: number,
+  chapterIdx: number, tMs: number, ghost?: string
+): void {
+  const a = clamp01(tMs / 700);
+  const m = 64;
+  // ruled frame + gold corner ticks
+  ctx.save();
+  ctx.globalAlpha = 0.55 * a;
+  ctx.strokeStyle = rgba(PALETTE.steel, 0.38);
+  ctx.lineWidth = 1;
+  ctx.strokeRect(m, m, W - 2 * m, H - 2 * m);
+  ctx.strokeStyle = rgba(PALETTE.gold, 0.75);
+  ctx.lineWidth = 2;
+  const L = 34;
+  for (const [cx, cy, sx, sy] of [[m, m, 1, 1], [W - m, m, -1, 1], [m, H - m, 1, -1], [W - m, H - m, -1, -1]] as const) {
+    ctx.beginPath();
+    ctx.moveTo(cx, cy + sy * L);
+    ctx.lineTo(cx, cy);
+    ctx.lineTo(cx + sx * L, cy);
+    ctx.stroke();
+  }
+  ctx.restore();
+  // ghost chapter numeral — huge, quiet, top-right
+  ctx.save();
+  ctx.globalAlpha = a;
+  setFont(ctx, 500, 800, FONT_DISPLAY);
+  ctx.fillStyle = rgba(PALETTE.inkGhost, 0.11);
+  ctx.textAlign = 'right';
+  const num = ghost ?? String((chapterIdx % 10) + 1).padStart(2, '0');
+  ctx.fillText(num, W - m - 24, H * 0.58);
+  ctx.textAlign = 'left';
+  ctx.restore();
+  // the single gold object — a breathing diamond above the text zone
+  const breathe = 0.5 + 0.5 * Math.sin(tMs / 3000);
+  ctx.save();
+  ctx.globalAlpha = (0.55 + 0.25 * breathe) * a;
+  ctx.translate(W / 2, H * 0.15);
+  ctx.rotate(Math.PI / 4);
+  const ds = 13 + 1.8 * breathe;
+  ctx.fillStyle = PALETTE.gold;
+  ctx.fillRect(-ds / 2, -ds / 2, ds, ds);
+  ctx.strokeStyle = rgba(PALETTE.goldPale, 0.6);
+  ctx.lineWidth = 1;
+  ctx.strokeRect(-ds / 2, -ds / 2, ds, ds);
+  ctx.restore();
+}
+
 export function drawStatement(
   ctx: CanvasRenderingContext2D, W: number, H: number, tMs: number,
-  lines: string[], opts: { sub?: string; accentWords?: string[]; size?: number; ghost?: string } = {}
+  lines: string[], opts: { sub?: string; accentWords?: string[]; size?: number; ghost?: string; chapterIdx?: number } = {}
 ): void {
   const size = opts.size ?? 88;
   const accent = new Set((opts.accentWords || []).map((w) => w.toLowerCase()));
   const total = lines.length;
+  // D11 — anchor the rest beat: numeral + ruled frame + gold object
+  statementAnchor(ctx, W, H, opts.chapterIdx ?? 0, tMs, opts.ghost);
   ctx.save();
-  if (opts.ghost) {
-    setFont(ctx, 420, 800, FONT_DISPLAY);
-    ctx.fillStyle = rgba(PALETTE.inkGhost, 0.13);
-    ctx.textAlign = 'center';
-    ctx.fillText(opts.ghost, W / 2, H * 0.62);
-    ctx.textAlign = 'left';
-  }
   lines.forEach((ln, i) => {
     const local = tMs - i * 320;
     const a = clamp01(local / 380);

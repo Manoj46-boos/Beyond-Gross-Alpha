@@ -173,14 +173,19 @@ export function memoCardScene(g: SceneCtx): void {
     }
     ctx.restore();
   });
-  // E&O EXCLUSION stamp
+  // E&O EXCLUSION stamp — D12: a premium stamp overlaps a document CORNER
+  // with a cast shadow; it never parks on the memo's live text.
   const stampT = t - 2100;
   if (stampT > 0) {
     const e = easeOutCubic(clamp01(stampT / 240));
     ctx.save();
-    ctx.translate(x + cardW / 2, y + cardH / 2 + 30);
-    ctx.rotate(0.06);
-    ctx.scale(e, e);
+    // drop shadow first, then the stamp — the ink reads as pressed onto paper
+    ctx.translate(x + cardW - 168, y + 118);
+    ctx.rotate(-0.14);
+    ctx.scale(e * 0.78, e * 0.78);
+    ctx.shadowColor = 'rgba(0,0,0,0.45)';
+    ctx.shadowBlur = 26;
+    ctx.shadowOffsetY = 10;
     setFont(ctx, 44, 800, FONT_UI);
     try { (ctx as any).letterSpacing = '6px'; } catch { /* noop */ }
     const label = 'E&O EXCLUSION';
@@ -188,9 +193,12 @@ export function memoCardScene(g: SceneCtx): void {
     ctx.strokeStyle = rgba(PALETTE.down, 0.9);
     ctx.lineWidth = 3.4;
     roundRect(ctx, -tw / 2, -44, tw, 88, 10);
-    ctx.stroke();
     ctx.fillStyle = rgba(PALETTE.down, 0.10);
     ctx.fill();
+    ctx.stroke();
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
     ctx.fillStyle = '#F08A8D';
     ctx.textAlign = 'center';
     ctx.fillText(label, 0, 16);
@@ -336,26 +344,37 @@ export function characterMatrixScene(g: SceneCtx): void {
     { label: 'Qualified dividends', tag: 'DISCOUNTED', tone: 'up', note: 'long-term rates' },
     { label: 'Long-term gains', tag: 'DISCOUNTED', tone: 'up', note: 'held > 1 year' },
   ];
+  // D17 cadence wiring: the narration walks the rows — the sentence index
+  // drives which row is hot (gold edge, fresh pulse), so the layout changes
+  // visibly every few seconds instead of holding for 41.5s.
+  const hotIdx = g.sentenceIdx != null && g.sentenceIdx >= 0 ? g.sentenceIdx % rows.length : -1;
+  const fresh = g.sentenceT != null ? clamp01(1 - g.sentenceT / 900) : 0;
   rows.forEach((r, i) => {
     const ent = clamp01((t - 300 - i * 330) / 600);
     if (ent <= 0) return;
+    const hot = i === hotIdx;
     ctx.save();
     ctx.globalAlpha = ent;
     const y = 350 + i * 88, x = W * 0.10, w = W * 0.80;
-    glassCard(ctx, x, y, w, 72, { r: 12, shadow: false });
+    glassCard(ctx, x, y, w, 72, {
+      r: 12,
+      shadow: false,
+      fill: hot ? rgba(PALETTE.gold, 0.07 + 0.05 * fresh) : 'rgba(255,255,255,0.045)',
+      border: hot ? rgba(PALETTE.gold, 0.35 + 0.35 * fresh) : undefined,
+    });
     setFont(ctx, 29, 700, FONT_UI);
-    ctx.fillStyle = PALETTE.ink;
+    ctx.fillStyle = hot ? PALETTE.ink : PALETTE.inkSoft;
     ctx.fillText(r.label, x + 36, y + 45);
-    chip(ctx, r.tag, x + 430, y + 18, { size: 22, gold: r.tone === 'gold', dot: r.tone === 'down' ? PALETTE.down : PALETTE.up });
+    chip(ctx, r.tag, x + 430, y + 18, { size: 22, gold: hot, dot: r.tone === 'down' ? PALETTE.down : PALETTE.up });
     setFont(ctx, 22, 500, FONT_UI);
-    ctx.fillStyle = PALETTE.inkFaint;
+    ctx.fillStyle = hot ? PALETTE.inkSoft : PALETTE.inkFaint;
     ctx.textAlign = 'right';
     ctx.fillText(r.note, x + w - 36, y + 45);
     ctx.textAlign = 'left';
     ctx.restore();
   });
-  // the blunt BlackRock verdict
-  const va = clamp01((t - 4200) / 600);
+  // the blunt BlackRock verdict — enters once four sentences have played
+  const va = g.sentenceIdx != null ? clamp01((g.sentenceIdx - 3.5) / 0.9) : clamp01((t - 4200) / 600);
   if (va > 0) {
     ctx.save();
     ctx.globalAlpha = va;
@@ -466,7 +485,9 @@ export function signatureCurveScene(g: SceneCtx): void {
     impactRing(ctx, bx + bw / 2, by + bh / 2, t, 3000, 160, 1.1, PALETTE.gold);
     softBloom(ctx, W, H, t - 3000, 460, 0.14);
   }
-  // hold note: the script holds this 4 full seconds — panel title dims, badge stays
+  // hold note: the script holds this 4 full seconds — panel title dims, badge stays.
+  // D10: lifted from H*0.94 (inside the caption pill zone, floor at 968px) to
+  // a clear strip above the caption area so payoff line and captions never fight.
   const holdP = clamp01((t - (s.hold ?? 4200)) / 1200);
   if (holdP > 0) {
     ctx.save();
@@ -474,7 +495,7 @@ export function signatureCurveScene(g: SceneCtx): void {
     setFont(ctx, 34, 600, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.inkSoft;
     ctx.textAlign = 'center';
-    ctx.fillText('It isn’t a scare number. It’s arithmetic.', W / 2, H * 0.94);
+    ctx.fillText('It isn’t a scare number. It’s arithmetic.', W / 2, H * 0.72);
     ctx.textAlign = 'left';
     ctx.restore();
   }
@@ -486,7 +507,14 @@ export function benchmarkBarScene(g: SceneCtx): void {
   paintStage(ctx, W, g.H, t, {});
   panelTitle(ctx, 'Before you buy complexity, beat this benchmark', W * 0.10, 250, W * 0.8, t / 2400, { kickerText: 'The floor' });
   const x = W * 0.10, w = W * 0.62;
-  barRow(ctx, { x, y: 420, w, h: 130, label: 'Plain index ETF, held for decades', value: 0.3, maxV: 2.0, p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'gold', valueText: '≈ 0.3%/yr', sub: 'roughly the tax on its dividends' });
+  // D12: ruler ticks turn the 2.0-max track into a readable scale, so the
+  // honestly-small 0.3% bar reads as a measured floor, not a rendering error.
+  barRow(ctx, {
+    x, y: 420, w, h: 130, label: 'Plain index ETF, held for decades', value: 0.3, maxV: 2.0,
+    p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'gold', valueText: '≈ 0.3%/yr',
+    sub: 'roughly the tax on its dividends', scaleTicks: true,
+    tickFormat: (v) => `${Math.round(v * 10) / 10}%`,
+  });
   // competing pitches fade below the line
   const compA = clamp01((t - 1600) / 600);
   if (compA > 0) {

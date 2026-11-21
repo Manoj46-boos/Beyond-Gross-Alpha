@@ -227,6 +227,8 @@ export interface BarRowOpts {
   tag?: string;
   landT?: number;        // impact time for micro-shake + ring
   valueSize?: number;
+  scaleTicks?: boolean;              // ruler ticks along the track (D12)
+  tickFormat?: (v: number) => string;
 }
 export function barRow(ctx: CanvasRenderingContext2D, o: BarRowOpts): number {
   const { x, y, w, h, label, value, maxV, p } = o;
@@ -234,16 +236,45 @@ export function barRow(ctx: CanvasRenderingContext2D, o: BarRowOpts): number {
   const tone = o.tone ?? 'gold';
   const col = TONE_HEX[tone];
   const deep = { gold: PALETTE.goldDeep, up: PALETTE.upDeep, down: PALETTE.downDeep, platinum: '#39435C', steel: '#2E4468' }[tone]!;
-  // label
+  // label (with the sub-label folded under it — outside the track entirely, D9)
+  const subText = o.sub ?? '';
+  setFont(ctx, 30, 700, FONT_UI);
+  let labelW = Math.max(ctx.measureText(label).width + 26, o.tag ? 0 : 0);
+  if (subText) {
+    setFont(ctx, 20, 600, FONT_UI);
+    let sub = subText;
+    const maxSubW = Math.max(160, Math.min(w * 0.40, 430));
+    while (ctx.measureText(sub).width > maxSubW && sub.length > 8) sub = sub.slice(0, -5) + '…';
+    labelW = Math.max(labelW, ctx.measureText(sub).width + 26);
+    setFont(ctx, 20, 600, FONT_UI);
+    ctx.fillStyle = PALETTE.inkFaint;
+    ctx.fillText(sub, x, y + h * 0.5 + 40);
+  }
   setFont(ctx, 30, 700, FONT_UI);
   ctx.fillStyle = PALETTE.inkSoft;
-  ctx.fillText(label, x, y + h * 0.5 + 10);
-  const labelW = Math.max(ctx.measureText(label).width + 26, o.tag ? 0 : 0);
+  ctx.fillText(label, x, y + h * 0.5 + (subText ? 4 : 10));
   // track
   const bx = x + labelW, bw = w - labelW;
   roundRect(ctx, bx, y + h * 0.18, bw, h * 0.64, 8);
   ctx.fillStyle = 'rgba(255,255,255,0.04)';
   ctx.fill();
+  if (o.scaleTicks) {
+    // ruler ticks so a short bar reads as a scale, not a rendering error (D12)
+    for (let i = 0; i <= 4; i++) {
+      const tx = bx + (bw * i) / 4;
+      ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(tx, y + h * 0.18 - 7);
+      ctx.lineTo(tx, y + h * 0.82 + 7);
+      ctx.stroke();
+      setFont(ctx, 16, 600, FONT_UI);
+      ctx.fillStyle = 'rgba(190,200,220,0.5)';
+      ctx.textAlign = 'center';
+      ctx.fillText(o.tickFormat ? o.tickFormat((maxV * i) / 4) : `${Math.round((maxV * i) / 4)}`, tx, y + h * 0.82 + 26);
+      ctx.textAlign = 'left';
+    }
+  }
   // fill
   const fw = bw * (value / maxV) * grow;
   if (fw > 4) {
@@ -258,20 +289,19 @@ export function barRow(ctx: CanvasRenderingContext2D, o: BarRowOpts): number {
     ctx.fillStyle = rgba('#FFF3D6', 0.9);
     ctx.fill();
   }
-  // value numeral — right-aligned at the END of the track (never collides
-  // with the bar fill or side annotations)
+  // value numeral (D9): the old pass right-aligned it at the END of the track,
+  // so any engineered-big value printed white-on-its-own-fill. Premium rule:
+  // INSIDE the fill near the cap when the fill reaches it (dark text on the
+  // bright tip), otherwise just past the moving tip on the dark track.
   const vText = o.valueText ?? `${Math.round(value * 100) / 100}`;
   setFont(ctx, o.valueSize ?? 38, 800, FONT_DISPLAY);
-  ctx.textAlign = 'right';
-  ctx.fillStyle = PALETTE.ink;
-  ctx.fillText(vText, bx + bw, y + h * 0.5 + 12);
-  ctx.textAlign = 'left';
-  if (o.sub) {
-    setFont(ctx, 21, 600, FONT_UI);
-    ctx.fillStyle = PALETTE.inkFaint;
-    ctx.textAlign = 'right';
-    ctx.fillText(o.sub, bx + bw, y + h * 0.5 + 42);
-    ctx.textAlign = 'left';
+  const vw = ctx.measureText(vText).width;
+  if (fw > 4 && vw + 30 < fw) {
+    ctx.fillStyle = 'rgba(10,14,26,0.92)';
+    ctx.fillText(vText, bx + fw - vw - 18, y + h * 0.5 + 12);
+  } else {
+    ctx.fillStyle = PALETTE.ink;
+    ctx.fillText(vText, Math.min(bx + fw + 16, bx + bw - vw - 8), y + h * 0.5 + 12);
   }
   if (o.tag) {
     chip(ctx, o.tag, bx, y - 44, { size: 22, gold: tone === 'gold' });
@@ -484,11 +514,39 @@ export function statCard(ctx: CanvasRenderingContext2D, o: StatCardOpts): void {
   ctx.globalAlpha = clamp01(o.p * 3);
   glassCard(ctx, o.x + (1 - ent) * 26, o.y, o.w, o.h, { r: 22, goldEdge: o.goldEdge ?? o.tone === 'gold', border: o.tone === 'down' ? rgba(PALETTE.down, 0.4) : o.tone === 'up' ? rgba(PALETTE.up, 0.4) : undefined });
   const ix = o.x + 44, iy = o.y + 66;
-  setFont(ctx, 24, 700, FONT_UI);
-  try { (ctx as any).letterSpacing = '4px'; } catch { /* noop */ }
-  ctx.fillStyle = PALETTE.inkFaint;
-  ctx.fillText(o.label.toUpperCase(), ix, iy);
-  try { (ctx as any).letterSpacing = '0px'; } catch { /* noop */ }
+  // label — width-fitted (D10): the old pass printed a fixed 24px letterspaced
+  // label that ran past the card edge. Fit by shrinking type + tracking, then
+  // wrap to two lines if it still cannot fit.
+  const maxLabelW = o.w - 88;
+  const label = o.label.toUpperCase();
+  let labSize = 24, labTrack = 4, labLines = [label];
+  const measure = (txt: string, size: number, track: number) => {
+    setFont(ctx, size, 700, FONT_UI);
+    try { (ctx as any).letterSpacing = `${track}px`; } catch { /* noop */ }
+    const w = ctx.measureText(txt).width;
+    try { (ctx as any).letterSpacing = '0px'; } catch { /* noop */ }
+    return w;
+  };
+  while (labSize > 14 && measure(label, labSize, labTrack) > maxLabelW) {
+    labSize -= 1;
+    labTrack = Math.max(1.5, labSize * 0.16);
+  }
+  if (measure(label, labSize, labTrack) > maxLabelW) {
+    // wrap on the nearest space past the middle
+    const mid = Math.floor(label.length / 2);
+    let cut = label.indexOf(' ', mid);
+    if (cut < 0) cut = label.lastIndexOf(' ');
+    if (cut > 0) labLines = [label.slice(0, cut), label.slice(cut + 1)];
+  }
+  for (let li = 0; li < labLines.length; li++) {
+    setFont(ctx, labSize, 700, FONT_UI);
+    try { (ctx as any).letterSpacing = `${labTrack}px`; } catch { /* noop */ }
+    ctx.fillStyle = PALETTE.inkFaint;
+    ctx.fillText(labLines[li], ix, iy + li * (labSize + 8));
+    try { (ctx as any).letterSpacing = '0px'; } catch { /* noop */ }
+  }
+  const labelRows = labLines.length;
+  const labDrop = (labelRows - 1) * (labSize + 8);
   const countP = clamp01((o.p - 0.18) / 0.5);
   const bigSize = o.bigSize ?? 120;
   // count-up for numeric-looking values
@@ -498,15 +556,15 @@ export function statCard(ctx: CanvasRenderingContext2D, o: StatCardOpts): void {
     const dec = (m[1].split('.')[1] || '').length;
     const cur = target * countP;
     const shown = `${m[0][0] === '$' ? '$' : ''}${cur.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec })}${m[2]}`;
-    goldFillText(ctx, shown, ix, iy + bigSize * 0.86, bigSize, 800);
+    goldFillText(ctx, shown, ix, iy + labDrop + bigSize * 0.86, bigSize, 800);
   } else {
-    goldFillText(ctx, o.big, ix, iy + bigSize * 0.86, bigSize, 800);
+    goldFillText(ctx, o.big, ix, iy + labDrop + bigSize * 0.86, bigSize, 800);
   }
   if (o.sub) {
     setFont(ctx, 26, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkSoft;
     wrapText(ctx, o.sub, o.w - 88, 26, 600, FONT_UI).forEach((ln, i) => {
-      ctx.fillText(ln, ix, iy + bigSize * 1.12 + 14 + i * 34);
+      ctx.fillText(ln, ix, iy + labDrop + bigSize * 1.12 + 14 + i * 34);
     });
   }
   if (o.tag) chip(ctx, o.tag, ix, o.y + o.h - 58, { size: 24, gold: o.tone === 'gold' });

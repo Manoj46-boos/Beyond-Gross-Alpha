@@ -322,41 +322,41 @@ export const fadeOut = (t: number, end: number, dur = 420): number => clamp01((e
 /** deterministic seed per scene/beat */
 export const seedOf = (key: string, extra = 0): number => Math.floor(hash01(key.length * 131 + extra * 17 + (key.charCodeAt(0) || 7)) * 1e6);
 
-/** the brand α glyph, drawn as strokes (used in watermark/brand moments) */
-export function drawAlphaGlyph(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, color = PALETTE.gold, lineWidth = 7, grow = 1): void {
-  // stylised alpha: a loop + right leg, single stroke path
+/** the brand α glyph — D16: ONE vector, defined once, reused everywhere
+ *  (watermark, end screen, brand moments). Two-stroke calligraphic
+ *  construction: (1) the loop, a nearly-closed circle with its opening at the
+ *  upper right; (2) the tail, an S-curve diving through the loop's right side
+ *  and kicking out to the baseline. Reads as α at every size — the old
+ *  per-site arc approximations read as 'Q'. */
+export function drawAlphaGlyph(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, color: string = PALETTE.gold, lineWidth = 7, grow = 1): void {
   ctx.save();
   ctx.strokeStyle = color;
   ctx.lineWidth = lineWidth;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  const w = s * 1.0, h = s * 1.16;
-  // loop: ellipse-ish from top-left through bottom loop
-  const cx = x + w * 0.42;
-  const cy = y - h * 0.36;
-  const steps = 40;
-  const total = Math.floor(steps * clamp01(grow));
+  const g = clamp01(grow);
+  const cx = x + s * 0.36;       // loop centre
+  const cy = y - s * 0.44;       // loop centre above the baseline
+  const rl = s * 0.335;          // loop radius
+  // stroke 1 — the loop (sweep grows with `grow` up to 78% of the glyph)
+  const loopSweep = 2 * Math.PI * 0.86;
   ctx.beginPath();
-  for (let i = 0; i <= total; i++) {
-    const p = i / steps;
-    // parametric alpha curve: loop (p 0..0.72) then right leg (0.72..1)
-    let px: number, py: number;
-    if (p < 0.72) {
-      const q = p / 0.72;
-      const a = Math.PI * 1.9 + q * Math.PI * 2.6; // sweep around loop
-      const rx = w * 0.34 * (1 - 0.18 * q);
-      const ry = h * 0.36 * (1 - 0.30 * Math.sin(q * Math.PI));
-      px = cx + Math.cos(a) * rx;
-      py = cy - Math.sin(a) * ry * 1.15;
-    } else {
-      const q = (p - 0.72) / 0.28;
-      const sx = x + w * 0.30;
-      const sy = y - h * 0.16;
-      px = sx + (w * 0.72 - 0) * q;
-      py = sy + h * 0.16 * q * q * 0.4 + h * 0.02;
-    }
-    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
-  }
+  ctx.ellipse(cx, cy, rl, rl * 0.94, 0, -Math.PI * 0.62, -Math.PI * 0.62 + loopSweep * Math.min(1, g / 0.78));
   ctx.stroke();
+  // stroke 2 — the tail (appears in the last 22% of the draw-on)
+  if (g > 0.78) {
+    const q = clamp01((g - 0.78) / 0.22);
+    ctx.beginPath();
+    ctx.moveTo(cx + rl * 1.02, cy - rl * 1.28);
+    ctx.quadraticCurveTo(
+      cx + rl * (1.02 - 0.97 * q), cy - rl * (1.28 - 1.55 * q),
+      cx + rl * (0.05 + 0.42 * q), cy - rl * (0.27 - 1.05 * q)
+    );
+    ctx.quadraticCurveTo(
+      cx + rl * (0.47 + 0.55 * q), cy + rl * (0.78 + 0.35 * q),
+      cx + rl * (1.02 + 1.16 * q), cy + rl * (1.13 - 0.05 * q)
+    );
+    ctx.stroke();
+  }
   ctx.restore();
 }

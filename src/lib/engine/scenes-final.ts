@@ -4,7 +4,7 @@
  */
 
 import { SceneCtx } from './scene-context';
-import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, kicker, chip, diamond, goldRule } from './theme';
+import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, kicker, chip, diamond, goldRule, drawAlphaGlyph } from './theme';
 import { clamp01, easeOutCubic, springTo, hash01 } from './easing';
 import { goldDust, impactRing, softBloom, godRays, bokehField, floatY } from './fx';
 import { panelTitle } from './charts';
@@ -141,26 +141,27 @@ export function fiveQuestionsScene(g: SceneCtx): void {
   goldFillText(ctx, 'Ask whoever manages your money.', W * 0.10, 250, 62, 800, FONT_DISPLAY);
   ctx.restore();
   QUESTIONS.forEach((q, i) => {
-    // each question highlights as spoken (evenly staged over the beat)
+    // D17: each question is hot while ITS sentence plays — keyed to the real
+    // sentence index instead of an evenly-staged fake window
     const ent = clamp01((t - 700 - i * 800) / 500);
     if (ent <= 0) return;
-    const hot = clamp01((t - 700 - i * 800 - 300) / 500) * clamp01(((g.d - holdStart(t, i, g)) / 600));
+    const hot = g.sentenceIdx != null && i === g.sentenceIdx;
     ctx.save();
     ctx.globalAlpha = ent;
     const x = W * 0.10, y = 320 + i * 110, w = W * 0.80, h = 92;
     glassCard(ctx, x, y, w, h, {
       r: 14,
       shadow: false,
-      fill: hot > 0.4 ? rgba(PALETTE.gold, 0.10) : 'rgba(255,255,255,0.045)',
-      border: hot > 0.4 ? rgba(PALETTE.gold, 0.55) : undefined,
+      fill: hot ? rgba(PALETTE.gold, 0.10) : 'rgba(255,255,255,0.045)',
+      border: hot ? rgba(PALETTE.gold, 0.55) : undefined,
     });
     // number
-    diamond(ctx, x + 52, y + h / 2, 13, hot > 0.4 ? PALETTE.goldBright : rgba(PALETTE.inkMuted, 0.8));
+    diamond(ctx, x + 52, y + h / 2, 13, hot ? PALETTE.goldBright : rgba(PALETTE.inkMuted, 0.8));
     setFont(ctx, 28, 800, FONT_UI);
-    ctx.fillStyle = hot > 0.4 ? PALETTE.goldBright : PALETTE.inkFaint;
+    ctx.fillStyle = hot ? PALETTE.goldBright : PALETTE.inkFaint;
     ctx.fillText(String(i + 1), x + 88, y + h / 2 + 10);
     setFont(ctx, 27, 600, FONT_UI);
-    ctx.fillStyle = hot > 0.4 ? PALETTE.ink : PALETTE.inkSoft;
+    ctx.fillStyle = hot ? PALETTE.ink : PALETTE.inkSoft;
     const maxW = w - 260;
     let txt = q;
     setFont(ctx, 27, 600, FONT_UI);
@@ -181,11 +182,6 @@ export function fiveQuestionsScene(g: SceneCtx): void {
     ctx.textAlign = 'left';
     ctx.restore();
   }
-}
-function holdStart(t: number, i: number, g: SceneCtx): number {
-  // hot window end: staged so each question is hot for ~2s during speech
-  void t; void i;
-  return g.d * 0.15 + i * 1400;
 }
 
 // ── end screen (YouTube-safe) ────────────────────────────────────────────────
@@ -226,14 +222,8 @@ export function endScreenScene(g: SceneCtx): void {
   ctx.fillText(channelName.toUpperCase(), W * 0.78, H * 0.30);
   try { (ctx as any).letterSpacing = '0px'; } catch { /* noop */ }
   goldRule(ctx, W * 0.78, H * 0.30 + 26, 420, clamp01((t - 700) / 600));
-  // the brand α
-  ctx.strokeStyle = PALETTE.gold;
-  ctx.lineWidth = 8;
-  ctx.beginPath();
-  ctx.arc(W * 0.78, H * 0.46, 46, Math.PI * 0.65, Math.PI * 2.3);
-  ctx.moveTo(W * 0.78 - 34, H * 0.46 + 14);
-  ctx.lineTo(W * 0.78 + 38, H * 0.46 + 18);
-  ctx.stroke();
+  // the brand α — the ONE shared brand vector, drawn on (D16)
+  drawAlphaGlyph(ctx, W * 0.78 - 72, H * 0.46 + 52, 104, PALETTE.gold, 8, clamp01((t - 900) / 800));
   ctx.textAlign = 'left';
   ctx.restore();
 }

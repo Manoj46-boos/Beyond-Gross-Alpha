@@ -27,6 +27,11 @@ export interface SceneCtx {
   sentenceId?: string;
   prevSentenceId?: string;
   sentenceT?: number;
+  /** D17 cadence machinery — 0-based index of the playing sentence within the
+   *  beat, and the beat's total sentence count. Long-hold scenes key their
+   *  per-sentence reveals off this. */
+  sentenceIdx?: number;
+  sentenceCount?: number;
   channelName: string;
   nextVideoTitle: string;
   chapterIdx: number;

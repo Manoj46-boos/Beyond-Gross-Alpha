@@ -88,8 +88,13 @@ export function hostScene(g: SceneCtx): void {
     rAU: pose.rAU - posePrev.rAU,
   };
 
-  // ── the room (with the horizon dimmed behind the figure) ──
-  paintStage(ctx, W, H, t, { tone: 'neutral', horizonFade: { x: px, r: 320 } });
+  // ── the room (with the horizon dimmed behind the figure and a key-light
+  // pool so he separates from the background — D2 + D13)
+  paintStage(ctx, W, H, t, {
+    tone: 'neutral',
+    horizonFade: { x: px, r: 320 },
+    keyLight: { x: px, y: groundY - 330, r: 520 },
+  });
   godRays(ctx, W, H, t, { alpha: 0.4, x: W * 0.80 });
   bokehField(ctx, W, H, t, 4, true, 0.8);
   goldDust(ctx, W, H, t, 11, 0.8);

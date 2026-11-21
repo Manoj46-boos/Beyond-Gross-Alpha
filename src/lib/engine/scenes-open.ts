@@ -8,7 +8,7 @@ import { SceneCtx } from './scene-context';
 import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, goldRule, chip, fitText } from './theme';
 import { clamp01, easeOutCubic, easeInOutCubic, springTo, hash01, fmtMoney } from './easing';
 import { goldDust, impactRing, softBloom, microShake, spinToken, floatY } from './fx';
-import { drawStatement } from './textfx';
+import { drawStatement, statementAnchor } from './textfx';
 import { panelTitle, barRow } from './charts';
 import { paintStage } from './stage';
 
@@ -152,10 +152,27 @@ export function gapBarsScene(g: SceneCtx): void {
     kickerText: 'BlackRock 2026 · advisor survey',
   });
   const x = 240, w = W - 700, y = 400, rh = 130;
+  // D17 cadence: the narration walks the layout — sentence 0-1 lands the two
+  // bars, sentence 2 draws the gap bracket, later sentences keep a live gold
+  // edge on whichever bar is being talked about. No more 21s dead hold.
+  const idx = g.sentenceIdx ?? 0;
+  const fresh = g.sentenceT != null ? clamp01(1 - g.sentenceT / 900) : 0;
+  const hotRow = idx <= 1 ? 0 : idx <= 3 ? 1 : (idx % 2 === 0 ? 0 : 1);
   barRow(ctx, { x, y, w, h: rh, label: 'Asked for tax guidance', value: 92, maxV: 100, p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'gold', valueText: '92%', tag: 'constantly asked' });
   barRow(ctx, { x, y: y + rh + 70, w, h: rh, label: 'After-tax drives decisions', value: 17, maxV: 100, p: clamp01((t - 1300) / 900), t, landT: 2250, tone: 'down', valueText: '17%' });
-  // the gap annotation
-  const gp = clamp01((t - 2400) / 700);
+  // live gold edge on the bar under discussion
+  if (idx >= 2) {
+    const hy = hotRow === 0 ? y : y + rh + 70;
+    ctx.save();
+    ctx.globalAlpha = 0.35 + 0.45 * fresh;
+    ctx.strokeStyle = PALETTE.goldBright;
+    ctx.lineWidth = 2.2;
+    roundRect(ctx, x - 14, hy - 12, w + 28, rh + 24, 14);
+    ctx.stroke();
+    ctx.restore();
+  }
+  // the gap annotation — enters when the narration reaches it
+  const gp = g.sentenceIdx != null ? clamp01((g.sentenceIdx - 1.6) / 0.8) : clamp01((t - 2400) / 700);
   if (gp > 0) {
     ctx.save();
     ctx.globalAlpha = gp;
@@ -190,12 +207,13 @@ export function titleCardScene(g: SceneCtx): void {
 // ── full-frame statement (serif) ─────────────────────────────────────────────
 export function statementScene(g: SceneCtx): void {
   const { ctx, W, H, t, s } = g;
-  drawStatement(ctx, W, H, t, s.lines ?? ['—'], { accentWords: s.accent ?? [], sub: s.sub, ghost: s.ghost, size: s.size });
+  drawStatement(ctx, W, H, t, s.lines ?? ['—'], { accentWords: s.accent ?? [], sub: s.sub, ghost: s.ghost, size: s.size, chapterIdx: g.chapterIdx });
 }
 
 // ── turn card ("Research, not vibes.") ──────────────────────────────────────
 export function turnCardScene(g: SceneCtx): void {
   const { ctx, W, H, t, s } = g;
+  statementAnchor(ctx, W, H, g.chapterIdx, t, s.ghost);
   const lines = s.lines ?? ['—'];
   ctx.save();
   ctx.textAlign = 'center';
@@ -226,6 +244,7 @@ export function turnCardScene(g: SceneCtx): void {
 // ── quiet beat (held silence with a whisper line) ────────────────────────────
 export function quietBeatScene(g: SceneCtx): void {
   const { ctx, W, H, t, s } = g;
+  statementAnchor(ctx, W, H, g.chapterIdx, t, s.ghost);
   const a = clamp01(t / 700) * clamp01((g.d - t) / 500);
   ctx.save();
   ctx.globalAlpha = a * 0.85;
@@ -240,12 +259,13 @@ export function quietBeatScene(g: SceneCtx): void {
 // ── policy risk statement (Build on it. Don't worship it.) ───────────────────
 export function policyRiskScene(g: SceneCtx): void {
   const { ctx, W, H, t, s } = g;
-  drawStatement(ctx, W, H, t, s.lines ?? ['—'], { accentWords: s.accent ?? [], size: 104, sub: '$48B is a policy choice, not a law of physics.' });
+  drawStatement(ctx, W, H, t, s.lines ?? ['—'], { accentWords: s.accent ?? [], size: 104, sub: '$48B is a policy choice, not a law of physics.', chapterIdx: g.chapterIdx });
 }
 
 // ── the final lines (earned vs kept) ─────────────────────────────────────────
 export function finalLinesScene(g: SceneCtx): void {
   const { ctx, W, H, t } = g;
+  statementAnchor(ctx, W, H, g.chapterIdx, t);
   // near-silent room: dimmer stage, dust only
   ctx.save();
   ctx.fillStyle = rgba('#05080F', 0.25);

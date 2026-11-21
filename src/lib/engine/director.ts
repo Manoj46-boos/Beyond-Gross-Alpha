@@ -108,18 +108,26 @@ export interface CamResult { dx: number; dy: number; scale: number; }
 function cameraFor(group: Group, gt: number, d: number, chapterIdx: number): CamResult {
   const p = clamp01(gt / Math.max(1, d));
   const type = SCRIPT[chapterIdx]?.beats[group.beatIdx]?.scene?.type ?? 'host';
+  const key = group.sceneKey;
   // personality by family
   let zBase = 1.0, zTarget = 0.045;
   if (type === 'statement' || type === 'finalLines' || type === 'turnCard' || type === 'policyRisk') { zBase = 0.97; zTarget = 0.06; }
   else if (type === 'coldOpen') { zBase = 1.02; zTarget = 0.07; }
   else if (type === 'host') { zBase = 1.0; zTarget = 0.035; }
   else if (type === 'secCase' || type === 'elmVerdict') { zBase = 1.0; zTarget = 0.028; }
+  // D14 — depth-aware camera: layered scenes (the figure, the room, cards)
+  // keep the full personality; flat data layouts on the fixed stage get a
+  // third of the drift and half the whip, so two frames of the same layout
+  // align and text edges stop softening in and out of the vignette.
+  const layered = key === 'host' || key === 'coldOpen' || key === 'endScreen' || key === 'quietBeat' || key === 'titleCard' || key === 'chapterCard';
+  if (!layered) zTarget = Math.min(zTarget, 0.018);
   const scale = zBase + zTarget * easeInOutSine(p);
-  const driftK = type.startsWith('statement') || type === 'finalLines' ? 0.12 : type === 'coldOpen' ? 0.35 : 0.6;
+  const driftBase = type.startsWith('statement') || type === 'finalLines' ? 0.12 : type === 'coldOpen' ? 0.35 : 0.6;
+  const driftK = layered ? driftBase : Math.min(driftBase, 0.2);
   const dx = drift(gt, 1) * 46 * driftK;
   const dy = drift(gt, 7) * 26 * driftK;
-  // entry whip (gentle)
-  const whip = gt < 340 ? (1 - easeOutCubic(gt / 340)) * 26 : 0;
+  // entry whip (gentle; halved on flat layouts)
+  const whip = gt < 340 ? (1 - easeOutCubic(gt / 340)) * (layered ? 26 : 12) : 0;
   const dir = (group.beatIdx % 2 === 0 ? 1 : -1);
   return { dx: dx + whip * dir, dy, scale: Math.min(1.10, scale) };
 }
@@ -179,6 +187,7 @@ export function drawFrame(
     let prevSentenceId: string | undefined;
     let sentenceT = 0;
     let prevStart = -1;
+    let startedCount = 0;
     for (const sen of beat.sentences) {
       const local = sen.startMs - beat.startMs;
       if (bt >= local) {
@@ -187,6 +196,7 @@ export function drawFrame(
         if (sentenceId !== undefined) prevStart = local;
         sentenceId = sen.lineId;
         sentenceT = bt - local;
+        startedCount++;
       }
       for (const w of sen.words) {
         const wt = w.t - beat.startMs;
@@ -197,6 +207,11 @@ export function drawFrame(
       }
     }
     void prevStart;
+    // D17 — the cadence machinery: which sentence of the beat is playing
+    // (0-based) and how many the beat has. Scene drawers key their per-
+    // sentence reveals off this instead of holding one layout for 20-40s.
+    const sentenceIdx = Math.max(0, startedCount - 1);
+    const sentenceCount = beat.sentences.length;
 
     const g: SceneCtx = {
       ctx, W, H,
@@ -213,6 +228,8 @@ export function drawFrame(
       sentenceId,
       prevSentenceId,
       sentenceT,
+      sentenceIdx,
+      sentenceCount,
       channelName: opts.channelName,
       nextVideoTitle: opts.nextVideoTitle,
       chapterIdx,
@@ -255,7 +272,7 @@ export function drawFrame(
 
   // captions (suppressed when the scene IS the on-screen text — no dupe)
   const textScenes = ['statement', 'finalLines', 'turnCard', 'policyRisk', 'quietBeat', 'titleCard'];
-  const capStyle: CaptionStyle = { mode: beat && textScenes.includes(type) ? 'off' : opts.captions, maxRows: 2, maxWords: 8 };
+  const capStyle: CaptionStyle = { mode: beat && textScenes.includes(type) ? 'off' : opts.captions, maxRows: 2, maxWords: 10 };
   drawCaptions(ctx, W, H, t, tl.captionLines, capStyle);
 
   // source chips (bottom-left, paper tick sound already scheduled in mix)

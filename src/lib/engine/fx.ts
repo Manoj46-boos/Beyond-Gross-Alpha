@@ -176,21 +176,26 @@ export function dofPass(
     const bctx = dofBuffer.getContext('2d');
     if (!bctx) return;
     bctx.clearRect(0, 0, bw, bh);
+    // real pyramid blur: the FULL frame downscaled (D8 — the old pass stamped
+    // the top half stretched ×2 over the whole buffer, which re-projected the
+    // kicker/headline as giant phantom words late in every host scene)
     bctx.drawImage(ctx.canvas, 0, 0, bw, bh);
-    bctx.drawImage(ctx.canvas, 0, 0, bw, bh * 0.5, 0, 0, bw, bh);
     bctx.globalCompositeOperation = 'destination-in';
-    bctx.drawImage(ctx.canvas, 0, 0, bw, bh);
+    // feathered subject mask — the blur dissolves into nothing across the
+    // subject disc instead of ending on a hard circular seam
+    if (subject) {
+      const sx = subject.x / 2, sy = subject.y / 2, sr = subject.r / 2;
+      const m = bctx.createRadialGradient(sx, sy, Math.max(4, sr * 0.40), sx, sy, sr);
+      m.addColorStop(0, 'rgba(0,0,0,0)');
+      m.addColorStop(0.58, 'rgba(0,0,0,0)');
+      m.addColorStop(1, 'rgba(0,0,0,1)');
+      bctx.fillStyle = m;
+      bctx.fillRect(0, 0, bw, bh);
+    }
     bctx.globalCompositeOperation = 'source-over';
 
     ctx.save();
-    ctx.globalAlpha = clamp01(strength) * 0.9;
-    // clip out the subject disc
-    if (subject) {
-      ctx.beginPath();
-      ctx.rect(0, 0, W, H);
-      ctx.arc(subject.x, subject.y, subject.r, 0, Math.PI * 2, true);
-      ctx.clip('evenodd');
-    }
+    ctx.globalAlpha = clamp01(strength) * 0.55;
     ctx.drawImage(dofBuffer, 0, 0, W, H);
     ctx.restore();
   } catch { /* headless fallbacks: skip DOF */ }
