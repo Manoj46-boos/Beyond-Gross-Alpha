@@ -8,7 +8,7 @@
 export type ThumbnailVariant = 0 | 1 | 2 | 3;
 
 import { PALETTE, rgba, setFont, roundRect, glassCard, goldFillText, FONT_DISPLAY, FONT_UI } from './theme';
-import { poseAt, applyMood, drawStickman } from './stickman';
+import { poseAt, applyMood, drawStickman, companionArm } from './stickman';
 
 export function drawThumbnail(ctx: CanvasRenderingContext2D, W: number, H: number, variant: ThumbnailVariant, channelName: string): void {
   // navy room
@@ -85,32 +85,39 @@ export function drawThumbnail(ctx: CanvasRenderingContext2D, W: number, H: numbe
     ctx.fillStyle = PALETTE.inkSoft;
     ctx.fillText('The line your advisor never shows you.', W * 0.12, H * 0.85);
   } else if (variant === 3) {
-    // T4 — AUDIT R-05: the film's only ownable visual asset — the Principal —
-    // presents the $5.1M gap number. Face + one number, not typography alone.
-    // left column: the gap number
-    setFont(ctx, 30, 700, FONT_UI);
-    try { (ctx as any).letterSpacing = '6px'; } catch { /* noop */ }
-    ctx.fillStyle = PALETTE.goldBright;
-    ctx.fillText('THE FEE LINE, COMPOUNDING', W * 0.09, H * 0.24);
-    try { (ctx as any).letterSpacing = '0px'; } catch { /* noop */ }
-    goldFillText(ctx, '$5,100,000', W * 0.09, H * 0.48, 118, 900, FONT_DISPLAY);
-    setFont(ctx, 40, 700, FONT_UI);
-    ctx.fillStyle = PALETTE.ink;
-    ctx.fillText('$13.7M − $8.6M — gone in 25 years.', W * 0.09, H * 0.60);
-    setFont(ctx, 30, 600, FONT_UI);
-    ctx.fillStyle = PALETTE.inkSoft;
-    ctx.fillText('It never left through the front door.', W * 0.09, H * 0.68);
-    // gold hairline beneath the copy, so the type sits on the system
+    // T4 — AUDIT §3.3: the asset we OWN — the Principal POINTING at the
+    // $13.7M vs $8.6M split (the Phase-1 pointer makes the pose read), face
+    // at the upper-left third, one number gold, one red, and "THE $5.1M
+    // LINE" as the only text.
+    setFont(ctx, 104, 900, FONT_DISPLAY);
+    ctx.textAlign = 'left';
+    goldFillText(ctx, '$13.7M', W * 0.46, H * 0.28, 104, 900, FONT_DISPLAY);
+    const rg = ctx.createLinearGradient(0, H * 0.36, 0, H * 0.50);
+    rg.addColorStop(0, '#F08A8D');
+    rg.addColorStop(1, PALETTE.down);
+    setFont(ctx, 104, 900, FONT_DISPLAY);
+    ctx.fillStyle = rg;
+    ctx.fillText('$8.6M', W * 0.46, H * 0.48);
+    // gold hairline between the two outcomes
     ctx.strokeStyle = rgba(PALETTE.gold, 0.55);
-    ctx.lineWidth = 2.4;
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(W * 0.09, H * 0.735);
-    ctx.lineTo(W * 0.52, H * 0.735);
+    ctx.moveTo(W * 0.46, H * 0.335);
+    ctx.lineTo(W * 0.94, H * 0.335);
     ctx.stroke();
-    // the Principal, right column — presenting pose on the same floor
-    const pose = poseAt('thumb-gap', 620, 620, [], [], undefined, 'present');
+    // the only text
+    setFont(ctx, 46, 800, FONT_UI);
+    try { (ctx as any).letterSpacing = '10px'; } catch { /* noop */ }
+    ctx.fillStyle = PALETTE.goldBright;
+    ctx.fillText('THE $5.1M LINE', W * 0.46, H * 0.63);
+    try { (ctx as any).letterSpacing = '0px'; } catch { /* noop */ }
+    ctx.textAlign = 'left';
+    // the Principal — face at the upper-left third, pointing at the split
+    const pose = poseAt('thumb-split', 620, 620, [], [], undefined, 'present');
     applyMood(pose, 'reveal', 620, 3);
-    drawStickman(ctx, W * 0.78, H * 0.905, 1.28, 620, { pose, alpha: 1, faceScale: 1.5, rimBoost: 0.06 }, 7);
+    const px = W * 0.24, groundY = H * 0.92, rigScale = 1.42;
+    companionArm(pose, px, groundY, rigScale, { x: W * 0.5, y: H * 0.3 }, 'point');
+    drawStickman(ctx, px, groundY, rigScale, 620, { pose, alpha: 1, faceScale: 1.5, rimBoost: 0.06 }, 7);
   } else {
     // T3 — 92% vs 17% THE GAP
     setFont(ctx, 140, 900, FONT_DISPLAY);

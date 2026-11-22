@@ -7,7 +7,7 @@
 import { CAPTION_SAFE_TOP, SceneCtx } from './scene-context';
 import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, kicker, chip, hexLerp, dimRect } from './theme';
 import { clamp01, easeOutCubic, easeInOutCubic, springTo, hash01, fmtComma } from './easing';
-import { goldDust, impactRing, softBloom, glowLine, spinToken, floatY, microShake, focusPing } from './fx';
+import { goldDust, impactRing, softBloom, glowLine, spinToken, floatY, microShake, focusPing, impactPuff } from './fx';
 import { panelTitle, waterfall, donut, column, dotGrid, barRow, statCard, lineChart } from './charts';
 import { paintStage } from './stage';
 import { dataSceneFigure } from './scenes-figure';
@@ -72,14 +72,17 @@ export function trapTileScene(g: SceneCtx): void {
   const { ctx, W, H, t, s } = g;
   paintStage(ctx, W, H, t, {});
   panelTitle(ctx, 'Two traps the pros still step in', W * 0.10, 210, W * 0.8, t / 2400, { kickerText: 'Lever 1 · Traps' });
+  // AUDIT §3.2 — D17 sentence-cadence wiring: sentences 0-1 walk the trap
+  // card, 2+ the verdict — the listening zone lifts, the other recedes.
+  const zi = g.sentenceIdx != null && g.sentenceIdx >= 0 ? (g.sentenceIdx <= 1 ? 0 : 1) : -1;
   const x = W * 0.16, y = 360, w = W * 0.68, h = 330;
   const ent = springTo(0.9, 1, Math.min(700, t), 150, 15);
   ctx.save();
-  ctx.globalAlpha = clamp01(t / 300);
+  ctx.globalAlpha = clamp01(t / 300) * (zi === 1 ? 0.6 : 1);
   ctx.translate(x + w / 2, y + h / 2);
   ctx.scale(ent, ent);
   ctx.translate(-w / 2, -h / 2);
-  glassCard(ctx, 0, 0, w, h, { r: 20, border: rgba(PALETTE.down, 0.45) });
+  glassCard(ctx, 0, 0, w, h, { r: 20, alpha: zi === 1 ? 0.6 : 1, border: rgba(PALETTE.down, 0.45) });
   // warning band
   setFont(ctx, 32, 800, FONT_UI);
   try { (ctx as any).letterSpacing = '4px'; } catch { /* noop */ }
@@ -108,9 +111,10 @@ export function trapTileScene(g: SceneCtx): void {
   ctx.restore();
   // verdict
   const va = clamp01((t - 1500) / 500);
+  if (zi === 1) focusPing(ctx, x + w / 2, y + h * 0.62, g.sentenceT, 100);
   if (va > 0) {
     ctx.save();
-    ctx.globalAlpha = va;
+    ctx.globalAlpha = va * (zi === 0 ? 0.55 : 1);
     setFont(ctx, 40, 700, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.ink;
     ctx.textAlign = 'center';
@@ -175,9 +179,18 @@ export function bpsCompareScene(g: SceneCtx): void {
   const { ctx, W, t } = g;
   paintStage(ctx, W, g.H, t, {});
   panelTitle(ctx, 'Real money — but modest, and capped', W * 0.10, 220, W * 0.8, t / 2400, { kickerText: 'Lever 1 · What it’s worth' });
+  // AUDIT §3.2 — D17 sentence-cadence wiring: sentence 1 walks the Vanguard
+  // bar, 2 the Goldman bar, 3+ the capped-note — the listening element lifts,
+  // the others recede.
+  const bi = g.sentenceIdx != null && g.sentenceIdx >= 0 ? g.sentenceIdx : -1;
+  const hotEl = bi < 1 ? -1 : bi === 1 ? 0 : bi === 2 ? 1 : 2;
   const x = W * 0.10, w = W * 0.62;
   barRow(ctx, { x, y: 400, w, h: 120, label: 'Vanguard simulations', value: 30, maxV: 60, p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'up', valueText: 'up to 30 bps/yr' });
+  if (hotEl === 1 || hotEl === 2) dimRect(ctx, x, 348, w, 234);
+  if (hotEl === 0) focusPing(ctx, x + w * 0.52, 460, g.sentenceT, 104);
   barRow(ctx, { x, y: 590, w, h: 120, label: 'Goldman Sachs AM', value: 45, maxV: 60, p: clamp01((t - 1300) / 900), t, landT: 2250, tone: 'gold', valueText: '45+ bps/yr', sub: 'high brackets + strategic allocation' });
+  if (hotEl === 0 || hotEl === 2) dimRect(ctx, x, 538, w, 234);
+  if (hotEl === 1) focusPing(ctx, x + w * 0.78, 650, g.sentenceT, 104);
   const na = clamp01((t - 2300) / 500);
   if (na > 0) {
     ctx.save();
@@ -385,6 +398,11 @@ export function waterfallScene(g: SceneCtx): void {
   ], clamp01(t / 2400), t);
   ctx.restore();
   if (wi >= 4) focusPing(ctx, W * 0.34 + W * 0.40 * (5 / 6), 340, g.sentenceT, 84);
+  // AUDIT §2.4 — each waterfall column LANDS with a gold puff at its base
+  for (let i = 0; i < 3; i++) {
+    const colW2 = (W * 0.40) / 3;
+    impactPuff(ctx, W * 0.34 + colW2 * i + colW2 * 0.62, 300 + 390 - 12, t, Math.round((0.16 * i + 0.3) * 2400), { scale: 1.05 });
+  }
   // side note
   const na = clamp01((t - 2200) / 500);
   if (na > 0) {
@@ -683,6 +701,8 @@ export function secCaseScene(g: SceneCtx): void {
     ctx.textAlign = 'left';
     ctx.restore();
     impactRing(ctx, W * 0.78, H * 0.42, t, 3200, 200, 1.2, PALETTE.down);
+    // AUDIT §2.4 — the stamp SLAMS: gold puff + tightened shadow at contact
+    impactPuff(ctx, W * 0.78, H * 0.42 + 58, t, 3200, { scale: 1.25 });
   }
   // closing line (right column, clear of captions)
   // AUDIT K-07 — the verdict wrapped 560px from x=1344 and ended ~1904, 16px

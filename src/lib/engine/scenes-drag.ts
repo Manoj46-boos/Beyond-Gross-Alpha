@@ -7,7 +7,7 @@
 import { SceneCtx } from './scene-context';
 import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, kicker, chip, hexLerp, dimRect } from './theme';
 import { clamp01, easeOutCubic, springTo, hash01, fmtComma, fmtMoney } from './easing';
-import { goldDust, impactRing, softBloom, glowLine, spinToken, floatY, focusPing } from './fx';
+import { goldDust, impactRing, softBloom, glowLine, spinToken, floatY, focusPing, impactPuff } from './fx';
 import { panelTitle, lineChart, column, statCard, barRow } from './charts';
 import { paintStage } from './stage';
 import { dataSceneFigure } from './scenes-figure';
@@ -233,6 +233,8 @@ export function memoCardScene(g: SceneCtx): void {
     ctx.fillText(label, 0, 16);
     try { (ctx as any).letterSpacing = '0px'; } catch { /* noop */ }
     ctx.restore();
+    // AUDIT §2.4 — the E&O stamp slams: gold puff + tightened shadow at contact
+    impactPuff(ctx, x + cardW - 178, y + cardH - 76, t, 2100, { scale: 0.85 });
   }
   ctx.restore();
   // the human part caption
@@ -254,6 +256,10 @@ export function taxRatesScene(g: SceneCtx): void {
   const { ctx, W, H, t } = g;
   paintStage(ctx, W, H, t, {});
   panelTitle(ctx, 'Top federal rates — the price of realizing', W * 0.10, 220, W * 0.8, t / 2400, { kickerText: 'Act II · The Schwab model' });
+  // AUDIT §3.2 — D17 sentence-cadence wiring: the narration walks the three
+  // rate plates (40.8% → 23.8% → +13.3% California) — the hot plate lifts,
+  // the others recede.
+  const hotIdx = g.sentenceIdx != null && g.sentenceIdx >= 0 ? g.sentenceIdx % 3 : -1;
   const plates = [
     { big: '40.8%', label: 'short-term gains', sub: 'taxed like salary', tone: 'down' },
     { big: '23.8%', label: 'long-term gains', sub: '37% bracket + 3.8% NIIT', tone: 'gold' },
@@ -270,16 +276,19 @@ export function taxRatesScene(g: SceneCtx): void {
     // h=400 (330→730) so the frame carries to the caption guard.
     const w = 480, gx = W * 0.10 + i * (w + 48);
     statCard(ctx, { x: gx, y: 330, w, h: 400, big: pl.big, label: pl.label, sub: pl.sub, p: ent, tone: pl.tone as any, bigSize: 92 });
+    if (hotIdx >= 0 && i !== hotIdx) dimRect(ctx, gx, 330, w, 400);
+    if (i === hotIdx) focusPing(ctx, gx + w / 2, 530, g.sentenceT, 110);
     ctx.restore();
   });
-  // assumption footnote
+  // assumption footnote — AUDIT §0.2 — raised inside the caption guard (the
+  // old baseline 800 sat under the caption pill's top at ≈796)
   const fa = clamp01((t - 1800) / 500);
   if (fa > 0) {
     ctx.save();
     ctx.globalAlpha = fa * 0.85;
     setFont(ctx, 28, 500, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
-    ctx.fillText('Model: 30 years · 6% capital-gains return · 0% dividends · 2026 top federal rates · excludes state tax', W * 0.10, 800);
+    ctx.fillText('Model: 30 years · 6% capital-gains return · 0% dividends · 2026 top federal rates · excludes state tax', W * 0.10, 776);
     ctx.restore();
   }
 }
@@ -290,8 +299,16 @@ export function turnoverBarsScene(g: SceneCtx): void {
   paintStage(ctx, W, g.H, t, {});
   panelTitle(ctx, 'Turnover — the drag almost triples', W * 0.10, 220, W * 0.8, t / 2400, { kickerText: 'Act II · Vary one thing' });
   const x = W * 0.10, w = W * 0.62;
+  // AUDIT §3.2 — D17 sentence-cadence wiring: sentence 1 walks the 5% bar,
+  // sentence 2 the 100% bar — the listening bar lifts, the other recedes.
+  const ti = g.sentenceIdx != null && g.sentenceIdx >= 0 ? g.sentenceIdx : -1;
+  const hotBar = ti === 1 ? 0 : ti === 2 ? 1 : -1;
   barRow(ctx, { x, y: 345, w, h: 120, label: '5% turnover', value: 0.71, maxV: 2.0, p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'up', valueText: '−0.71 pts/yr', sub: 'barely trading' });
+  if (hotBar === 1) dimRect(ctx, x, 292, w, 232);
+  if (hotBar === 0) focusPing(ctx, x + w * 0.26, 405, g.sentenceT, 104);
   barRow(ctx, { x, y: 535, w, h: 120, label: '100% turnover', value: 1.94, maxV: 2.0, p: clamp01((t - 1300) / 900), t, landT: 2250, tone: 'down', valueText: '−1.94 pts/yr', sub: 'normal for many active funds' });
+  if (hotBar === 0) dimRect(ctx, x, 482, w, 232);
+  if (hotBar === 1) focusPing(ctx, x + w * 0.52, 595, g.sentenceT, 104);
   // multiplier callout (below the second bar, clear of right-aligned values;
   // L-02 — raised to 746 so it clears the caption pill's 30px risk band)
   // AUDIT T-05 — dropped to y=712: at 690 the 44px gold verdict painted

@@ -757,16 +757,25 @@ function drawFace(
   }
   ctx.restore();
 
-  // glasses — one bold INK rim (C-01: the 1.8px gold wire read as stray lines
-  // / wide-set eyes at phone size; a 2.6px dark rim reads as eyewear)
+  // glasses — AUDIT §1.4 — 2.0px HALF-rim (the top arc only) with a gold
+  // brow-bar accent: the signature detail stays legible at phone size and
+  // the full dark barrel that made the eyes read wide-set is gone.
   const lensW = R * 0.38, lensH = R * 0.3;
-  ctx.strokeStyle = 'rgba(14,20,38,0.88)';
-  ctx.lineWidth = 2.6;
   for (const s of [-1, 1]) {
     const ex = s * eyeX + gaze * 0.6;
-    roundRectPath(ctx, ex - lensW / 2, eyeY - lensH / 2, lensW, lensH, lensH * 0.44);
-    ctx.fillStyle = 'rgba(200,220,255,0.05)';
-    ctx.fill();
+    // half-rim — the top arc only, the lens bottom stays open
+    ctx.strokeStyle = 'rgba(14,20,38,0.88)';
+    ctx.lineWidth = 2.0;
+    ctx.beginPath();
+    ctx.moveTo(ex - lensW / 2, eyeY - lensH * 0.08);
+    ctx.quadraticCurveTo(ex, eyeY - lensH * 0.62, ex + lensW / 2, eyeY - lensH * 0.08);
+    ctx.stroke();
+    // gold brow-bar accent riding the rim
+    ctx.strokeStyle = 'rgba(233,196,106,0.65)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(ex - lensW / 2 + 1.5, eyeY - lensH * 0.30);
+    ctx.quadraticCurveTo(ex, eyeY - lensH * 0.80, ex + lensW / 2 - 1.5, eyeY - lensH * 0.30);
     ctx.stroke();
   }
   // bridge + temples — same ink
@@ -793,10 +802,10 @@ function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: n
 }
 
 // ── ground shadow + reflection ───────────────────────────────────────────────
-export function groundShadow(ctx: CanvasRenderingContext2D, cx: number, groundY: number, scale: number): void {
+export function groundShadow(ctx: CanvasRenderingContext2D, cx: number, groundY: number, scale: number, k = 1): void {
   ctx.save();
   ctx.translate(cx, groundY);
-  ctx.scale(scale, scale);
+  ctx.scale(scale * k, scale);
   // C-10 — weight: a tight dark contact core under the feet plus a wider
   // ambient pool; the two-layer falloff reads as the figure PLANTED on the
   // floor, not hovering over a glow line.
@@ -925,7 +934,11 @@ export function drawStickman(
   if (alpha <= 0.01) return;
   const rim = 0.34 + (r.rimBoost ?? 0);
 
-  if (r.shadow !== false) groundShadow(ctx, cx, groundY, scale);
+  if (r.shadow !== false) {
+    // AUDIT §2.4 — the ground shadow tightens 20% for 150ms after an impact
+    const landAge = r.impactT != null ? t - r.impactT : Infinity;
+    groundShadow(ctx, cx, groundY, scale, landAge >= 0 && landAge < 150 ? 0.8 : 1);
+  }
   if (r.reflection) drawReflection(ctx, cx, groundY, scale, p, t, seed);
 
   ctx.save();

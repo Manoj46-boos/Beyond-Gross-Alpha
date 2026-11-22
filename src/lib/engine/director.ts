@@ -184,7 +184,11 @@ export function drawFrame(
         // get the house-grid fallback — everything stays visible.
         const statementFam = sceneType === 'statement' || sceneType === 'finalLines' || sceneType === 'turnCard' || sceneType === 'policyRisk';
         const cu = (beat.beat.scene.closeup ?? DEFAULT_CLOSEUP) as { x: number; y: number; w: number; h: number };
-        const m = 40;
+        // AUDIT §0.1 — the safe-area margin is the report's 120px: the rect
+        // fits inside the safe frame and the content-bbox clamp holds the
+        // payoff inside x ∈ [120, 1800] (the old 40px margin let close-ups
+        // crowd the watermark and caption gutters).
+        const m = 120;
         const fit = Math.min((W - 2 * m) / cu.w, (H - 2 * m) / cu.h);
         const s = Math.min(statementFam ? 1.22 : 1.30, Math.max(1.0, fit));
         let cdx = -(cu.x + cu.w / 2 - W / 2) * s + drift(gt, 3) * 10;

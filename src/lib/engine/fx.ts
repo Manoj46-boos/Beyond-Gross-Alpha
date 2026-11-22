@@ -274,6 +274,49 @@ export function impactRing(ctx: CanvasRenderingContext2D, cx: number, cy: number
   }
 }
 
+// ── AUDIT §2.4 — contact punctuation ─────────────────────────────────────────
+/** On every prop landing (bar catch, stamp slam, column land): a 6-mote gold
+ *  dust puff bursts from the contact point while the ground shadow tightens
+ *  20% for 150ms — the weight premium viewers feel without being able to
+ *  name it. Pure additive pass; safe to drop after any landing draw. */
+export function impactPuff(
+  ctx: CanvasRenderingContext2D, x: number, y: number, t: number, t0: number,
+  opts: { scale?: number } = {},
+): void {
+  const age = t - t0;
+  if (age < 0 || age > 900) return;
+  const k = opts.scale ?? 1;
+  // the ground pool tightens 20% for the first 150ms, then relaxes
+  if (age < 150) {
+    const tight = 1 - 0.2 * (1 - age / 150);
+    ctx.save();
+    ctx.globalAlpha = 0.55 * (1 - age / 150);
+    ctx.fillStyle = 'rgba(1,2,6,0.6)';
+    ctx.beginPath();
+    ctx.ellipse(x, y + 6, 92 * k * tight, 15 * k, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  // 6 gold motes — an upward fan, each with its own grain and gravity
+  for (let i = 0; i < 6; i++) {
+    const h = hash01(i * 7.7 + 3.1);
+    const ang = -Math.PI * (0.12 + h * 0.76);
+    const sp = (0.5 + h * 0.5) * 150 * k;
+    const rise = Math.min(1, age / 240);
+    const px = x + Math.cos(ang) * sp * rise;
+    const py = y + Math.sin(ang) * sp * rise + 46 * k * Math.pow(Math.max(0, age - 140) / 760, 2);
+    const a = (1 - age / 900) * 0.85;
+    if (a <= 0.02) continue;
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.fillStyle = h > 0.5 ? '#FFD97A' : PALETTE.gold;
+    ctx.beginPath();
+    ctx.arc(px, py, (1.6 + h * 1.9) * k, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
 // ── U3.3 — the focus ping ────────────────────────────────────────────────────
 /** A 2-frame gold ring on the scene's NEWEST element, fired at each sentence
  *  boundary so the viewer's eye lands exactly where the narration does. Pass

@@ -8,7 +8,7 @@ import {
   PALETTE, rgba, setFont, wrapText, glassCard, goldFillText, chip, roundRect, fitText, FONT_DISPLAY, FONT_UI,
 } from './theme';
 import { clamp01, easeOutCubic, easeOutBack, easeInOutCubic, fmtMoney, fmtComma, hash01 } from './easing';
-import { glowLine, impactRing } from './fx';
+import { glowLine, impactRing, impactPuff } from './fx';
 
 export interface ChartSource { chip: string; }
 
@@ -296,6 +296,8 @@ export function barRow(ctx: CanvasRenderingContext2D, o: BarRowOpts): number {
   }
   if (o.landT != null && o.t != null) {
     impactRing(ctx, bx + fw, y + h * 0.5, o.t, o.landT, h * 0.9, 0.7, col);
+    // AUDIT §2.4 — the bar catch punctuates: 6-mote gold puff + shadow tighten
+    impactPuff(ctx, bx + fw, y + h * 0.5, o.t, o.landT, { scale: 1.1 });
   }
   return bx + fw;
 }
@@ -338,7 +340,11 @@ export function column(ctx: CanvasRenderingContext2D, o: ColOpts): void {
     if (o.valueText) {
       goldFillText(ctx, o.valueText, o.cx, y - 28, 40, 800);
     }
-    if (o.landT != null && o.t != null) impactRing(ctx, o.cx, y, o.t, o.landT, 120, 0.8, col);
+    if (o.landT != null && o.t != null) {
+      impactRing(ctx, o.cx, y, o.t, o.landT, 120, 0.8, col);
+      // AUDIT §2.4 — the column lands with a gold puff + shadow tighten
+      impactPuff(ctx, o.cx, y, o.t, o.landT, { scale: 1.1 });
+    }
   }
   if (o.label) {
     setFont(ctx, 28, 600, FONT_UI);
