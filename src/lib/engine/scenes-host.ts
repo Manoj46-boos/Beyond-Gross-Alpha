@@ -15,7 +15,7 @@
 import { SceneCtx } from './scene-context';
 import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, drawAlphaGlyph, chip, FONT_DISPLAY, FONT_UI, kicker, headline } from './theme';
 import { clamp, clamp01, easeOutCubic } from './easing';
-import { goldDust, godRays, bokehField, floatY, impactRing } from './fx';
+import { goldDust, godRays, bokehField, floatY, impactRing, lightBlade } from './fx';
 import { poseAt, drawStickman, walkIn, applyMood, companionArm, companionArmL, palmPosition, type Pose } from './stickman';
 import { statCard } from './charts';
 import { drawChapterCard } from './textfx';
@@ -214,13 +214,13 @@ export function hostScene(g: SceneCtx): void {
       const cw = 320, chh = 96 + lines.length * 34;
       const cx = palmRS.x + 90, cy = palmRS.y - 130 - chh / 2 + floatY(t, 5, 5, 4200);
       glassCard(ctx, cx - cw / 2, cy, cw, chh, { r: 14, goldEdge: true });
-      setFont(ctx, 20, 700, FONT_UI);
+      setFont(ctx, 27, 700, FONT_UI);
       try { (ctx as any).letterSpacing = '3px'; } catch { /* noop */ }
       ctx.fillStyle = PALETTE.inkFaint;
       ctx.textAlign = 'center';
       ctx.fillText('ON FILE', cx, cy + 40);
       try { (ctx as any).letterSpacing = '0px'; } catch { /* noop */ }
-      setFont(ctx, 24, 600, FONT_UI);
+      setFont(ctx, 28, 600, FONT_UI);
       ctx.fillStyle = PALETTE.ink;
       lines.forEach((ln, i) => ctx.fillText(ln, cx, cy + 74 + i * 34));
       ctx.textAlign = 'left';
@@ -285,7 +285,7 @@ export function hostScene(g: SceneCtx): void {
         ctx.ellipse(0, 56, 62, 6.5, 0, 0, Math.PI * 2);
         ctx.fill();
         glassCard(ctx, -105, -52, 210, 104, { r: 12, goldEdge: true });
-        setFont(ctx, 21, 800, FONT_UI);
+        setFont(ctx, 27, 800, FONT_UI);
         try { (ctx as any).letterSpacing = '2px'; } catch { /* noop */ }
         ctx.fillStyle = PALETTE.ink;
         ctx.textAlign = 'center';
@@ -347,7 +347,10 @@ export function drawChapterWalkOn(
   const groundY = H * 0.88;
   const rigScale = 2.3;
   const homeX = W * 0.115;
-  const EXIT_AT = Math.max(2600, durMs - 1500);
+  // L-08 — the exit is the most-rehearsed move in the film: it starts earlier
+  // and gets a full-stride window (was compressed into ≤1500ms — the skating
+  // read) so the stride cadence matches the walk-on
+  const EXIT_AT = Math.max(2350, durMs - 1950);
   let px = homeX;
   let pose: Pose;
   if (tMs < 1500) {
@@ -362,10 +365,22 @@ export function drawChapterWalkOn(
     companionArm(pose, homeX, groundY, rigScale, { x: W * 0.5, y: H * 0.42 }, 'point');
     pose.look = clamp((W * 0.5 - homeX) / 420, -1, 1);
   } else {
-    // exits right as the light blade crosses
-    const w = walkIn(tMs - EXIT_AT, homeX, W + 220, Math.max(900, durMs - EXIT_AT), rigScale, index + 9);
+    // L-08 — exits right THROUGH the light blade: the blade sweeps with him
+    // over the exit window, so it reads as a door he walks out of
+    const exitDur = Math.max(1950, durMs - EXIT_AT);
+    const w = walkIn(tMs - EXIT_AT, homeX, W + 160, exitDur, rigScale, index + 9);
     px = w.x;
     pose = w.pose;
+    drawStickman(ctx, px, groundY, rigScale, tMs, {
+      pose,
+      flip: false,
+      faceScale: 1.5,
+      reflection: true,
+      rimBoost: 0.06,
+      vel: { lean: 0, rootY: 0, rAL: 0, rAU: 0 },
+    }, 2);
+    lightBlade(ctx, W, H, clamp01((tMs - EXIT_AT) / (exitDur * 0.62)));
+    return;
   }
   drawStickman(ctx, px, groundY, rigScale, tMs, {
     pose,

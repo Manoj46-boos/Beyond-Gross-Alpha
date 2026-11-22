@@ -16,9 +16,9 @@ import { dataSceneFigure } from './scenes-figure';
 export function plumbingScene(g: SceneCtx): void {
   const { ctx, W, H, t, s } = g;
   paintStage(ctx, W, H, t, {});
-  panelTitle(ctx, 'Same index, same stocks — different tax outcome', W * 0.10, 240, W * 0.8, t / 2400, { kickerText: 'Lever 3 · The wrapper' });
+  panelTitle(ctx, 'Same index, same stocks — different tax outcome', W * 0.10, 210, W * 0.8, t / 2400, { kickerText: 'Lever 3 · The wrapper' });
   const showMutual = (s.mode ?? 'mutual') === 'mutual';
-  const x = W * 0.10, w = W * 0.80, y = 380, h = 380;
+  const x = W * 0.10, w = W * 0.80, y = 330, h = 380;
   const ent = clamp01(t / 500);
   ctx.save();
   ctx.globalAlpha = ent;
@@ -42,7 +42,7 @@ export function plumbingScene(g: SceneCtx): void {
       ctx.save();
       ctx.globalAlpha = ba;
       glassCard(ctx, b.x, y + 120, 300, 90, { r: 12, shadow: false, border: i === 2 ? rgba(PALETTE.down, 0.5) : undefined });
-      setFont(ctx, 24, 700, FONT_UI);
+      setFont(ctx, 28, 700, FONT_UI);
       ctx.fillStyle = i === 2 ? '#F08A8D' : PALETTE.ink;
       wrapText(ctx, b.label, 270, 24, 700, FONT_UI).forEach((ln, li) => ctx.fillText(ln, b.x + 24, y + 155 + li * 30));
       ctx.restore();
@@ -94,7 +94,7 @@ export function plumbingScene(g: SceneCtx): void {
       ctx.save();
       ctx.globalAlpha = ba;
       glassCard(ctx, b.x, y + 120, 300, 90, { r: 12, shadow: false, goldEdge: i === 2, border: i === 2 ? rgba(PALETTE.gold, 0.4) : undefined });
-      setFont(ctx, 24, 700, FONT_UI);
+      setFont(ctx, 28, 700, FONT_UI);
       ctx.fillStyle = i === 2 ? PALETTE.goldBright : PALETTE.ink;
       wrapText(ctx, b.label, 270, 24, 700, FONT_UI).forEach((ln, li) => ctx.fillText(ln, b.x + 24, y + 155 + li * 30));
       ctx.restore();
@@ -108,7 +108,7 @@ export function heartbeatScene(g: SceneCtx): void {
   const { ctx, W, H, t } = g;
   paintStage(ctx, W, H, t, { tone: 'gold' });
   goldDust(ctx, W, H, t, 41, 1);
-  panelTitle(ctx, 'Heartbeat trades: the quiet machinery', W * 0.10, 240, W * 0.8, t / 2400, { kickerText: 'Lever 3 · In-kind' });
+  panelTitle(ctx, 'Heartbeat trades: the quiet machinery', W * 0.10, 210, W * 0.8, t / 2400, { kickerText: 'Lever 3 · In-kind' });
   // pulse ring (the "heartbeat")
   const pulse = (t / 1100) % 1;
   ctx.save();
@@ -125,14 +125,14 @@ export function heartbeatScene(g: SceneCtx): void {
   if (ca > 0) {
     ctx.save();
     ctx.globalAlpha = ca;
-    glassCard(ctx, W * 0.55, 360, 640, 260, { r: 18, goldEdge: true });
-    setFont(ctx, 24, 700, FONT_UI);
+    glassCard(ctx, W * 0.55, 310, 640, 260, { r: 18, goldEdge: true });
+    setFont(ctx, 28, 700, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
-    ctx.fillText('US TREASURY COST, PER YEAR (BLOOMBERG EST.)', W * 0.55 + 40, 420);
-    goldFillText(ctx, '$48,000,000,000', W * 0.55 + 40, 520, 68, 800, FONT_DISPLAY);
-    setFont(ctx, 24, 600, FONT_UI);
+    ctx.fillText('US TREASURY COST, PER YEAR (BLOOMBERG EST.)', W * 0.55 + 40, 370);
+    goldFillText(ctx, '$48,000,000,000', W * 0.55 + 40, 470, 68, 800, FONT_DISPLAY);
+    setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkSoft;
-    ctx.fillText('the top 1% collect most of the benefit', W * 0.55 + 40, 575);
+    ctx.fillText('the top 1% collect most of the benefit', W * 0.55 + 40, 525);
     ctx.restore();
     impactRing(ctx, W * 0.55 + 320, 490, t, 1600, 180, 1, PALETTE.gold);
   }
@@ -145,7 +145,7 @@ export function heartbeatScene(g: SceneCtx): void {
     setFont(ctx, 28, 600, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.goldBright;
     ctx.textAlign = 'center';
-    ctx.fillText('File that away. We\'ll come back to it.', W * 0.55 + 320, 604);
+    ctx.fillText('File that away. We\'ll come back to it.', W * 0.55 + 320, 554);
     ctx.textAlign = 'left';
     ctx.restore();
   }
@@ -155,11 +155,11 @@ export function heartbeatScene(g: SceneCtx): void {
 export function distribBarsScene(g: SceneCtx): void {
   const { ctx, W, t } = g;
   paintStage(ctx, W, g.H, t, {});
-  panelTitle(ctx, 'The scoreboard: capital-gains distributions, 2025', W * 0.10, 250, W * 0.8, t / 2400, { kickerText: 'Lever 3 · State Street' });
+  panelTitle(ctx, 'The scoreboard: capital-gains distributions, 2025', W * 0.10, 220, W * 0.8, t / 2400, { kickerText: 'Lever 3 · State Street' });
   // S-05 — bars shift right of the figure margin (figure spans x≈90..330)
   const x = W * 0.30, w = W * 0.42;
-  barRow(ctx, { x, y: 400, w, h: 120, label: 'Equity mutual funds', value: 57, maxV: 100, p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'down', valueText: '57%' });
-  barRow(ctx, { x, y: 590, w, h: 120, label: 'Equity ETFs', value: 6, maxV: 100, p: clamp01((t - 1300) / 900), t, landT: 2250, tone: 'up', valueText: '6%' });
+  barRow(ctx, { x, y: 345, w, h: 120, label: 'Equity mutual funds', value: 57, maxV: 100, p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'down', valueText: '57%' });
+  barRow(ctx, { x, y: 535, w, h: 120, label: 'Equity ETFs', value: 6, maxV: 100, p: clamp01((t - 1300) / 900), t, landT: 2250, tone: 'up', valueText: '6%' });
   const ma = clamp01((t - 2200) / 500);
   if (ma > 0) {
     ctx.save();
@@ -184,21 +184,21 @@ export function distribBarsScene(g: SceneCtx): void {
 export function taxManagedScene(g: SceneCtx): void {
   const { ctx, W, t } = g;
   paintStage(ctx, W, g.H, t, {});
-  panelTitle(ctx, 'The label matters less than the turnover', W * 0.10, 250, W * 0.8, t / 2400, { kickerText: 'Lever 3 · Tax-managed funds' });
+  panelTitle(ctx, 'The label matters less than the turnover', W * 0.10, 220, W * 0.8, t / 2400, { kickerText: 'Lever 3 · Tax-managed funds' });
   const x = W * 0.10, w = W * 0.55;
-  barRow(ctx, { x, y: 400, w, h: 120, label: 'Tax-managed small-cap', value: 7.16, maxV: 8, p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'gold', valueText: '7.16%', sub: '10-yr after-tax return' });
-  barRow(ctx, { x, y: 590, w, h: 120, label: 'Plain small-cap index', value: 6.76, maxV: 8, p: clamp01((t - 1300) / 900), t, landT: 2250, tone: 'platinum', valueText: '6.76%', sub: '10-yr after-tax return' });
+  barRow(ctx, { x, y: 345, w, h: 120, label: 'Tax-managed small-cap', value: 7.16, maxV: 8, p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'gold', valueText: '7.16%', sub: '10-yr after-tax return' });
+  barRow(ctx, { x, y: 535, w, h: 120, label: 'Plain small-cap index', value: 6.76, maxV: 8, p: clamp01((t - 1300) / 900), t, landT: 2250, tone: 'platinum', valueText: '6.76%', sub: '10-yr after-tax return' });
   const la = clamp01((t - 2200) / 600);
   if (la > 0) {
     ctx.save();
     ctx.globalAlpha = la;
-    glassCard(ctx, x + w + 90, 400, 480, 310, { r: 16 });
+    glassCard(ctx, x + w + 90, 350, 480, 310, { r: 16 });
     setFont(ctx, 30, 700, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.ink;
     wrapText(ctx, 'A low-turnover index fund is already a tax-managed fund.', 400, 30, 700, FONT_DISPLAY).forEach((ln, i) => {
-      ctx.fillText(ln, x + w + 128, 470 + i * 46);
+      ctx.fillText(ln, x + w + 128, 420 + i * 46);
     });
-    setFont(ctx, 23, 600, FONT_UI);
+    setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     wrapText(ctx, 'The edge mostly came from a different index.', 420, 23, 600, FONT_UI).forEach((ln, i) => {
       ctx.fillText(ln, x + w + 128, 640 + i * 32);
@@ -211,14 +211,14 @@ export function taxManagedScene(g: SceneCtx): void {
 export function pitchDeckScene(g: SceneCtx): void {
   const { ctx, W, H, t } = g;
   paintStage(ctx, W, H, t, {});
-  panelTitle(ctx, 'Where the private banks live', W * 0.10, 240, W * 0.7, t / 2400, { kickerText: 'Lever 4 · Net worth > $5M' });
+  panelTitle(ctx, 'Where the private banks live', W * 0.10, 210, W * 0.7, t / 2400, { kickerText: 'Lever 4 · Net worth > $5M' });
   const items = ['Direct indexing', 'Exchange funds', 'Tax-aware long-short'];
   items.forEach((it, i) => {
     const ent = clamp01((t - 300 - i * 380) / 600);
     if (ent <= 0) return;
     ctx.save();
     ctx.globalAlpha = ent;
-    const w = 520, x = W * 0.10 + i * (w + 60), y = 400;
+    const w = 520, x = W * 0.10 + i * (w + 60), y = 350;
     // slightly over-designed "deck" slide
     glassCard(ctx, x, y, w, 300, { r: 18, goldEdge: true });
     ctx.save();
@@ -231,7 +231,7 @@ export function pitchDeckScene(g: SceneCtx): void {
     setFont(ctx, 40, 700, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.ink;
     ctx.fillText(it, x + 48, y + 130);
-    setFont(ctx, 20, 600, FONT_UI);
+    setFont(ctx, 27, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.fillText(['screenshot slide 04', 'slide 11 · confidential', 'slide 17 · draft'][i], x + 48, y + 180);
     ctx.restore();
@@ -262,23 +262,29 @@ export function pitchDeckScene(g: SceneCtx): void {
 export function diMosaicScene(g: SceneCtx): void {
   const { ctx, W, H, t } = g;
   paintStage(ctx, W, H, t, {});
-  panelTitle(ctx, 'Direct indexing: harvest the fifty that are down', W * 0.10, 240, W * 0.8, t / 2400, { kickerText: 'Lever 4 · Direct indexing' });
+  panelTitle(ctx, 'Direct indexing: harvest the fifty that are down', W * 0.10, 210, W * 0.8, t / 2400, { kickerText: 'Lever 4 · Direct indexing' });
   const shatter = clamp01((t - 500) / 1200);
-  const bx = W * 0.22, by = 400, bw = 240, bh = 300;
-  // the single ETF block fading into shards
+  const bx = W * 0.22, by = 350, bw = 240, bh = 300;
+  // the single ETF block dissolving into shards — L-05: presence floors at
+  // 0.42 with a readable caption (the old 1 − shatter·0.9 left a 10% washed
+  // ghost occupying the left third of the frame)
   ctx.save();
-  ctx.globalAlpha = 1 - shatter * 0.9;
+  ctx.globalAlpha = 1 - shatter * 0.58;
   glassCard(ctx, bx, by, bw, bh, { r: 16, fill: 'rgba(127,163,216,0.12)', border: rgba(PALETTE.steel, 0.5) });
-  setFont(ctx, 24, 700, FONT_UI);
+  setFont(ctx, 28, 700, FONT_UI);
   ctx.fillStyle = PALETTE.inkSoft;
   ctx.textAlign = 'center';
-  ctx.fillText('ONE ETF', bx + bw / 2, by + bh / 2);
+  ctx.fillText('ONE ETF', bx + bw / 2, by + bh / 2 - 10);
+  setFont(ctx, 26, 500, FONT_UI);
+  ctx.fillStyle = PALETTE.inkFaint;
+  ctx.fillText('dissolved into 80', bx + bw / 2, by + bh / 2 + 34);
+  ctx.fillText('direct positions', bx + bw / 2, by + bh / 2 + 68);
   ctx.textAlign = 'left';
   ctx.restore();
   // mosaic of small tiles — U1.4: plain colour tiles, with 3-character ticker
   // chips stamped on 10 deterministic-random tiles
   const cols = 10, rows = 8;
-  const mx = W * 0.44, my = 380;
+  const mx = W * 0.44, my = 330;
   const tw = 44, th = 40;
   const CHIPS = ['IBM', 'GE', 'CAT', 'KO', 'HD', 'BA', 'GM', 'JPM', 'DIS', 'NKE'];
   const chipOn = new Map<number, string>();
@@ -308,23 +314,24 @@ export function diMosaicScene(g: SceneCtx): void {
       ctx.stroke();
     }
     ctx.restore();
-    // 3-character ticker chip stamped over the tile
+    // 3-character ticker chip stamped over the tile (L-03 — 26px floor: the
+    // chip box grows with the type)
     const ticker = chipOn.get(i);
     if (ticker) {
       ctx.save();
       ctx.globalAlpha = ent * clamp01((t - 1900) / 500);
       ctx.translate(px + tw / 2, py + th / 2);
       ctx.rotate((hash01(i * 1.3) - 0.5) * 0.24 * shatter);
-      roundRect(ctx, -17, -9, 34, 18, 5);
+      roundRect(ctx, -24, -14, 48, 28, 6);
       ctx.fillStyle = 'rgba(8,12,22,0.88)';
       ctx.fill();
       ctx.strokeStyle = rgba(PALETTE.gold, 0.55);
       ctx.lineWidth = 1;
       ctx.stroke();
-      setFont(ctx, 11, 800, FONT_UI);
+      setFont(ctx, 26, 800, FONT_UI);
       ctx.fillStyle = 'rgba(246,241,230,0.95)';
       ctx.textAlign = 'center';
-      ctx.fillText(ticker, 0, 4);
+      ctx.fillText(ticker, 0, 9);
       ctx.textAlign = 'left';
       ctx.restore();
     }
@@ -353,9 +360,9 @@ export function diMosaicScene(g: SceneCtx): void {
 export function diDecayScene(g: SceneCtx): void {
   const { ctx, W, t } = g;
   paintStage(ctx, W, g.H, t, {});
-  panelTitle(ctx, 'Pay 40 bps forever for a benefit that decays', W * 0.10, 250, W * 0.8, t / 2400, { kickerText: 'Lever 4 · The trade' });
+  panelTitle(ctx, 'Pay 40 bps forever for a benefit that decays', W * 0.10, 220, W * 0.8, t / 2400, { kickerText: 'Lever 4 · The trade' });
   const x = W * 0.10, w = W * 0.58;
-  barRow(ctx, { x, y: 400, w, h: 120, label: 'Years 1–5', value: 69, maxV: 80, p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'up', valueText: '69 bps/yr', sub: 'average tax benefit' });
+  barRow(ctx, { x, y: 345, w, h: 120, label: 'Years 1–5', value: 69, maxV: 80, p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'up', valueText: '69 bps/yr', sub: 'average tax benefit' });
   barRow(ctx, { x, y: 590, w, h: 120, label: 'Years 6–10', value: 9, maxV: 80, p: clamp01((t - 1300) / 900), t, landT: 2250, tone: 'down', valueText: '9 bps/yr', sub: 'as the portfolio appreciates' });
   // cost line
   const ca = clamp01((t - 2200) / 500);
@@ -370,7 +377,7 @@ export function diDecayScene(g: SceneCtx): void {
     ctx.lineWidth = 2.6;
     ctx.stroke();
     ctx.setLineDash([]);
-    setFont(ctx, 24, 700, FONT_UI);
+    setFont(ctx, 28, 700, FONT_UI);
     ctx.fillStyle = PALETTE.goldBright;
     ctx.fillText('your cost: 30–40 bps — forever', x + w - 380, 384);
     ctx.restore();
@@ -381,13 +388,13 @@ export function diDecayScene(g: SceneCtx): void {
 export function exchangeFundScene(g: SceneCtx): void {
   const { ctx, W, H, t } = g;
   paintStage(ctx, W, H, t, {});
-  panelTitle(ctx, 'Deferral with handcuffs', W * 0.10, 240, W * 0.7, t / 2400, { kickerText: 'Lever 4 · Exchange funds' });
+  panelTitle(ctx, 'Deferral with handcuffs', W * 0.10, 210, W * 0.7, t / 2400, { kickerText: 'Lever 4 · Exchange funds' });
   // $1T stat (S-05 — shifted right of the figure margin)
   const sa = clamp01((t - 300) / 700);
   if (sa > 0) {
     ctx.save();
     ctx.globalAlpha = sa;
-    statCard(ctx, { x: W * 0.185, y: 340, w: 470, h: 250, big: '$1T+', label: 'US wealth in low-basis single stock (BlackRock)', p: sa, tone: 'gold', bigSize: 88 });
+    statCard(ctx, { x: W * 0.185, y: 300, w: 470, h: 250, big: '$1T+', label: 'US wealth in low-basis single stock (BlackRock)', p: sa, tone: 'gold', bigSize: 88 });
     ctx.restore();
   }
   // pool diagram: concentrated shares in → diversified basket out
@@ -397,7 +404,7 @@ export function exchangeFundScene(g: SceneCtx): void {
     ctx.globalAlpha = pa;
     const poolX = W * 0.435, poolY = 340, poolW = 560, poolH = 250;
     glassCard(ctx, poolX, poolY, poolW, poolH, { r: 20, goldEdge: true });
-    setFont(ctx, 24, 700, FONT_UI);
+    setFont(ctx, 28, 700, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.textAlign = 'center';
     ctx.fillText('THE PRIVATE POOL', poolX + poolW / 2, poolY + 44);
@@ -413,7 +420,7 @@ export function exchangeFundScene(g: SceneCtx): void {
       roundRect(ctx, bx2, by2, 76, 76, 10);
       ctx.fill();
       ctx.fillStyle = PALETTE.inkSoft;
-      setFont(ctx, 16, 700, FONT_UI);
+      setFont(ctx, 26, 700, FONT_UI);
       ctx.textAlign = 'center';
       ctx.fillText('STOCK', bx2 + 38, by2 + 44);
       ctx.textAlign = 'left';
@@ -424,7 +431,7 @@ export function exchangeFundScene(g: SceneCtx): void {
     if (oa > 0) {
       ctx.save();
       ctx.globalAlpha = oa;
-      setFont(ctx, 22, 600, FONT_UI);
+      setFont(ctx, 28, 600, FONT_UI);
       ctx.fillStyle = PALETTE.up;
       ctx.textAlign = 'center';
       ctx.fillText('→ diversified basket, your old basis', poolX + poolW / 2, poolY + 200);
@@ -458,7 +465,7 @@ export function exchangeFundScene(g: SceneCtx): void {
     ctx.arc(0, 6, 9, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillRect(-3, 6, 6, 16);
-    setFont(ctx, 22, 800, FONT_UI);
+    setFont(ctx, 28, 800, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.textAlign = 'center';
     ctx.fillText('7-YEAR LOCKUP', 0, 86);
@@ -481,7 +488,7 @@ export function exchangeFundScene(g: SceneCtx): void {
 export function longShortScene(g: SceneCtx): void {
   const { ctx, W, t } = g;
   paintStage(ctx, W, g.H, t, {});
-  panelTitle(ctx, 'Tax-aware long-short: harvest from both sides', W * 0.10, 250, W * 0.8, t / 2400, { kickerText: 'Lever 4 · The exotic one' });
+  panelTitle(ctx, 'Tax-aware long-short: harvest from both sides', W * 0.10, 220, W * 0.8, t / 2400, { kickerText: 'Lever 4 · The exotic one' });
   const x = W * 0.10, w = W * 0.52;
   // long basket rises, short basket falls — both harvestable
   const ptsL: [number, number][] = [], ptsS: [number, number][] = [];
@@ -500,7 +507,7 @@ export function longShortScene(g: SceneCtx): void {
     xLabels: ['', '', '', ''],
     gridLines: 4, showAxis: true,
   });
-  setFont(ctx, 24, 700, FONT_UI);
+  setFont(ctx, 28, 700, FONT_UI);
   ctx.fillStyle = PALETTE.up;
   ctx.fillText('LONG basket — losses to harvest', x + 20, 350);
   ctx.fillStyle = '#F08A8D';
@@ -528,8 +535,8 @@ export function elmVerdictScene(g: SceneCtx): void {
   const { ctx, W, H, t } = g;
   // somber room — this is the turn
   paintStage(ctx, W, H, t, { tone: 'down', grid: 0.5, sheen: 0.3 });
-  panelTitle(ctx, 'The strongest counterpoint in this video', W * 0.10, 240, W * 0.8, t / 2400, { kickerText: 'Lever 4 · Elm Wealth, Apr 2026' });
-  const x = W * 0.14, y = 360, w = W * 0.72, h = 420;
+  panelTitle(ctx, 'The strongest counterpoint in this video', W * 0.10, 210, W * 0.8, t / 2400, { kickerText: 'Lever 4 · Elm Wealth, Apr 2026' });
+  const x = W * 0.14, y = 330, w = W * 0.72, h = 420;
   // D17 cadence wiring: the narration walks the panel — headline → mechanics →
   // verdict — so the emphasis moves with the sentence index instead of the
   // layout holding static for 34.9s.

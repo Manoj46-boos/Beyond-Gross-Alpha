@@ -29,7 +29,7 @@ export function brokerageStatementScene(g: SceneCtx): void {
   setFont(ctx, 26, 700, FONT_UI);
   ctx.fillStyle = PALETTE.inkSoft;
   ctx.fillText('CLIENT PERFORMANCE SUMMARY', x + 44, y + 56);
-  setFont(ctx, 20, 500, FONT_UI);
+  setFont(ctx, 27, 500, FONT_UI);
   ctx.fillStyle = PALETTE.inkFaint;
   ctx.fillText('Account ····7042     Period · 25 years', x + 44, y + 88);
   // rows
@@ -96,16 +96,16 @@ export function brokerageStatementScene(g: SceneCtx): void {
 export function feeChipsScene(g: SceneCtx): void {
   const { ctx, W, H, t } = g;
   paintStage(ctx, W, H, t, {});
-  panelTitle(ctx, 'When the fee compresses, the tax work disappears', W * 0.10, 250, W * 0.8, t / 2400, {
+  panelTitle(ctx, 'When the fee compresses, the tax work disappears', W * 0.10, 220, W * 0.8, t / 2400, {
     kickerText: 'Act I · Incentives',
   });
   // hero stat: 83%
   statCard(ctx, {
-    x: W * 0.10, y: 400, w: 560, h: 380,
+    x: W * 0.10, y: 350, w: 560, h: 380,
     big: '83%', label: 'advisors charging <1% on $5M+ clients by 2026', sub: 'average fees → ⅔ of a point (Cerulli)', p: clamp01((t - 300) / 900), tone: 'gold', bigSize: 130,
   });
   // the squeeze visual: fee arrow down, tax work fading
-  const x2 = W * 0.58, y2 = 430;
+  const x2 = W * 0.58, y2 = 380;
   const ent2 = clamp01((t - 1100) / 700);
   if (ent2 > 0) {
     ctx.save();
@@ -121,7 +121,7 @@ export function feeChipsScene(g: SceneCtx): void {
       yFormat: () => '', gridLines: 3, showAxis: false,
       annotations: [{ at: 1, label: '→ 0.66%', tone: 'gold' }],
     });
-    setFont(ctx, 23, 600, FONT_UI);
+    setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.fillText('average advisory fee', x2 + 90, y2 + 62);
     // "tax management: invisible" chip
@@ -225,7 +225,7 @@ export function memoCardScene(g: SceneCtx): void {
 export function taxRatesScene(g: SceneCtx): void {
   const { ctx, W, H, t } = g;
   paintStage(ctx, W, H, t, {});
-  panelTitle(ctx, 'Top federal rates — the price of realizing', W * 0.10, 250, W * 0.8, t / 2400, { kickerText: 'Act II · The Schwab model' });
+  panelTitle(ctx, 'Top federal rates — the price of realizing', W * 0.10, 220, W * 0.8, t / 2400, { kickerText: 'Act II · The Schwab model' });
   const plates = [
     { big: '40.8%', label: 'short-term gains', sub: 'taxed like salary', tone: 'down' },
     { big: '23.8%', label: 'long-term gains', sub: '37% bracket + 3.8% NIIT', tone: 'gold' },
@@ -237,7 +237,7 @@ export function taxRatesScene(g: SceneCtx): void {
     ctx.save();
     ctx.globalAlpha = ent;
     const w = 500, gx = W * 0.10 + i * (w + 40);
-    statCard(ctx, { x: gx, y: 380, w, h: 330, big: pl.big, label: pl.label, sub: pl.sub, p: ent, tone: pl.tone as any, bigSize: 92 });
+    statCard(ctx, { x: gx, y: 330, w, h: 330, big: pl.big, label: pl.label, sub: pl.sub, p: ent, tone: pl.tone as any, bigSize: 92 });
     ctx.restore();
   });
   // assumption footnote
@@ -245,7 +245,7 @@ export function taxRatesScene(g: SceneCtx): void {
   if (fa > 0) {
     ctx.save();
     ctx.globalAlpha = fa * 0.85;
-    setFont(ctx, 21, 500, FONT_UI);
+    setFont(ctx, 27, 500, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.fillText('Model: 30 years · 6% capital-gains return · 0% dividends · 2026 top federal rates · excludes state tax', W * 0.10, 800);
     ctx.restore();
@@ -256,10 +256,10 @@ export function taxRatesScene(g: SceneCtx): void {
 export function turnoverBarsScene(g: SceneCtx): void {
   const { ctx, W, t } = g;
   paintStage(ctx, W, g.H, t, {});
-  panelTitle(ctx, 'Turnover — the drag almost triples', W * 0.10, 250, W * 0.8, t / 2400, { kickerText: 'Act II · Vary one thing' });
+  panelTitle(ctx, 'Turnover — the drag almost triples', W * 0.10, 220, W * 0.8, t / 2400, { kickerText: 'Act II · Vary one thing' });
   const x = W * 0.10, w = W * 0.62;
-  barRow(ctx, { x, y: 400, w, h: 120, label: '5% turnover', value: 0.71, maxV: 2.0, p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'up', valueText: '−0.71 pts/yr', sub: 'barely trading' });
-  barRow(ctx, { x, y: 590, w, h: 120, label: '100% turnover', value: 1.94, maxV: 2.0, p: clamp01((t - 1300) / 900), t, landT: 2250, tone: 'down', valueText: '−1.94 pts/yr', sub: 'normal for many active funds' });
+  barRow(ctx, { x, y: 345, w, h: 120, label: '5% turnover', value: 0.71, maxV: 2.0, p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'up', valueText: '−0.71 pts/yr', sub: 'barely trading' });
+  barRow(ctx, { x, y: 535, w, h: 120, label: '100% turnover', value: 1.94, maxV: 2.0, p: clamp01((t - 1300) / 900), t, landT: 2250, tone: 'down', valueText: '−1.94 pts/yr', sub: 'normal for many active funds' });
   // multiplier callout (below the second bar, clear of right-aligned values;
   // L-02 — raised to 746 so it clears the caption pill's 30px risk band)
   const ma = clamp01((t - 2300) / 500);
@@ -268,7 +268,7 @@ export function turnoverBarsScene(g: SceneCtx): void {
     ctx.globalAlpha = ma;
     setFont(ctx, 44, 800, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.goldBright;
-    ctx.fillText('≈ 3× the drag', x + 8, 746);
+    ctx.fillText('≈ 3× the drag', x + 8, 690);
     ctx.restore();
   }
 }
@@ -277,7 +277,7 @@ export function turnoverBarsScene(g: SceneCtx): void {
 export function growthCurvesScene(g: SceneCtx): void {
   const { ctx, W, H, t } = g;
   paintStage(ctx, W, H, t, {});
-  panelTitle(ctx, 'A hundred forty thousand dollars — gone. Not to the market. To the calendar.', W * 0.10, 240, W * 0.84, t / 2600, { kickerText: 'Act II · $100,000 · 30 years · 6%' });
+  panelTitle(ctx, 'A hundred forty thousand dollars — gone. Not to the market. To the calendar.', W * 0.10, 210, W * 0.84, t / 2600, { kickerText: 'Act II · $100,000 · 30 years · 6%' });
   // two curves
   const ptsA: [number, number][] = [], ptsB: [number, number][] = [];
   for (let i = 0; i <= 30; i++) {
@@ -285,7 +285,7 @@ export function growthCurvesScene(g: SceneCtx): void {
     ptsB.push([i, 100 * Math.pow(1.06 - 0.0194, i)]);   // high turnover (net ~4.06%)
   }
   // S-05 — chart zone shifts right of the figure margin (figure spans x≈90..330)
-  const chartX = W * 0.30, chartY = 330, chartW = W * 0.44, chartH = 420;
+  const chartX = W * 0.30, chartY = 280, chartW = W * 0.44, chartH = 430;
   lineChart(ctx, {
     x: chartX, y: chartY, w: chartW, h: chartH,
     series: [
@@ -306,7 +306,7 @@ export function growthCurvesScene(g: SceneCtx): void {
     setFont(ctx, 28, 800, FONT_DISPLAY);
     ctx.fillStyle = '#F08A8D';
     ctx.fillText('$330,190', chartX + chartW * 0.62 + 16, chartY + 230);
-    setFont(ctx, 17, 600, FONT_UI);
+    setFont(ctx, 26, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.fillText('high turnover', chartX + chartW * 0.62 + 16, chartY + 186 + 14);
     ctx.restore();
@@ -316,7 +316,7 @@ export function growthCurvesScene(g: SceneCtx): void {
     ctx.globalAlpha = epA;
     glassCard(ctx, chartX + chartW - 10, chartY + 6, 240, 62, { r: 10, goldEdge: true, shadow: false, fill: 'rgba(12,16,30,0.85)', sheen: false });
     goldFillText(ctx, '$469,970', chartX + chartW + 6, chartY + 46, 28, 800, FONT_DISPLAY);
-    setFont(ctx, 17, 600, FONT_UI);
+    setFont(ctx, 26, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.fillText('low turnover', chartX + chartW + 8, chartY - 6 + 8);
     ctx.restore();
@@ -328,7 +328,7 @@ export function growthCurvesScene(g: SceneCtx): void {
     ctx.globalAlpha = va;
     const gapW = 420;
     glassCard(ctx, chartX + chartW + 40, chartY + 170, gapW, 170, { r: 16, goldEdge: true });
-    setFont(ctx, 24, 700, FONT_UI);
+    setFont(ctx, 28, 700, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.fillText('30% OF THE ENDING WEALTH', chartX + chartW + 70, chartY + 216);
     goldFillText(ctx, '−$139,780', chartX + chartW + 70, chartY + 290, 62, 800, FONT_DISPLAY);
@@ -348,7 +348,7 @@ export function growthCurvesScene(g: SceneCtx): void {
 export function characterMatrixScene(g: SceneCtx): void {
   const { ctx, W, t } = g;
   paintStage(ctx, W, g.H, t, {});
-  panelTitle(ctx, 'The character of a return matters as much as its size', W * 0.10, 250, W * 0.8, t / 2400, { kickerText: 'Act II · Mechanics' });
+  panelTitle(ctx, 'The character of a return matters as much as its size', W * 0.10, 220, W * 0.8, t / 2400, { kickerText: 'Act II · Mechanics' });
   const rows = [
     { label: 'Bond interest', tag: 'ORDINARY', tone: 'down', note: 'taxed like salary' },
     { label: 'REIT distributions', tag: 'MOSTLY ORDINARY', tone: 'down', note: 'the default' },
@@ -366,7 +366,7 @@ export function characterMatrixScene(g: SceneCtx): void {
     const hot = i === hotIdx;
     ctx.save();
     ctx.globalAlpha = ent;
-    const y = 350 + i * 88, x = W * 0.10, w = W * 0.80;
+    const y = 300 + i * 88, x = W * 0.10, w = W * 0.80;
     glassCard(ctx, x, y, w, 72, {
       r: 12,
       shadow: false,
@@ -377,7 +377,7 @@ export function characterMatrixScene(g: SceneCtx): void {
     ctx.fillStyle = hot ? PALETTE.ink : PALETTE.inkSoft;
     ctx.fillText(r.label, x + 36, y + 45);
     chip(ctx, r.tag, x + 430, y + 18, { size: 22, gold: hot, dot: r.tone === 'down' ? PALETTE.down : PALETTE.up });
-    setFont(ctx, 22, 500, FONT_UI);
+    setFont(ctx, 28, 500, FONT_UI);
     ctx.fillStyle = hot ? PALETTE.inkSoft : PALETTE.inkFaint;
     ctx.textAlign = 'right';
     ctx.fillText(r.note, x + w - 36, y + 45);
@@ -385,7 +385,7 @@ export function characterMatrixScene(g: SceneCtx): void {
     ctx.restore();
   });
   // U3.3 — the eye lands on the row being narrated
-  if (hotIdx >= 0) focusPing(ctx, W * 0.16, 350 + hotIdx * 88 + 36, g.sentenceT, 76);
+  if (hotIdx >= 0) focusPing(ctx, W * 0.16, 300 + hotIdx * 88 + 36, g.sentenceT, 76);
   // the blunt BlackRock verdict — enters once four sentences have played
   // (L-02 — card raised: bottom 744, clear of the caption pill top ≈796)
   const va = g.sentenceIdx != null ? clamp01((g.sentenceIdx - 3.5) / 0.9) : clamp01((t - 4200) / 600);
@@ -405,10 +405,10 @@ export function signatureCurveScene(g: SceneCtx): void {
   const { ctx, W, H, t, s } = g;
   paintStage(ctx, W, H, t, { tone: 'gold' });
   goldDust(ctx, W, H, t, 21, 1.2);
-  panelTitle(ctx, 'Same portfolio. Same market. Twenty-five years.', W * 0.12, 220, W * 0.76, t / 2400, { kickerText: 'The arithmetic' });
+  panelTitle(ctx, 'Same portfolio. Same market. Twenty-five years.', W * 0.12, 190, W * 0.76, t / 2400, { kickerText: 'The arithmetic' });
 
   // S-05 — chart zone shifts right of the figure margin (figure spans x≈90..330)
-  const chartX = W * 0.335, chartY = 320, chartW = W * 0.445, chartH = 460;
+  const chartX = W * 0.335, chartY = 270, chartW = W * 0.445, chartH = 470;
   const ptsA: [number, number][] = [], ptsB: [number, number][] = [];
   for (let i = 0; i <= 25; i++) {
     ptsA.push([i, 2 * Math.pow(1.08, i)]);
@@ -448,7 +448,7 @@ export function signatureCurveScene(g: SceneCtx): void {
   ctx.beginPath();
   for (let i = 0; i <= 4; i++) { const gy = chartY + (chartH / 4) * i; ctx.moveTo(chartX, gy); ctx.lineTo(chartX + chartW, gy); }
   ctx.stroke();
-  setFont(ctx, 22, 600, FONT_UI);
+  setFont(ctx, 28, 600, FONT_UI);
   ctx.fillStyle = PALETTE.inkFaint;
   ctx.textAlign = 'right';
   for (let i = 0; i <= 4; i++) {
@@ -493,7 +493,7 @@ export function signatureCurveScene(g: SceneCtx): void {
     ctx.translate(-bw / 2, -bh / 2);
     glassCard(ctx, 0, 0, bw, bh, { r: 16, goldEdge: true });
     goldFillText(ctx, '$5.1M', 30, 62, 58, 800, FONT_DISPLAY);
-    setFont(ctx, 22, 700, FONT_UI);
+    setFont(ctx, 28, 700, FONT_UI);
     ctx.fillStyle = PALETTE.inkSoft;
     ctx.fillText('THE TAX LINE', 30, 90);
     ctx.restore();
@@ -535,17 +535,17 @@ export function signatureCurveScene(g: SceneCtx): void {
 export function benchmarkBarScene(g: SceneCtx): void {
   const { ctx, W, t } = g;
   paintStage(ctx, W, g.H, t, {});
-  panelTitle(ctx, 'Before you buy complexity, beat this benchmark', W * 0.10, 250, W * 0.8, t / 2400, { kickerText: 'The floor' });
+  panelTitle(ctx, 'Before you buy complexity, beat this benchmark', W * 0.10, 220, W * 0.8, t / 2400, { kickerText: 'The floor' });
   const x = W * 0.10, w = W * 0.62;
   // U1.4: maxV = 0.5 so the honest 0.3% stub fills ~60% of the track — the
   // bar reads as a measured floor, and the value rides the dark cap zone.
   barRow(ctx, {
-    x, y: 420, w, h: 130, label: 'Plain index ETF, held for decades', value: 0.3, maxV: 0.5,
+    x, y: 370, w, h: 130, label: 'Plain index ETF, held for decades', value: 0.3, maxV: 0.5,
     p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'gold', valueText: '≈ 0.3%/yr',
     sub: 'roughly the tax on its dividends',
   });
   // U3.3 — focus ping on the value the narration is talking about
-  focusPing(ctx, x + w * 0.72, 485, g.sentenceT, 96);
+  focusPing(ctx, x + w * 0.72, 435, g.sentenceT, 96);
   // competing pitches fade below the line
   const compA = clamp01((t - 1600) / 600);
   if (compA > 0) {
@@ -553,7 +553,7 @@ export function benchmarkBarScene(g: SceneCtx): void {
     ctx.globalAlpha = compA * 0.85;
     setFont(ctx, 36, 600, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.inkMuted;
-    ctx.fillText('Most pitches can’t.', x + w + 50, 510);
+    ctx.fillText('Most pitches can’t.', x + w + 50, 460);
     ctx.restore();
   }
 }

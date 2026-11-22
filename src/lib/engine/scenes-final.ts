@@ -33,7 +33,7 @@ export function stepUpScene(g: SceneCtx): void {
     ctx.save();
     ctx.globalAlpha = wa;
     glassCard(ctx, W * 0.24, 480, 780, 300, { r: 18, goldEdge: true });
-    setFont(ctx, 24, 700, FONT_UI);
+    setFont(ctx, 28, 700, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.fillText('HELD UNTIL DEATH (TAXABLE ACCOUNT)', W * 0.24 + 40, 540);
     // embedded gains row → struck through
@@ -108,13 +108,13 @@ export function hierarchyScene(g: SceneCtx): void {
     });
     // tier diamond
     diamond(ctx, lx + 56, ly + h / 2, 15, tr.tone === 'gold' ? PALETTE.goldBright : tr.tone === 'up' ? PALETTE.up : PALETTE.steel);
-    setFont(ctx, 22, 800, FONT_UI);
+    setFont(ctx, 28, 800, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.fillText(tr.tier, lx + 92, ly + 46);
     setFont(ctx, 36, 700, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.ink;
     ctx.fillText(tr.title, lx + 92, ly + 92);
-    setFont(ctx, 22, 500, FONT_UI);
+    setFont(ctx, 28, 500, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.fillText(tr.sub, lx + 92, ly + 124);
     // verdict chip (right)
@@ -126,7 +126,7 @@ export function hierarchyScene(g: SceneCtx): void {
   if (fa > 0) {
     ctx.save();
     ctx.globalAlpha = fa;
-    setFont(ctx, 22, 600, FONT_UI);
+    setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkMuted;
     ctx.textAlign = 'right';
     ctx.fillText('Benchmark to beat: plain index ETF held for decades ≈ 0.3%/yr drag', W - 120, 310);

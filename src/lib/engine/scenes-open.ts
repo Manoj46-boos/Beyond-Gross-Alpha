@@ -33,7 +33,7 @@ function splitStatement(ctx: CanvasRenderingContext2D, W: number, H: number, t: 
     ctx.translate(0, (1 - ent) * 34);
     glassCard(ctx, x, y0, cardW, cardH, { r: 20, goldEdge: good, border: good ? rgba(PALETTE.gold, 0.35) : rgba(PALETTE.down, 0.4) });
     // statement header
-    setFont(ctx, 24, 700, FONT_UI);
+    setFont(ctx, 28, 700, FONT_UI);
     try { (ctx as any).letterSpacing = '4px'; } catch { /* noop */ }
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.textAlign = 'center';
@@ -59,7 +59,7 @@ function splitStatement(ctx: CanvasRenderingContext2D, W: number, H: number, t: 
     }
     ctx.textAlign = 'left';
     // gross-return line
-    setFont(ctx, 22, 600, FONT_UI);
+    setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.textAlign = 'center';
     ctx.fillText(good ? 'after-tax compounding intact' : 'after 2%/yr tax drag', x + cardW / 2, y0 + 250);
@@ -93,13 +93,37 @@ function splitStatement(ctx: CanvasRenderingContext2D, W: number, H: number, t: 
     ctx.restore();
     void e;
   }
-  // footnote
+  // footnote — L-07: exponents are COMPOSED (raised 62%-size runs), not raw
+  // U+2075 codepoints: Manrope lacks them, so they used to render through
+  // whatever fallback font the OS supplied — glyph mixing across machines.
+  const supMap: Record<string, string> = { '⁰': '0', '¹': '1', '²': '2', '³': '3', '⁴': '4', '⁵': '5', '⁶': '6', '⁷': '7', '⁸': '8', '⁹': '9' };
+  const raw = 'Illustration: $2M × 1.08²⁵ vs $2M × 1.06²⁵ — 2% annual tax drag';
+  const runs: { text: string; sup?: boolean }[] = [];
+  for (const ch of raw) {
+    if (supMap[ch] != null) {
+      const last = runs[runs.length - 1];
+      if (last?.sup) last.text += supMap[ch];
+      else runs.push({ text: supMap[ch], sup: true });
+    } else {
+      const last = runs[runs.length - 1];
+      if (last && !last.sup) last.text += ch;
+      else runs.push({ text: ch });
+    }
+  }
+  const baseSize = 27, supSize = Math.round(baseSize * 0.62), supRaise = Math.round(baseSize * 0.38);
   ctx.globalAlpha = alpha * 0.8;
-  setFont(ctx, 20, 500, FONT_UI);
   ctx.fillStyle = PALETTE.inkFaint;
-  ctx.textAlign = 'center';
-  ctx.fillText('Illustration: $2M × 1.08²⁵ vs $2M × 1.06²⁵ — 2% annual tax drag', W / 2, y0 + cardH + 56);
   ctx.textAlign = 'left';
+  const totalW = runs.reduce((acc, r) => {
+    setFont(ctx, r.sup ? supSize : baseSize, r.sup ? 700 : 500, FONT_UI);
+    return acc + ctx.measureText(r.text).width;
+  }, 0);
+  let fx = W / 2 - totalW / 2;
+  for (const r of runs) {
+    setFont(ctx, r.sup ? supSize : baseSize, r.sup ? 700 : 500, FONT_UI);
+    ctx.fillText(r.text, fx, r.sup ? y0 + cardH + 56 - supRaise : y0 + cardH + 56);
+    fx += ctx.measureText(r.text).width;
+  }
   ctx.restore();
 }
 
@@ -120,7 +144,7 @@ export function coldOpenScene(g: SceneCtx): void {
     if (a1 > 0) {
       ctx.globalAlpha = a1;
       goldFillText(ctx, '$13,700,000', W / 2, H * 0.40, 110, 800, FONT_DISPLAY, 'center');
-      setFont(ctx, 24, 600, FONT_UI);
+      setFont(ctx, 28, 600, FONT_UI);
       ctx.fillStyle = PALETTE.inkFaint;
       ctx.fillText('INVESTOR ONE', W / 2, H * 0.40 - 110);
     }
@@ -132,7 +156,7 @@ export function coldOpenScene(g: SceneCtx): void {
       setFont(ctx, 110, 800, FONT_DISPLAY);
       ctx.fillStyle = g2;
       ctx.fillText('$8,600,000', W / 2, H * 0.64);
-      setFont(ctx, 24, 600, FONT_UI);
+      setFont(ctx, 28, 600, FONT_UI);
       ctx.fillStyle = PALETTE.inkFaint;
       ctx.fillText('INVESTOR TWO', W / 2, H * 0.64 - 112);
       // hairline between
@@ -154,7 +178,7 @@ export function coldOpenScene(g: SceneCtx): void {
 // ── G2 — the gap bars ────────────────────────────────────────────────────────
 export function gapBarsScene(g: SceneCtx): void {
   const { ctx, W, t } = g;
-  panelTitle(ctx, 'The most expensive silence in wealth management', W / 2 - 560, 240, 1120, t / 2400, {
+  panelTitle(ctx, 'The most expensive silence in wealth management', W / 2 - 560, 210, 1120, t / 2400, {
     kickerText: 'BlackRock 2026 · advisor survey',
   });
   const x = 240, w = W - 700, y = 400, rh = 130;
@@ -321,7 +345,7 @@ export function finalLinesScene(g: SceneCtx): void {
 export function circleBackScene(g: SceneCtx): void {
   const { ctx, W, H, t, s } = g;
   if ((s.mode ?? 'comments') === 'comments') {
-    panelTitle(ctx, 'Ask question one. Report back.', W / 2 - 520, 250, 1040, t / 2400, { kickerText: 'Your turn' });
+    panelTitle(ctx, 'Ask question one. Report back.', W / 2 - 520, 220, 1040, t / 2400, { kickerText: 'Your turn' });
     // floating comment bubbles
     const bubbles = [
       { text: 'My advisor sent the after-tax report in an hour.', x: W * 0.30, tone: 'gold' },

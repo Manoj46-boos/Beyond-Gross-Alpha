@@ -106,6 +106,20 @@ export function godRays(
 
 // ── grain (3 tiles, overlay) ─────────────────────────────────────────────────
 let grainTiles: any[] | null = null;
+/** L-06 — a seeded PRNG (mulberry32): grain tiles are generated from a fixed
+ *  seed so two renders of the same frame are pixel-identical — the engine
+ *  contract "every animated quantity is a pure function of (t, seed)" holds
+ *  for texture too, which is what makes one-shot re-renders and QA diffs
+ *  trustworthy. */
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let s = Math.imul(a ^ (a >>> 15), 1 | a);
+    s = (s + Math.imul(s ^ (s >>> 7), 61 | s)) ^ s;
+    return ((s ^ (s >>> 14)) >>> 0) / 4294967296;
+  };
+}
 function makeGrainTiles(): any[] {
   const tiles: any[] = [];
   const anyDoc = typeof document !== 'undefined' ? document : null;
@@ -116,6 +130,7 @@ function makeGrainTiles(): any[] {
     }
     return null;
   };
+  const rand = mulberry32(0x5EED1234);
   for (let k = 0; k < 3; k++) {
     const c = mk() as HTMLCanvasElement | null;
     if (!c) { tiles.push(null); continue; }
@@ -123,7 +138,7 @@ function makeGrainTiles(): any[] {
     const g = c.getContext('2d')!;
     const img = g.createImageData(240, 240);
     for (let i = 0; i < img.data.length; i += 4) {
-      const v = 118 + Math.floor(Math.random() * 20);
+      const v = 118 + Math.floor(rand() * 20);
       img.data[i] = v; img.data[i + 1] = v; img.data[i + 2] = v;
       img.data[i + 3] = 255;
     }

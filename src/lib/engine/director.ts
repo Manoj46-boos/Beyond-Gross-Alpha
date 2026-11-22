@@ -116,15 +116,16 @@ function cameraFor(group: Group, gt: number, d: number, chapterIdx: number): Cam
   else if (type === 'host') { zBase = 1.0; zTarget = 0.035; }
   else if (type === 'secCase' || type === 'elmVerdict') { zBase = 1.0; zTarget = 0.028; }
   // D14/U4.3 — depth-aware camera: layered scenes (the figure, the room, cards)
-  // keep the full personality; flat data layouts on the fixed stage get the
-  // report's discipline — drift ±18px at depth 0.35, NO alternating entry whip;
-  // the 2.2% punch stays everywhere.
+  // keep the full personality; flat data layouts get L-09's calibrated push —
+  // the old caps (0.018 zoom / ±18px) sat below the perception threshold at
+  // phone size, so ~70% of the runtime paid for motion without the benefit.
+  // Still NO entry whip on flat scenes; the 2.2% punch stays everywhere.
   const layered = key === 'host' || key === 'coldOpen' || key === 'endScreen' || key === 'quietBeat' || key === 'titleCard' || key === 'chapterCard';
-  if (!layered) zTarget = Math.min(zTarget, 0.018);
+  if (!layered) zTarget = Math.min(zTarget, 0.048);
   const scale = zBase + zTarget * easeInOutSine(p);
   const driftBase = type.startsWith('statement') || type === 'finalLines' ? 0.12 : type === 'coldOpen' ? 0.35 : 0.6;
-  const dx = drift(gt, 1) * (layered ? 46 * driftBase : 18);
-  const dy = drift(gt, 7) * (layered ? 26 : 10);
+  const dx = drift(gt, 1) * (layered ? 46 * driftBase : 34);
+  const dy = drift(gt, 7) * (layered ? 26 : 15);
   // entry whip only where there is a subject to track (host/chapter cards)
   const whip = gt < 340 && layered ? (1 - easeOutCubic(gt / 340)) * 26 : 0;
   const dir = (group.beatIdx % 2 === 0 ? 1 : -1);

@@ -141,7 +141,7 @@ export function drawSourceChip(
   const aIn = clamp01(local / 240);
   const aOut = clamp01((durMs - local) / 300);
   const alpha = Math.min(aIn, aOut);
-  setFont(ctx, 23, 600, FONT_UI);
+  setFont(ctx, 28, 600, FONT_UI);
   // document glyph + text
   const tw = ctx.measureText(text).width;
   const w = tw + 74, h = 44;
@@ -171,7 +171,7 @@ const MARGIN_X = 120;
 export function drawWatermark(ctx: CanvasRenderingContext2D, W: number, channelName: string, alpha = 0.8): void {
   ctx.save();
   ctx.globalAlpha = alpha;
-  setFont(ctx, 24, 700, FONT_UI);
+  setFont(ctx, 28, 700, FONT_UI);
   try { (ctx as any).letterSpacing = '4px'; } catch { /* noop */ }
   ctx.fillStyle = rgba(PALETTE.inkSoft, 0.9);
   const name = channelName.toUpperCase();
@@ -326,6 +326,37 @@ export function statementAnchor(
   const a = clamp01(tMs / 700);
   // U4.2 — hairline gold rule frame inset 90 px (report spec)
   const m = 90;
+  // L-04 — the room stays ALIVE on rest beats (a void reads as a playback
+  // error in daylight): a horizon glow pooling above the floor, two quiet
+  // vertical hairlines flanking the text zone, and five drifting dust motes
+  // inside the ruled frame — all deterministic.
+  const breathe = 0.5 + 0.5 * Math.sin(tMs / 3000);
+  ctx.save();
+  ctx.globalAlpha = a;
+  const horizon = ctx.createLinearGradient(0, H * 0.78, 0, H * 0.98);
+  horizon.addColorStop(0, rgba(PALETTE.gold, 0));
+  horizon.addColorStop(0.72, rgba(PALETTE.gold, 0.10 + 0.05 * breathe));
+  horizon.addColorStop(1, rgba(PALETTE.gold, 0));
+  ctx.fillStyle = horizon;
+  ctx.fillRect(m, H * 0.78, W - 2 * m, H * 0.2);
+  ctx.strokeStyle = rgba(PALETTE.steel, 0.22);
+  ctx.lineWidth = 1;
+  for (const vx of [m + 96, W - m - 96]) {
+    ctx.beginPath();
+    ctx.moveTo(vx, H * 0.24);
+    ctx.lineTo(vx, H * 0.8);
+    ctx.stroke();
+  }
+  for (let k = 0; k < 5; k++) {
+    const dx = m + 130 + hash01(k * 7.3 + 1.7) * (W - 2 * m - 260);
+    const dy = H * 0.2 + hash01(k * 3.1 + 9.2) * H * 0.55 + Math.sin(tMs / 2600 + k * 2.1) * 14;
+    const dr = 1.6 + hash01(k * 11.7) * 1.8;
+    ctx.fillStyle = rgba(PALETTE.goldBright, 0.16 + 0.14 * Math.sin(tMs / 1800 + k * 1.9));
+    ctx.beginPath();
+    ctx.arc(dx, dy, dr, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
   // ruled frame + gold corner ticks
   ctx.save();
   ctx.globalAlpha = 0.55 * a;
@@ -343,23 +374,33 @@ export function statementAnchor(
     ctx.stroke();
   }
   ctx.restore();
-  // ghost chapter numeral — huge, quiet, top-right
+  // ghost chapter numeral — huge, quiet, top-right. L-04 — presence raised
+  // from a flat 13% to a vertical gradient wash (top 0.22 → base 0.09): it
+  // finally registers as an object, not sensor noise.
   ctx.save();
   ctx.globalAlpha = a;
   setFont(ctx, 500, 800, FONT_DISPLAY);
-  ctx.fillStyle = rgba(PALETTE.inkGhost, 0.13); // U4.2 — ghost numeral at 13%
   ctx.textAlign = 'right';
   const num = ghost ?? String((chapterIdx % 10) + 1).padStart(2, '0');
+  const numG = ctx.createLinearGradient(0, H * 0.18, 0, H * 0.6);
+  numG.addColorStop(0, rgba(PALETTE.inkGhost, 0.22));
+  numG.addColorStop(1, rgba(PALETTE.inkGhost, 0.09));
+  ctx.fillStyle = numG;
   ctx.fillText(num, W - m - 24, H * 0.58);
   ctx.textAlign = 'left';
   ctx.restore();
-  // the single gold object — a breathing diamond above the text zone
-  const breathe = 0.5 + 0.5 * Math.sin(tMs / 3000);
+  // the single gold object — a breathing diamond above the text zone, now
+  // carrying a soft halo so it reads as lit, not stamped (L-04)
   ctx.save();
   ctx.globalAlpha = (0.55 + 0.25 * breathe) * a;
   ctx.translate(W / 2, H * 0.15);
+  const halo = ctx.createRadialGradient(0, 0, 4, 0, 0, 52 + 6 * breathe);
+  halo.addColorStop(0, rgba(PALETTE.goldBright, 0.34));
+  halo.addColorStop(1, rgba(PALETTE.goldBright, 0));
+  ctx.fillStyle = halo;
+  ctx.fillRect(-70, -70, 140, 140);
   ctx.rotate(Math.PI / 4);
-  const ds = 13 + 1.8 * breathe;
+  const ds = 18 + 2.4 * breathe;
   ctx.fillStyle = PALETTE.gold;
   ctx.fillRect(-ds / 2, -ds / 2, ds, ds);
   ctx.strokeStyle = rgba(PALETTE.goldPale, 0.6);

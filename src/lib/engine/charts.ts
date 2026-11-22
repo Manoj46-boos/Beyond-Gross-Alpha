@@ -21,7 +21,7 @@ export function panelTitle(
   ctx.save();
   ctx.globalAlpha = alpha;
   if (kickerText) {
-    setFont(ctx, 24, 700, FONT_UI);
+    setFont(ctx, 28, 700, FONT_UI);
     try { (ctx as any).letterSpacing = '5px'; } catch { /* noop */ }
     ctx.fillStyle = PALETTE.gold;
     ctx.fillText(kickerText.toUpperCase(), x, y - size * 0.9);
@@ -49,7 +49,7 @@ export function panelTitle(
 export function sourceTag(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, alpha = 0.8): void {
   ctx.save();
   ctx.globalAlpha = alpha;
-  setFont(ctx, 22, 500, FONT_UI);
+  setFont(ctx, 28, 500, FONT_UI);
   ctx.fillStyle = PALETTE.inkFaint;
   ctx.fillText(text, x, y);
   ctx.restore();
@@ -102,7 +102,7 @@ export function lineChart(ctx: CanvasRenderingContext2D, o: LineChartOpts): void
   }
   ctx.stroke();
   if (o.showAxis !== false && o.yFormat) {
-    setFont(ctx, 23, 600, FONT_UI);
+    setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.textAlign = 'right';
     for (let i = 0; i <= gridLines; i++) {
@@ -112,7 +112,7 @@ export function lineChart(ctx: CanvasRenderingContext2D, o: LineChartOpts): void
     ctx.textAlign = 'left';
   }
   if (o.xLabels) {
-    setFont(ctx, 22, 600, FONT_UI);
+    setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     o.xLabels.forEach((lb, i) => {
       const lx = x + (i / (o.xLabels!.length - 1)) * w;
@@ -191,7 +191,7 @@ export function lineChart(ctx: CanvasRenderingContext2D, o: LineChartOpts): void
       const ax = px(idx), ay = py(s.points[idx][1]);
       ctx.save();
       ctx.globalAlpha = ap;
-      setFont(ctx, 23, 700, FONT_UI);
+      setFont(ctx, 28, 700, FONT_UI);
       const tw = ctx.measureText(a.label).width;
       const bw = tw + 26, bh = 40;
       let bx = clampNum(ax - bw / 2, x, x + w - bw);
@@ -283,7 +283,7 @@ export function barRow(ctx: CanvasRenderingContext2D, o: BarRowOpts): number {
     ctx.fillText(vText, Math.min(bx + fw + 16, bx + bw - vw - 8), y + h * 0.5 + 12);
   }
   if (o.sub) {
-    setFont(ctx, 20, 600, FONT_UI);
+    setFont(ctx, 27, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.fillText(o.sub, bx, y + h + 26);
   }
@@ -337,7 +337,7 @@ export function column(ctx: CanvasRenderingContext2D, o: ColOpts): void {
     if (o.landT != null && o.t != null) impactRing(ctx, o.cx, y, o.t, o.landT, 120, 0.8, col);
   }
   if (o.label) {
-    setFont(ctx, 25, 600, FONT_UI);
+    setFont(ctx, 26, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.textAlign = 'center';
     ctx.fillText(o.label, o.cx, o.baseY + 36);
@@ -380,7 +380,7 @@ export function waterfall(
     ctx.fillStyle = '#FFF3D6';
     ctx.fill();
     if (s.valueText) goldFillText(ctx, s.valueText, cx, yTop - 30, 34, 800);
-    setFont(ctx, 22, 600, FONT_UI);
+    setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.textAlign = 'center';
     wrapText(ctx, s.label, stepW * 0.94, 22, 600, FONT_UI).forEach((ln, li) => {
@@ -435,7 +435,7 @@ export function donut(
     ctx.globalAlpha = cp;
     goldFillText(ctx, centerBig, cx, cy + (centerSub ? -4 : 14), 64, 800, FONT_DISPLAY, 'center');
     if (centerSub) {
-      setFont(ctx, 22, 600, FONT_UI);
+      setFont(ctx, 28, 600, FONT_UI);
       ctx.fillStyle = PALETTE.inkFaint;
       ctx.textAlign = 'center';
       ctx.fillText(centerSub, cx, cy + 30);

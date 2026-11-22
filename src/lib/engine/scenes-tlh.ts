@@ -21,7 +21,7 @@ const LOC_COLUMNS = [
 export function locationMapScene(g: SceneCtx): void {
   const { ctx, W, H, t } = g;
   paintStage(ctx, W, H, t, {});
-  panelTitle(ctx, 'Asset location. Not allocation — location.', W * 0.10, 240, W * 0.8, t / 2400, { kickerText: 'Lever 1' });
+  panelTitle(ctx, 'Asset location. Not allocation — location.', W * 0.10, 210, W * 0.8, t / 2400, { kickerText: 'Lever 1' });
   const colW = 520, gap = 60;
   const x0 = (W - colW * 3 - gap * 2) / 2;
   LOC_COLUMNS.forEach((c, i) => {
@@ -49,12 +49,12 @@ export function locationMapScene(g: SceneCtx): void {
       ctx.translate((1 - easeOutCubic(ia)) * -40, 0);
       const iy = y + 120 + ii * 62;
       glassCard(ctx, x + 36, iy, colW - 72, 48, { r: 10, shadow: false, fill: 'rgba(255,255,255,0.045)' });
-      setFont(ctx, 24, 600, FONT_UI);
+      setFont(ctx, 28, 600, FONT_UI);
       ctx.fillStyle = PALETTE.ink;
       ctx.fillText(item, x + 58, iy + 32);
       ctx.restore();
     });
-    setFont(ctx, 21, 500, FONT_UI);
+    setFont(ctx, 27, 500, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.fillText(c.note, x + 36, y + h - 32);
     ctx.restore();
@@ -65,7 +65,7 @@ export function locationMapScene(g: SceneCtx): void {
 export function trapTileScene(g: SceneCtx): void {
   const { ctx, W, H, t, s } = g;
   paintStage(ctx, W, H, t, {});
-  panelTitle(ctx, 'Two traps the pros still step in', W * 0.10, 240, W * 0.8, t / 2400, { kickerText: 'Lever 1 · Traps' });
+  panelTitle(ctx, 'Two traps the pros still step in', W * 0.10, 210, W * 0.8, t / 2400, { kickerText: 'Lever 1 · Traps' });
   const x = W * 0.16, y = 360, w = W * 0.68, h = 330;
   const ent = springTo(0.9, 1, Math.min(700, t), 150, 15);
   ctx.save();
@@ -119,7 +119,7 @@ export function trapTileScene(g: SceneCtx): void {
 export function iraSplitScene(g: SceneCtx): void {
   const { ctx, W, H, t } = g;
   paintStage(ctx, W, H, t, {});
-  panelTitle(ctx, 'A million in a traditional IRA is not a million', W * 0.10, 240, W * 0.8, t / 2400, { kickerText: 'Lever 1 · Trap two' });
+  panelTitle(ctx, 'A million in a traditional IRA is not a million', W * 0.10, 210, W * 0.8, t / 2400, { kickerText: 'Lever 1 · Trap two' });
   // S-05 — the donut shifts right of the figure margin
   const cx = W * 0.42, cy = H * 0.55;
   donut(ctx, cx, cy, 170, [
@@ -145,7 +145,7 @@ export function iraSplitScene(g: SceneCtx): void {
     ctx.save();
     ctx.globalAlpha = na;
     glassCard(ctx, W * 0.58, 620, 560, 140, { r: 14 });
-    setFont(ctx, 24, 600, FONT_UI);
+    setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkSoft;
     wrapText(ctx, 'Park all your bonds in the IRA and the account you spend from is all equity — riskier than the spreadsheet says.', 500, 24, 600, FONT_UI).forEach((ln, i) => {
       ctx.fillText(ln, W * 0.58 + 30, 620 + 46 + i * 36);
@@ -164,7 +164,7 @@ export function iraSplitScene(g: SceneCtx): void {
 export function bpsCompareScene(g: SceneCtx): void {
   const { ctx, W, t } = g;
   paintStage(ctx, W, g.H, t, {});
-  panelTitle(ctx, 'Real money — but modest, and capped', W * 0.10, 250, W * 0.8, t / 2400, { kickerText: 'Lever 1 · What it’s worth' });
+  panelTitle(ctx, 'Real money — but modest, and capped', W * 0.10, 220, W * 0.8, t / 2400, { kickerText: 'Lever 1 · What it’s worth' });
   const x = W * 0.10, w = W * 0.62;
   barRow(ctx, { x, y: 400, w, h: 120, label: 'Vanguard simulations', value: 30, maxV: 60, p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'up', valueText: 'up to 30 bps/yr' });
   barRow(ctx, { x, y: 590, w, h: 120, label: 'Goldman Sachs AM', value: 45, maxV: 60, p: clamp01((t - 1300) / 900), t, landT: 2250, tone: 'gold', valueText: '45+ bps/yr', sub: 'high brackets + strategic allocation' });
@@ -185,7 +185,7 @@ export function bpsCompareScene(g: SceneCtx): void {
 export function tlhMechanicScene(g: SceneCtx): void {
   const { ctx, W, H, t } = g;
   paintStage(ctx, W, H, t, { tone: 'gold' });
-  panelTitle(ctx, 'Sell the loss. Keep the exposure. Bank the tax asset.', W * 0.10, 240, W * 0.8, t / 2400, { kickerText: 'Lever 2 · The mechanic' });
+  panelTitle(ctx, 'Sell the loss. Keep the exposure. Bank the tax asset.', W * 0.10, 210, W * 0.8, t / 2400, { kickerText: 'Lever 2 · The mechanic' });
 
   const stepW = W * 0.26;
   const y = 480;
@@ -217,7 +217,7 @@ export function tlhMechanicScene(g: SceneCtx): void {
       ctx.fillStyle = g2;
       ctx.fill();
       ctx.fillStyle = 'rgba(255,255,255,0.9)';
-      setFont(ctx, 24, 800, FONT_UI);
+      setFont(ctx, 28, 800, FONT_UI);
       ctx.textAlign = 'center';
       ctx.fillText('−20%', 0, 8);
       ctx.textAlign = 'left';
@@ -229,7 +229,7 @@ export function tlhMechanicScene(g: SceneCtx): void {
       if (ta > 0) {
         ctx.save();
         ctx.globalAlpha = ta;
-        setFont(ctx, 21, 700, FONT_UI);
+        setFont(ctx, 27, 700, FONT_UI);
         ctx.fillStyle = PALETTE.goldBright;
         ctx.textAlign = 'center';
         ctx.fillText('TAX ASSET', cx, cy + 74);
@@ -254,7 +254,7 @@ export function tlhMechanicScene(g: SceneCtx): void {
       ctx.stroke();
       ctx.setLineDash([]);
       ctx.fillStyle = 'rgba(240,250,245,0.92)';
-      setFont(ctx, 20, 700, FONT_UI);
+      setFont(ctx, 27, 700, FONT_UI);
       ctx.textAlign = 'center';
       ctx.fillText('similar', 0, -4);
       ctx.fillText('not identical', 0, 20);
@@ -266,7 +266,7 @@ export function tlhMechanicScene(g: SceneCtx): void {
     ctx.textAlign = 'center';
     ctx.fillText(st.label, cx, y + 172);
     ctx.textAlign = 'left';
-    setFont(ctx, 20, 500, FONT_UI);
+    setFont(ctx, 27, 500, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     wrapText(ctx, st.sub, stepW - 60, 20, 500, FONT_UI).forEach((ln, li) => {
       ctx.fillText(ln, x + 30, y + 200 + li * 24);
@@ -297,9 +297,9 @@ export function tlhMechanicScene(g: SceneCtx): void {
 export function washSaleScene(g: SceneCtx): void {
   const { ctx, W, H, t } = g;
   paintStage(ctx, W, H, t, {});
-  panelTitle(ctx, 'The wash-sale rule: a 61-day window', W * 0.10, 240, W * 0.8, t / 2400, { kickerText: 'Lever 2 · The guardrail' });
+  panelTitle(ctx, 'The wash-sale rule: a 61-day window', W * 0.10, 210, W * 0.8, t / 2400, { kickerText: 'Lever 2 · The guardrail' });
   // calendar bracket: 30 days before + sale + 30 days after
-  const x = W * 0.16, y = 380, w = W * 0.68;
+  const x = W * 0.16, y = 330, w = W * 0.68;
   const days = 61;
   const cellW = w / days;
   const saleIdx = 30;
@@ -319,13 +319,13 @@ export function washSaleScene(g: SceneCtx): void {
   if (ba > 0) {
     ctx.save();
     ctx.globalAlpha = ba;
-    setFont(ctx, 22, 600, FONT_UI);
+    setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.fillText('30 days before', x, y + 78);
     ctx.textAlign = 'right';
     ctx.fillText('30 days after', x + w, y + 78);
     ctx.textAlign = 'left';
-    setFont(ctx, 24, 800, FONT_UI);
+    setFont(ctx, 28, 800, FONT_UI);
     ctx.fillStyle = PALETTE.goldBright;
     ctx.textAlign = 'center';
     ctx.fillText('SALE', x + (saleIdx + 0.5) * cellW, y + 78);
@@ -343,7 +343,7 @@ export function washSaleScene(g: SceneCtx): void {
     ctx.fillText('Repurchase inside an IRA — or your spouse’s:', W * 0.16 + 40, 630);
     setFont(ctx, 40, 800, FONT_DISPLAY);
     goldFillText(ctx, 'the loss is destroyed. Permanently.', W * 0.16 + 40, 700, 40, 800, FONT_DISPLAY);
-    setFont(ctx, 22, 500, FONT_UI);
+    setFont(ctx, 28, 500, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.fillText('IRS Rev. Rul. 2008-5 · no basis adjustment on the other side', W * 0.16 + 40, 736);
     ctx.restore();
@@ -355,9 +355,9 @@ export function washSaleScene(g: SceneCtx): void {
 export function waterfallScene(g: SceneCtx): void {
   const { ctx, W, H, t } = g;
   paintStage(ctx, W, H, t, {});
-  panelTitle(ctx, 'The independent benchmark: 1.08% → what actually survives', W * 0.10, 240, W * 0.8, t / 2400, { kickerText: 'Lever 2 · FAJ 76(3), 2020' });
+  panelTitle(ctx, 'The independent benchmark: 1.08% → what actually survives', W * 0.10, 210, W * 0.8, t / 2400, { kickerText: 'Lever 2 · FAJ 76(3), 2020' });
   // S-05 — chart zone shifts right of the figure margin (figure spans x≈90..330)
-  waterfall(ctx, W * 0.34, 340, W * 0.40, 380, [
+  waterfall(ctx, W * 0.34, 300, W * 0.40, 390, [
     { label: 'Gross alpha', value: 1.08, tone: 'gold', valueText: '1.08%' },
     { label: 'Wash-sale rule', value: 0.82, tone: 'down', valueText: '0.82%' },
     { label: 'After 13 bps costs', value: 0.95, tone: 'up', valueText: '0.95%' },
@@ -368,7 +368,7 @@ export function waterfallScene(g: SceneCtx): void {
     ctx.save();
     ctx.globalAlpha = na;
     glassCard(ctx, W * 0.82, 400, 300, 220, { r: 14 });
-    setFont(ctx, 22, 600, FONT_UI);
+    setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkSoft;
     wrapText(ctx, 'Monthly harvesting · 500 largest US stocks · 1926–2018', 250, 22, 600, FONT_UI).forEach((ln, i) => {
       ctx.fillText(ln, W * 0.82 + 26, 450 + i * 34);
@@ -388,14 +388,14 @@ export function waterfallScene(g: SceneCtx): void {
 export function eraBarsScene(g: SceneCtx): void {
   const { ctx, W, H, t } = g;
   paintStage(ctx, W, H, t, {});
-  panelTitle(ctx, 'A volatility strategy: it feeds on dispersion', W * 0.10, 240, W * 0.62, t / 2400, { kickerText: 'Lever 2 · 1926–2018, four eras' });
+  panelTitle(ctx, 'A volatility strategy: it feeds on dispersion', W * 0.10, 210, W * 0.62, t / 2400, { kickerText: 'Lever 2 · 1926–2018, four eras' });
   const cols = [
     { label: '1926–49\nDepression', value: 2.13, tone: 'gold' },
     { label: '1949–72\nPostwar boom', value: 0.51, tone: 'platinum' },
     { label: '1972–95\nVolatility', value: 1.08, tone: 'gold' },
     { label: '1995–2018\nBull market', value: 0.81, tone: 'platinum' },
   ];
-  const maxH = 380, baseY = 700;
+  const maxH = 390, baseY = 650;
   const colW = 150, gap = 90;
   // S-05 — column group shifts right of the figure margin
   const x0 = W * 0.63 - (colW * 4 + gap * 3) / 2;
@@ -416,7 +416,7 @@ export function eraBarsScene(g: SceneCtx): void {
       p: ent, t, tone: c.tone as any, valueText: `${c.value.toFixed(2)}%`,
       label: c.label.split('\n')[0], width: colW, landT: 300 + i * 380 + 700,
     });
-    setFont(ctx, 19, 500, FONT_UI);
+    setFont(ctx, 27, 500, FONT_UI);
     ctx.fillStyle = dim ? PALETTE.inkFaint : PALETTE.inkSoft;
     ctx.textAlign = 'center';
     ctx.fillText(c.label.split('\n')[1], cx, baseY + 62);
@@ -458,7 +458,7 @@ export function eraBarsScene(g: SceneCtx): void {
 export function vendorCompareScene(g: SceneCtx): void {
   const { ctx, W, t } = g;
   paintStage(ctx, W, g.H, t, {});
-  panelTitle(ctx, 'Both are real. Only one is disinterested.', W * 0.10, 250, W * 0.8, t / 2400, { kickerText: 'Lever 2 · Read the footnote' });
+  panelTitle(ctx, 'Both are real. Only one is disinterested.', W * 0.10, 220, W * 0.8, t / 2400, { kickerText: 'Lever 2 · Read the footnote' });
   const cards = [
     { x: W * 0.10, big: '0.8–1.0%', label: 'independent research', sub: 'FAJ — wash-sale compliant, after costs', tone: 'gold' },
     { x: W * 0.54, big: '2.3%', label: 'vendor research', sub: 'Aperio — sells direct indexing; needs short-term gains to offset', tone: 'platinum' },
@@ -468,7 +468,7 @@ export function vendorCompareScene(g: SceneCtx): void {
     if (ent <= 0) return;
     ctx.save();
     ctx.globalAlpha = ent;
-    statCard(ctx, { x: c.x, y: 380, w: W * 0.36, h: 320, big: c.big, label: c.label, sub: c.sub, p: ent, tone: c.tone as any, bigSize: i === 0 ? 84 : 100, goldEdge: i === 0 });
+    statCard(ctx, { x: c.x, y: 330, w: W * 0.36, h: 320, big: c.big, label: c.label, sub: c.sub, p: ent, tone: c.tone as any, bigSize: i === 0 ? 84 : 100, goldEdge: i === 0 });
     ctx.restore();
   });
 }
@@ -478,16 +478,16 @@ export function wealthfrontCaseScene(g: SceneCtx): void {
   const { ctx, W, H, t } = g;
   paintStage(ctx, W, H, t, { tone: 'gold' });
   goldDust(ctx, W, H, t, 33, 0.9);
-  panelTitle(ctx, 'In production: the frequency argument in one number', W * 0.10, 240, W * 0.8, t / 2400, { kickerText: 'Lever 2 · Wealthfront, 2025' });
+  panelTitle(ctx, 'In production: the frequency argument in one number', W * 0.10, 210, W * 0.8, t / 2400, { kickerText: 'Lever 2 · Wealthfront, 2025' });
   // two stat plates (chart lives INSIDE the second card, below its label)
-  statCard(ctx, { x: W * 0.10, y: 380, w: 520, h: 300, big: '$161M', label: 'client tax savings, 2025', p: clamp01((t - 300) / 800), tone: 'gold', bigSize: 92 });
+  statCard(ctx, { x: W * 0.10, y: 330, w: 520, h: 300, big: '$161M', label: 'client tax savings, 2025', p: clamp01((t - 300) / 800), tone: 'gold', bigSize: 92 });
   const ent2 = clamp01((t - 1400) / 700);
   if (ent2 > 0) {
     ctx.save();
     ctx.globalAlpha = ent2;
-    const cardX = W * 0.54, cardY = 380, cardW = 560, cardH = 300;
+    const cardX = W * 0.54, cardY = 330, cardW = 560, cardH = 300;
     glassCard(ctx, cardX, cardY, cardW, cardH, { r: 22, border: rgba(PALETTE.up, 0.4) });
-    setFont(ctx, 24, 700, FONT_UI);
+    setFont(ctx, 28, 700, FONT_UI);
     try { (ctx as any).letterSpacing = '4px'; } catch { /* noop */ }
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.fillText('LOSSES HARVESTED IN 3 DAYS', cardX + 44, cardY + 62);
@@ -511,7 +511,7 @@ export function wealthfrontCaseScene(g: SceneCtx): void {
     ctx.fillRect(x + w2 * 0.35, y, w2 * 0.25, h2);
     ctx.strokeStyle = rgba(PALETTE.gold, 0.6);
     ctx.strokeRect(x + w2 * 0.35, y, w2 * 0.25, h2);
-    setFont(ctx, 18, 700, FONT_UI);
+    setFont(ctx, 27, 700, FONT_UI);
     ctx.fillStyle = PALETTE.goldBright;
     ctx.fillText('APRIL TARIFF SELLOFF — THE 3 DAYS', x + w2 * 0.24, y - 8);
     ctx.restore();
@@ -522,7 +522,7 @@ export function wealthfrontCaseScene(g: SceneCtx): void {
 export function decayCurveScene(g: SceneCtx): void {
   const { ctx, W, t } = g;
   paintStage(ctx, W, g.H, t, {});
-  panelTitle(ctx, 'Tax alpha decays — deferral, not forgiveness', W * 0.10, 250, W * 0.8, t / 2400, { kickerText: 'Lever 2 · The catch' });
+  panelTitle(ctx, 'Tax alpha decays — deferral, not forgiveness', W * 0.10, 220, W * 0.8, t / 2400, { kickerText: 'Lever 2 · The catch' });
   const pts: [number, number][] = [];
   for (let i = 0; i <= 30; i++) pts.push([i, 8 * Math.exp(-i / 6)]);
   lineChart(ctx, {
@@ -545,7 +545,7 @@ export function decayCurveScene(g: SceneCtx): void {
     wrapText(ctx, 'Every harvested loss lowers your basis — a bigger gain waiting later.', 360, 34, 700, FONT_DISPLAY).forEach((ln, i) => {
       ctx.fillText(ln, W * 0.68 + 40, 410 + i * 48);
     });
-    setFont(ctx, 22, 600, FONT_UI);
+    setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = PALETTE.goldBright;
     wrapText(ctx, 'Permanent only if donated, or stepped up at death.', 380, 22, 600, FONT_UI).forEach((ln, i) => {
       ctx.fillText(ln, W * 0.68 + 40, 620 + i * 32);
@@ -570,7 +570,7 @@ export function secCaseScene(g: SceneCtx): void {
   ctx.scale(ent, ent);
   ctx.translate(-w / 2, -h / 2);
   glassCard(ctx, 0, 0, w, h, { r: 8, fill: 'rgba(232,226,210,0.10)', border: rgba(PALETTE.inkSoft, 0.3) });
-  setFont(ctx, 22, 800, FONT_UI);
+  setFont(ctx, 28, 800, FONT_UI);
   try { (ctx as any).letterSpacing = '4px'; } catch { /* noop */ }
   ctx.fillStyle = PALETTE.inkFaint;
   ctx.fillText('SECURITIES AND EXCHANGE COMMISSION', 50, 70);
