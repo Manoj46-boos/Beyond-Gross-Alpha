@@ -248,9 +248,10 @@ export function drawFrame(
     }
     bokehField(ctx, W, H, t, chapterIdx * 3 + 1, true, isStatement ? 0.5 : 0.75);
 
-    // DOF reaction pass on host scenes late in the group (subtle)
+    // DOF reaction pass on host scenes late in the group (subtle — U1.1:
+    // band-limited cheap gaussian, composited at 20% alpha)
     if (type === 'host' && gt > gdur * 0.7) {
-      dofPass(ctx, W, H, 0.22, { x: W * 0.215, y: H * 0.62, r: 420 });
+      dofPass(ctx, W, H, 0.2);
     }
   }
 

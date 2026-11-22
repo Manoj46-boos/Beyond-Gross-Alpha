@@ -97,7 +97,7 @@ export function fontStr(size: number, weight: number, family: string = FONT_UI):
 export function fitText(
   ctx: CanvasRenderingContext2D, text: string, x: number, y: number,
   maxW: number, size: number, weight: number, family = FONT_UI,
-  fill = PALETTE.ink, floor = 30, letterSpacing = ''
+  fill: string = PALETTE.ink, floor = 30, letterSpacing = ''
 ): number {
   let s = size;
   setFont(ctx, s, weight, family);
@@ -322,41 +322,69 @@ export const fadeOut = (t: number, end: number, dur = 420): number => clamp01((e
 /** deterministic seed per scene/beat */
 export const seedOf = (key: string, extra = 0): number => Math.floor(hash01(key.length * 131 + extra * 17 + (key.charCodeAt(0) || 7)) * 1e6);
 
-/** the brand α glyph — D16: ONE vector, defined once, reused everywhere
- *  (watermark, end screen, brand moments). Two-stroke calligraphic
- *  construction: (1) the loop, a nearly-closed circle with its opening at the
- *  upper right; (2) the tail, an S-curve diving through the loop's right side
- *  and kicking out to the baseline. Reads as α at every size — the old
- *  per-site arc approximations read as 'Q'. */
+/** the brand α glyph (U1.4) — ONE vector, defined once, used by the watermark,
+ *  chapter cards and end screen. Two-stroke calligraphic construction:
+ *  (1) a 300-degree ellipse loop with its opening at the upper right;
+ *  (2) a TAPERING tail that dives through the loop's right side and kicks out
+ *  to the baseline, with a small serif wedge at the entry. Replaces the three
+ *  per-site parametric approximations (one of which read as 'Q'). */
 export function drawAlphaGlyph(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, color: string = PALETTE.gold, lineWidth = 7, grow = 1): void {
   ctx.save();
   ctx.strokeStyle = color;
-  ctx.lineWidth = lineWidth;
+  ctx.fillStyle = color;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   const g = clamp01(grow);
   const cx = x + s * 0.36;       // loop centre
   const cy = y - s * 0.44;       // loop centre above the baseline
   const rl = s * 0.335;          // loop radius
-  // stroke 1 — the loop (sweep grows with `grow` up to 78% of the glyph)
-  const loopSweep = 2 * Math.PI * 0.86;
+  // stroke 1 — the 300° ellipse loop (draw-on over the first 78% of grow)
+  const sweep = (Math.PI * 2 * (300 / 360)) * Math.min(1, g / 0.78);
+  ctx.lineWidth = lineWidth;
   ctx.beginPath();
-  ctx.ellipse(cx, cy, rl, rl * 0.94, 0, -Math.PI * 0.62, -Math.PI * 0.62 + loopSweep * Math.min(1, g / 0.78));
+  ctx.ellipse(cx, cy, rl, rl * 0.94, 0, -Math.PI * 0.615, -Math.PI * 0.615 + sweep);
   ctx.stroke();
-  // stroke 2 — the tail (appears in the last 22% of the draw-on)
+  // stroke 2 — the tapering tail (last 22% of the draw-on)
   if (g > 0.78) {
     const q = clamp01((g - 0.78) / 0.22);
+    const sx = cx + rl * 1.02, sy = cy - rl * 1.28;              // entry (top right)
+    const mx = cx + rl * (0.05 + 0.42 * q), my = cy - rl * (0.27 - 1.05 * q);
+    const ex = cx + rl * (1.02 + 1.16 * q), ey = cy + rl * (1.13 - 0.05 * q);
+    // serif wedge at the entry — the calligraphic entry accent
     ctx.beginPath();
-    ctx.moveTo(cx + rl * 1.02, cy - rl * 1.28);
-    ctx.quadraticCurveTo(
-      cx + rl * (1.02 - 0.97 * q), cy - rl * (1.28 - 1.55 * q),
-      cx + rl * (0.05 + 0.42 * q), cy - rl * (0.27 - 1.05 * q)
-    );
-    ctx.quadraticCurveTo(
-      cx + rl * (0.47 + 0.55 * q), cy + rl * (0.78 + 0.35 * q),
-      cx + rl * (1.02 + 1.16 * q), cy + rl * (1.13 - 0.05 * q)
-    );
-    ctx.stroke();
+    ctx.moveTo(sx - lineWidth * 0.55, sy - lineWidth * 0.30);
+    ctx.lineTo(sx + lineWidth * 0.75, sy + lineWidth * 0.18);
+    ctx.lineTo(sx + lineWidth * 0.10, sy + lineWidth * 0.62);
+    ctx.closePath();
+    ctx.fill();
+    // tapering tail: a thin filled crescent — wide at the entry, needle at the tip
+    const steps = 14;
+    ctx.beginPath();
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      // quadratic through (mx,my) from (sx,sy) to (ex,ey)
+      const bxp = (1 - t) * (1 - t) * sx + 2 * (1 - t) * t * mx + t * t * ex;
+      const byp = (1 - t) * (1 - t) * sy + 2 * (1 - t) * t * my + t * t * ey;
+      const w = lineWidth * 0.42 * (1 - t) + lineWidth * 0.10;
+      // normal of the curve direction
+      const tx = 2 * (1 - t) * (mx - sx) + 2 * t * (ex - mx);
+      const ty = 2 * (1 - t) * (my - sy) + 2 * t * (ey - my);
+      const tl = Math.hypot(tx, ty) || 1;
+      if (i === 0) ctx.moveTo(bxp - (-ty / tl) * w, byp - (tx / tl) * w);
+      else ctx.lineTo(bxp - (-ty / tl) * w, byp - (tx / tl) * w);
+    }
+    for (let i = steps; i >= 0; i--) {
+      const t = i / steps;
+      const bxp = (1 - t) * (1 - t) * sx + 2 * (1 - t) * t * mx + t * t * ex;
+      const byp = (1 - t) * (1 - t) * sy + 2 * (1 - t) * t * my + t * t * ey;
+      const w = lineWidth * 0.42 * (1 - t) + lineWidth * 0.10;
+      const tx = 2 * (1 - t) * (mx - sx) + 2 * t * (ex - mx);
+      const ty = 2 * (1 - t) * (my - sy) + 2 * t * (ey - my);
+      const tl = Math.hypot(tx, ty) || 1;
+      ctx.lineTo(bxp + (-ty / tl) * w, byp + (tx / tl) * w);
+    }
+    ctx.closePath();
+    ctx.fill();
   }
   ctx.restore();
 }

@@ -156,47 +156,61 @@ export function vignette(ctx: CanvasRenderingContext2D, W: number, H: number, st
   ctx.fillRect(0, 0, W, H);
 }
 
-// ── depth of field (pyramid blur, subject kept sharp) ────────────────────────
+// ── depth of field (U1.1: cheap gaussian — quarter-size down + full-size up
+// twice, applied ONLY to the bottom band 55%→880px so captions stay crisp) ───
 let dofBuffer: any = null;
+let dofBand: any = null;
 export function dofPass(
-  ctx: CanvasRenderingContext2D, W: number, H: number, strength: number,
-  subject?: { x: number; y: number; r: number }
+  ctx: CanvasRenderingContext2D, W: number, H: number, strength: number
 ): void {
   if (strength <= 0.03) return;
   try {
-    if (!dofBuffer) {
-      dofBuffer = typeof OffscreenCanvas !== 'undefined'
-        ? new OffscreenCanvas(960, 540)
+    const mk = (w: number, h: number): any => {
+      const c = typeof OffscreenCanvas !== 'undefined'
+        ? new OffscreenCanvas(w, h)
         : (typeof document !== 'undefined' ? document.createElement('canvas') : null);
-      if (dofBuffer && !dofBuffer.getContext) dofBuffer = null;
-    }
+      if (c && !c.getContext) return null;
+      return c;
+    };
+    if (!dofBuffer) dofBuffer = mk(960, 540);
     if (!dofBuffer) return;
-    const bw = Math.max(240, Math.floor(W / 2)), bh = Math.max(135, Math.floor(H / 2));
+    const bw = Math.max(240, Math.floor(W / 4)), bh = Math.max(135, Math.floor(H / 4));
     if (dofBuffer.width !== bw) { dofBuffer.width = bw; dofBuffer.height = bh; }
     const bctx = dofBuffer.getContext('2d');
     if (!bctx) return;
+    // the "down" half of the cheap gaussian
     bctx.clearRect(0, 0, bw, bh);
-    // real pyramid blur: the FULL frame downscaled (D8 — the old pass stamped
-    // the top half stretched ×2 over the whole buffer, which re-projected the
-    // kicker/headline as giant phantom words late in every host scene)
+    bctx.imageSmoothingEnabled = true;
     bctx.drawImage(ctx.canvas, 0, 0, bw, bh);
-    bctx.globalCompositeOperation = 'destination-in';
-    // feathered subject mask — the blur dissolves into nothing across the
-    // subject disc instead of ending on a hard circular seam
-    if (subject) {
-      const sx = subject.x / 2, sy = subject.y / 2, sr = subject.r / 2;
-      const m = bctx.createRadialGradient(sx, sy, Math.max(4, sr * 0.40), sx, sy, sr);
-      m.addColorStop(0, 'rgba(0,0,0,0)');
-      m.addColorStop(0.58, 'rgba(0,0,0,0)');
-      m.addColorStop(1, 'rgba(0,0,0,1)');
-      bctx.fillStyle = m;
-      bctx.fillRect(0, 0, bw, bh);
-    }
-    bctx.globalCompositeOperation = 'source-over';
+
+    if (!dofBand) dofBand = mk(1920, 1080);
+    if (!dofBand) return;
+    if (dofBand.width !== W) { dofBand.width = W; dofBand.height = H; }
+    const fctx = dofBand.getContext('2d');
+    if (!fctx) return;
+    // draw the quarter buffer back up to full size twice
+    fctx.clearRect(0, 0, W, H);
+    fctx.imageSmoothingEnabled = true;
+    fctx.drawImage(dofBuffer, 0, 0, W, H);
+    fctx.drawImage(dofBuffer, 0, 0, W, H);
+    // band mask: from 55% of frame height down; the caption strip (below
+    // y=880) is skipped entirely, the figure's head/torso stay sharp
+    const bandTop = H * 0.55;
+    const bandBot = H * (880 / 1080);
+    const rampH = Math.max(8, (bandBot - bandTop) * 0.5);
+    fctx.globalCompositeOperation = 'destination-in';
+    const g = fctx.createLinearGradient(0, bandTop, 0, bandTop + rampH);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(1, 'rgba(0,0,0,1)');
+    fctx.fillStyle = g;
+    fctx.fillRect(0, bandTop, W, rampH);
+    fctx.fillStyle = '#000';
+    fctx.fillRect(0, bandTop + rampH, W, Math.max(0, bandBot - bandTop - rampH));
+    fctx.globalCompositeOperation = 'source-over';
 
     ctx.save();
-    ctx.globalAlpha = clamp01(strength) * 0.55;
-    ctx.drawImage(dofBuffer, 0, 0, W, H);
+    ctx.globalAlpha = clamp01(strength);
+    ctx.drawImage(dofBand, 0, 0);
     ctx.restore();
   } catch { /* headless fallbacks: skip DOF */ }
 }

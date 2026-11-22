@@ -44,8 +44,9 @@ export function hostScene(g: SceneCtx): void {
       speaking ? wordTexts : [],
       prevSentenceId
     );
-    // D6 — the face follows the narration's emotional register
-    applyMood(pose, beat.voStyle);
+    // D6/U2.6 — the face follows the narration's emotional register (t enables
+    // the urgent blink-cycle + alternating quote gaze)
+    applyMood(pose, beat.voStyle, t, g.chapterIdx);
     // gesture override from script props (present/leanIn/open/etc.)
     if (s.gesture === 'leanIn') { pose.lean += 3; pose.torsoTilt += 2; pose.rAU += 14; pose.rAL += 10; }
     if (s.gesture === 'present') { pose.rAU = 44; pose.rAL = 24; }
@@ -59,9 +60,10 @@ export function hostScene(g: SceneCtx): void {
   const headX = W * 0.44;
   const headMaxW = W * 0.47;
   // stat plate anchored inside the arm's reach envelope: left edge 160px right
-  // of the figure, top at 520 — the palm touches its left edge at hand height
+  // of the figure — U1.3: top at 508 (12 px above the old 520) so the plate
+  // clears the caption zone with margin
   const plateX = px + 160;
-  const plateY = 520;
+  const plateY = 508;
   const companionOn = !walking && s.gesture !== 'leanIn' && s.gesture !== 'count';
   if (companionOn) {
     if (s.stat) {
@@ -93,7 +95,7 @@ export function hostScene(g: SceneCtx): void {
   paintStage(ctx, W, H, t, {
     tone: 'neutral',
     horizonFade: { x: px, r: 320 },
-    keyLight: { x: px, y: groundY - 330, r: 520 },
+    keyLight: { x: px, y: groundY - 330, r: W * 0.45 },
   });
   godRays(ctx, W, H, t, { alpha: 0.4, x: W * 0.80 });
   bokehField(ctx, W, H, t, 4, true, 0.8);
@@ -151,7 +153,7 @@ export function hostScene(g: SceneCtx): void {
     wordTimes: speaking ? wordTimes : [],
     wordTexts: speaking ? wordTexts : [],
     beatT: g.beatT,
-    faceScale: 1.22,
+    faceScale: 1.25,
     reflection: true,
     rimBoost: 0.06,
     vel,

@@ -43,12 +43,11 @@ export function paintStage(
   const toneTint = tone === 'gold' ? '#B08A28' : tone === 'down' ? '#5A2A32' : tone === 'up' ? '#1F5A4C' : '#2A4470';
   glowBlob(ctx, W * 0.84, H * 0.14, W * 0.55, toneTint, 0.115 + 0.028 * breathe);
   glowBlob(ctx, W * 0.10, H * 0.88, W * 0.42, tone === 'down' ? '#3A1A22' : '#8A6D1F', 0.075 + 0.022 * breathe2);
-  // D13: the key-light pool — one large soft radial behind the subject so the
-  // figure separates from the room at a glance
+  // U1.5: the key-light pool — one radial GOLD pool (alpha ≈ 0.10, radius
+  // ≈ 45% of width) centred behind the figure so he separates from the room
   if (opts.keyLight) {
     const k = opts.keyLight;
-    glowBlob(ctx, k.x, k.y, k.r, '#3D5578', 0.30);
-    glowBlob(ctx, k.x, k.y, k.r * 0.55, '#C8A94E', 0.10);
+    glowBlob(ctx, k.x, k.y, k.r, '#C8A94E', 0.10);
   }
 
   // 3. blueprint lattice (above horizon) — dots + hairlines.
@@ -109,9 +108,9 @@ export function paintStage(
     for (let i = 1; i <= rows; i++) {
       const p = i / rows;
       const y = hy + (H - hy) * p * p;
-      // D13: rows keep ~55-100% of the grid alpha (they used to multiply down
-      // to 0.007 effective — genuinely invisible)
-      ctx.globalAlpha = 1 - p * 0.45;
+      // U1.5: rows fade 0.10 → 0.05 effective (globalAlpha scales the 0.14
+      // strokeStyle — 0.72→0.36 keeps the far rows at perception threshold)
+      ctx.globalAlpha = 0.72 - p * 0.36;
       ctx.moveTo(0, y); ctx.lineTo(W, y);
     }
     ctx.stroke();
@@ -152,7 +151,7 @@ export function paintStage(
     ctx.globalAlpha = 0.5 * sheen;
     const sg = ctx.createLinearGradient(sx - 260, 0, sx + 260, H);
     sg.addColorStop(0, 'rgba(210,225,255,0)');
-    sg.addColorStop(0.5, 'rgba(210,225,255,0.055)');
+    sg.addColorStop(0.5, 'rgba(210,225,255,0.045)');
     sg.addColorStop(1, 'rgba(210,225,255,0)');
     ctx.fillStyle = sg;
     ctx.fillRect(0, 0, W, H);

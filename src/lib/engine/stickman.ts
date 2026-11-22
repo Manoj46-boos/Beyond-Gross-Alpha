@@ -37,6 +37,7 @@ export interface Pose {
   rKnee: number; rAnkle: number;
   lKnee: number; lAnkle: number;
   brow: number;        // -1 concerned .. 1 raised
+  browAsym: number;    // U2.6 — extra lift for the LEADING brow on word strikes
   lid: number;
   smile: number;       // -0.5 .. 1
   surprise: number;
@@ -53,7 +54,7 @@ export function basePose(): Pose {
     rootY: 0, lean: 0, torsoTilt: 0, headTilt: 0, headNod: 0, shoulderTilt: 0, pelvisTilt: 0,
     rAU: 6, rAL: 8, lAU: -6, lAL: 8,
     rKnee: 4, rAnkle: 0, lKnee: 4, lAnkle: 0,
-    brow: 0, lid: 0, smile: 0.18, surprise: 0, blink: 0, mouth: 0,
+    brow: 0, browAsym: 0, lid: 0, smile: 0.18, surprise: 0, blink: 0, mouth: 0,
     hand: 'open',
     walkPhase: -1, walkSpeed: 0, look: 0,
   };
@@ -219,29 +220,44 @@ const GESTURES: Gesture[] = [
 const STOPWORDS = new Set(['the', 'and', 'a', 'an', 'of', 'to', 'in', 'is', 'it', 'that', 'you', 'your', 'for', 'on', 'with', 'as', 'are', 'this', 'but', 'not', 'at', 'be', 'we', 'so', 'if', 'one', 'what']);
 
 /**
- * applyMood — the face is an instrument keyed to the narration (D6).
- * Maps the script's voStyle to a resting expression: 'reveal' opens the face,
- * 'urgent' narrows it, 'calm'/'neutral' quiet the grin to a professional rest.
+ * applyMood — the face is an instrument keyed to the narration (D6, U2.6).
+ * Exact report mappings: 'reveal' → brows +0.6, lids 0.15, smile 0;
+ * 'urgent' → brows −0.4, FASTER blink cycle, lean +1;
+ * 'calm' → neutral smile 0.08; 'quote' → gaze ±0.5 with a head tilt.
+ * `t` + `seed` enable the urgent blink-cycle and the alternating quote gaze.
  * Called by host scenes AFTER poseAt, BEFORE gesture overrides.
  */
-export function applyMood(p: Pose, voStyle?: string): void {
+export function applyMood(p: Pose, voStyle?: string, t?: number, seed = 0): void {
   switch (voStyle) {
     case 'reveal':
-      p.brow = 0.55; p.lid = 0.12; p.smile = 0.02; p.surprise = 0.14;
+      p.brow = 0.6; p.lid = 0.15; p.smile = 0; p.surprise = 0.14;
       break;
     case 'urgent':
-      p.brow = -0.45; p.lid = 0.2; p.smile = -0.14; p.lean += 1.2;
+      p.brow = -0.4; p.lid = 0.2; p.smile = -0.12; p.lean += 1;
+      if (t != null) p.blink = Math.max(p.blink, blinkCycleAt(t, 2400, seed * 0.37 + 11));
       break;
     case 'quote':
-      p.brow = 0.16; p.lid = 0.1; p.smile = 0.08; p.look = 0.45;
+      p.brow = 0.16; p.lid = 0.1; p.smile = 0.08;
+      p.look = t != null ? (Math.floor(t / 9000 + seed) % 2 === 0 ? 0.5 : -0.5) : 0.5;
+      p.headTilt += 2.5;
       break;
     case 'calm':
-      p.brow = 0.04; p.lid = 0.06; p.smile = 0.05;
+      p.brow = 0.04; p.lid = 0.06; p.smile = 0.08;
       break;
     default: // neutral — quiet, professional rest; the grin is gone
       p.brow = 0.02; p.lid = 0.04; p.smile = 0.07;
       break;
   }
+}
+
+/** blink envelope over one cycle (U2.6) — extracted so 'urgent' voStyle can
+ *  re-run it on a faster period. 0 = eyes open, 1 = fully closed. */
+export function blinkCycleAt(t: number, periodMs: number, seed = 0): number {
+  const bt = (t + (seed * 700) % 900) % periodMs;
+  if (bt >= 150) return 0;
+  if (bt < 60) return 0.5 * (1 - Math.cos((bt / 60) * Math.PI));
+  if (bt < 90) return 1;
+  return 0.5 * (1 + Math.cos(((bt - 90) / 60) * Math.PI));
 }
 
 function sentenceHash(id: string): number {
@@ -262,6 +278,14 @@ function accentEnv(t: number, wordTimes: number[], words: string[]): number {
     return amp * (1 - p) * Math.cos(p * Math.PI * 0.6);
   }
   return 0;
+}
+
+/** U2.4 — reusable anticipation: an 80–120 ms counter-move against the gesture
+ *  change (30% of the angle, opposite direction) before the spring commits.
+ *  `st` = ms since the sentence boundary. Deterministic. */
+function anticipation(from: number, to: number, st: number, mag = 6): number {
+  const bell = st < 120 ? Math.sin((st / 120) * Math.PI) : 0;
+  return -Math.sign(to - from) * Math.min(mag, Math.abs(to - from) * 0.30) * bell;
 }
 
 /**
@@ -289,20 +313,19 @@ export function poseAt(
   p.lean = sp(gPrev.lean, g.lean, 120, 12);
   p.torsoTilt = sp(gPrev.torsoTilt, g.torsoTilt);
   p.shoulderTilt = sp(gPrev.shoulderTilt, g.shoulderTilt);
-  p.headTilt = sp(gPrev.headTilt, g.headTilt);
+  // the head trails the torso: same target, lower stiffness — the classic
+  // overlapping-action tell (U2.4b)
+  p.headTilt = sp(gPrev.headTilt, g.headTilt, 105, 10);
   p.brow = g.brow;
   p.smile = g.smile;
 
-  // anticipation — the channels counter-move first, then commit (D4 windup)
-  const antBell = st < 140 ? Math.sin((st / 140) * Math.PI) : 0;
-  const antic = (to: number, from: number, mag = 6) =>
-    -Math.sign(to - from) * Math.min(mag, Math.abs(to - from) * 0.35) * antBell;
-  p.rAU += antic(g.rAU, gPrev.rAU);
-  p.rAL += antic(g.rAL, gPrev.rAL, 9);
-  p.lAU += antic(g.lAU, gPrev.lAU);
-  p.lAL += antic(g.lAL, gPrev.lAL, 9);
-  p.lean += antic(g.lean, gPrev.lean, 3);
-  p.shoulderTilt += antic(g.shoulderTilt, gPrev.shoulderTilt, 4);
+  // anticipation — channels counter-move first, then commit (U2.4a)
+  p.rAU += anticipation(gPrev.rAU, g.rAU, st);
+  p.rAL += anticipation(gPrev.rAL, g.rAL, st, 9);
+  p.lAU += anticipation(gPrev.lAU, g.lAU, st);
+  p.lAL += anticipation(gPrev.lAL, g.lAL, st, 9);
+  p.lean += anticipation(gPrev.lean, g.lean, st, 3);
+  p.shoulderTilt += anticipation(gPrev.shoulderTilt, g.shoulderTilt, st, 4);
 
   // word accent strikes the right forearm (and counter-leans the torso)
   const acc = accentEnv(t, wordTimes, wordTexts);
@@ -311,8 +334,10 @@ export function poseAt(
   p.lean += acc * 2.2;
   p.shoulderTilt += acc * 4;
   p.headNod = Math.max(0, acc * 0.35);
-  // the face leads the strike — brows lift on content words, lids narrow
+  // the face leads the strike — brows lift on content words, lids narrow;
+  // the LEADING brow takes the extra 2px (U2.6)
   p.brow += acc * 0.5;
+  p.browAsym = Math.max(0, acc) * 0.4;
   p.lid += Math.max(0, acc) * 0.18;
 
   // idle life
@@ -328,15 +353,8 @@ export function poseAt(
   // shoulder counter-motion
   p.shoulderTilt -= p.lean * 0.5;
 
-  // blink cycle
-  const bt = (t + (h * 700) % 900) % 4300;
-  let blink = 0;
-  if (bt < 150) {
-    if (bt < 60) blink = 0.5 * (1 - Math.cos((bt / 60) * Math.PI));
-    else if (bt < 90) blink = 1;
-    else blink = 0.5 * (1 + Math.cos(((bt - 90) / 60) * Math.PI));
-  }
-  p.blink = Math.max(p.blink, blink);
+  // blink cycle (via the shared envelope — U2.6 lets 'urgent' re-run it faster)
+  p.blink = Math.max(p.blink, blinkCycleAt(t, 4300, h));
   // occasional glance
   p.look = Math.sin(t / 7400 + h * 6.2) * 0.35;
 
@@ -345,8 +363,9 @@ export function poseAt(
 }
 
 /** smooth walk cycle — pose for a walk phase 0..1.
- * Anatomy: support leg straight through stance (sp 0.25–0.75), deep knee flexion
- * mid-swing, pelvis high at mid-stance and low at double support (D5). */
+ * Anatomy (U2.5): support leg STRAIGHT through stance (knee → ~0 at the pass
+ * position), deep knee flexion mid-swing, pelvis high at mid-stance and low at
+ * double support with a 4 px drop onto the support leg at contact. */
 export function walkPose(phase: number, speed: number): Pose {
   const p = basePose();
   const ph = phase % 1;
@@ -359,11 +378,16 @@ export function walkPose(phase: number, speed: number): Pose {
   p.lAU = -8 + s2 * 24 * speed;
   p.lAL = 14 + Math.max(0, -s2) * 16 * speed;
   // (legs are driven from walkPhase inside legDraw — same phase, same source of truth)
-  p.rKnee = Math.max(0, Math.cos(pp)) * 44 * speed + 5;
-  p.lKnee = Math.max(0, -Math.cos(pp)) * 44 * speed + 5;
+  // swing = fraction of the cycle this leg is OFF the ground (cos < 0); the
+  // support leg stays straight, the swing leg flexes deeply (U2.5 fix — the
+  // old formula was inverted and bent the stance leg 46°)
+  p.rKnee = Math.max(0, -Math.cos(pp)) * 44 * speed + 5;
+  p.lKnee = Math.max(0, Math.cos(pp)) * 44 * speed + 5;
   p.rAnkle = 0; p.lAnkle = 0;
-  // pelvis height: LOW at double support (ph .25/.75), HIGH at mid-stance (ph 0/.5)
-  p.rootY = -6 * (0.5 + 0.5 * Math.cos(pp * 2)) * speed;
+  // pelvis height: HIGH at mid-stance (ph 0/.5), LOW at double support
+  // (ph .25/.75) with a 4 px drop onto the support leg at contact (U2.5)
+  const contact = Math.max(0, -Math.cos(pp * 2));
+  p.rootY = (-6 * (0.5 + 0.5 * Math.cos(pp * 2)) + 4 * contact) * speed;
   p.lean = 1.5 * speed;
   p.torsoTilt = 1.5 * speed;
   p.shoulderTilt = -s * 4 * speed;
@@ -378,7 +402,7 @@ export function walkPose(phase: number, speed: number): Pose {
 // ── face ─────────────────────────────────────────────────────────────────────
 function drawFace(
   ctx: CanvasRenderingContext2D, hx: number, hy: number, tiltDeg: number,
-  p: Pose, t: number, faceScale: number, wordTexts: string[], wordTimes: number[], beatT: number, look: number
+  p: Pose, t: number, faceScale: number, wordTexts: string[], wordTimes: number[], beatT: number, look: number, quiffLag = 0
 ): void {
   ctx.save();
   ctx.translate(hx, hy);
@@ -409,11 +433,13 @@ function drawFace(
   ctx.fillRect(-R, -R, R * 2, R * 2.4);
   ctx.restore();
 
-  // hair — swept-back silver cap with a subtle quiff
+  // hair — swept-back silver cap with a subtle quiff that TRAILS the head nod
+  // by ~50 ms (U2.4c secondary motion: quiffLag comes from the head's own lag)
   ctx.save();
   ctx.beginPath();
   ctx.ellipse(0, 0, R * 0.86, R, 0, 0, Math.PI * 2);
   ctx.clip();
+  ctx.rotate(quiffLag * 0.35 * D2R);
   const hg = ctx.createLinearGradient(0, -R * 1.1, 0, -R * 0.1);
   hg.addColorStop(0, HAIR.lit);
   hg.addColorStop(1, HAIR.dark);
@@ -449,15 +475,16 @@ function drawFace(
   const lid = clamp01(p.lid + p.blink);
   const surprise = p.surprise;
 
-  // brows
+  // brows — content-word strikes lift the LEADING brow an extra ~2px (U2.6)
   const browLift = p.brow * 5.2;
   ctx.strokeStyle = rgba('#4E5A70', 0.95);
   ctx.lineWidth = 2.6;
   ctx.lineCap = 'round';
   for (const s of [-1, 1]) {
+    const liftS = browLift + (s === 1 ? (p.browAsym ?? 0) * 5.2 : 0);
     ctx.beginPath();
-    ctx.moveTo(s * (eyeX - 6.5), eyeY - 9.5 - browLift * s * 0.4 + (p.brow < 0 ? p.brow * 2.5 : 0));
-    ctx.quadraticCurveTo(s * eyeX, eyeY - 12.5 - browLift, s * (eyeX + 6.5), eyeY - 9.2 - browLift * s * 0.4);
+    ctx.moveTo(s * (eyeX - 6.5), eyeY - 9.5 - liftS * s * 0.4 + (p.brow < 0 ? p.brow * 2.5 : 0));
+    ctx.quadraticCurveTo(s * eyeX, eyeY - 12.5 - liftS, s * (eyeX + 6.5), eyeY - 9.2 - liftS * s * 0.4);
     ctx.stroke();
   }
 
@@ -642,8 +669,8 @@ export function drawReflection(
     if (p.walkPhase >= 0) {
       const wph = p.walkPhase * Math.PI * 2 + (near ? 0 : Math.PI);
       thighAng = Math.sin(wph) * 26 * p.walkSpeed + (near ? 0.5 : -0.5);
-      const swing = Math.max(0, Math.cos(wph));
-      kneeBend = swing * 44 * p.walkSpeed + (1 - swing) * 5 * p.walkSpeed + 2;
+      const swingFrac = Math.max(0, -Math.cos(wph));
+      kneeBend = swingFrac * 44 * p.walkSpeed + (1 - swingFrac) * 5 * p.walkSpeed + 2;
     } else {
       thighAng = s * 2.2 + (near ? p.rKnee * 0.06 : -p.lKnee * 0.06);
       kneeBend = near ? p.rKnee : p.lKnee;
@@ -702,15 +729,25 @@ export function drawStickman(
   ctx.translate(cx, groundY);
   if (r.flip) ctx.scale(-1, 1);
   ctx.scale(scale, scale);
+  // squash & stretch (U2.3) — root transform, pivot at the feet (the origin),
+  // so the shoes stay planted. Two components:
+  //  (1) stride events — contact squashes, push-off stretches (walk phase);
+  //  (2) analytic vertical velocity — scaleY = 1 + k·vy with k ≈ 0.0009 px⁻¹
+  //      (vy in px/s from the finite-difference vel), volume-preserved as
+  //      scaleX = 1 − k·vy·0.6.
+  let sy = 1;
   if (p.walkPhase >= 0) {
-    // squash & stretch — volume-preserving, keyed to the stride's support events (D3).
-    // Contact (double support, ph .25/.75) squashes; mid-stance push-off stretches.
-    // Pivot is the origin = the feet, so the shoes stay planted on the floor.
     const contact = Math.max(0, -Math.cos(p.walkPhase * Math.PI * 4));
     const push = Math.max(0, Math.cos(p.walkPhase * Math.PI * 4));
-    const sy = 1 - contact * 0.05 * p.walkSpeed + push * 0.03 * p.walkSpeed;
-    ctx.scale(1 / Math.max(0.9, sy), sy);
+    sy += -contact * 0.05 * p.walkSpeed + push * 0.03 * p.walkSpeed;
   }
+  // vel is pose(t) − pose(t−90ms); rootY up is negative, so upward motion
+  // (push-off) is vy < 0 → stretch, downward motion (landing) → squash
+  const vyPS = (r.vel?.rootY ?? 0) * (1000 / 90);
+  sy += clamp(-0.0009 * vyPS, -0.05, 0.05);
+  sy = clamp(sy, 0.92, 1.08);
+  const sx = 1 - (sy - 1) * 0.6;
+  ctx.scale(sx, sy);
 
   const breath = 1 + 0.006 * Math.sin(t / 2400);
   const hipY = -(U_LEG + L_LEG) + p.rootY;
@@ -726,18 +763,20 @@ export function drawStickman(
       const wph = p.walkPhase * Math.PI * 2 + (side === 1 ? 0 : Math.PI);
       const sp = ((wph / (Math.PI * 2)) % 1 + 1) % 1;
       thighAng = Math.sin(wph) * 26 * p.walkSpeed + (near ? 0.5 : -0.5);
-      // knee: deep flexion mid-swing (foot clears the floor), straight support
-      // through stance — the visible weight (D5)
-      const swing = Math.max(0, Math.cos(wph));
-      kneeBend = swing * 44 * p.walkSpeed + (1 - swing) * 5 * p.walkSpeed + 2;
-      // heel-strike → foot-flat → toe-off foot pitch (D5)
+      // knee: deep flexion mid-swing (foot clears the floor), STRAIGHT support
+      // through stance — knee bend → ~0 at the pass position (U2.5; the old
+      // formula was inverted: the stance leg bent 46° while the swing leg
+      // stayed straight, the exact opposite of a walk)
+      const swingFrac = Math.max(0, -Math.cos(wph));
+      kneeBend = swingFrac * 44 * p.walkSpeed + (1 - swingFrac) * 5 * p.walkSpeed + 2;
+      // heel strike → foot-flat → toe-off foot pitch (U2.5: −12° at phase 0.05,
+      // +14° at phase 0.45)
       let footPitch: number;
-      if (sp < 0.25) footPitch = -5;
-      else if (sp < 0.33) footPitch = lerp(-5, -11, (sp - 0.25) / 0.08);
-      else if (sp < 0.5) footPitch = lerp(-11, 0, (sp - 0.33) / 0.17);
-      else if (sp < 0.68) footPitch = lerp(0, 15, (sp - 0.5) / 0.18);
-      else if (sp < 0.8) footPitch = lerp(15, -6, (sp - 0.68) / 0.12);
-      else footPitch = lerp(-6, -5, (sp - 0.8) / 0.2);
+      if (sp < 0.05) footPitch = lerp(-6, -12, sp / 0.05);
+      else if (sp < 0.35) footPitch = lerp(-12, 0, (sp - 0.05) / 0.30);
+      else if (sp < 0.45) footPitch = lerp(0, 14, (sp - 0.35) / 0.10);
+      else if (sp < 0.65) footPitch = lerp(14, -6, (sp - 0.45) / 0.20);
+      else footPitch = lerp(-6, -5, (sp - 0.65) / 0.35);
       ankleAng = footPitch * p.walkSpeed;
     } else {
       thighAng = side * 2.2 + (near ? p.rKnee * 0.06 : -p.lKnee * 0.06);
@@ -776,7 +815,7 @@ export function drawStickman(
     ctx.lineTo(15, 2.9);
     ctx.stroke();
     ctx.strokeStyle = 'rgba(212,175,55,0.5)';
-    ctx.lineWidth = 0.8;
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(-5.5, 1.6);
     ctx.lineTo(14.8, 1.3);
@@ -800,6 +839,13 @@ export function drawStickman(
   ctx.restore();
 
   // ── torso ──
+  // gesture strikes key a 2–3% squash on the torso (U2.3): the whole upper
+  // body settles a touch on content-word impacts, pivoting from the hips
+  const strike = Math.max(0, accentEnv(r.beatT ?? t, r.wordTimes ?? [], r.wordTexts ?? []));
+  ctx.save();
+  ctx.translate(0, hipY);
+  ctx.scale(1 + (sx - 1) * 0.4, 1 - strike * 0.028);
+  ctx.translate(0, -hipY);
   const shX = Math.sin(leanR + tiltR) * TORSO;
   const shY = hipY - Math.cos(leanR + tiltR) * TORSO;
   const shW = SHOULDER_HW * breath;
@@ -842,26 +888,43 @@ export function drawStickman(
   ctx.closePath();
   ctx.fillStyle = 'rgba(226,232,242,0.92)';
   ctx.fill();
-  // tie — a 1-segment pendulum driven by torso motion (D4 follow-through):
-  // the blade trails the lean and swings with the vertical bob
+  // tie — a 2-SEGMENT pendulum (U2.4c): the knot+upper blade swing with the
+  // torso motion; the lower blade trails on a second, softer angle driven by
+  // the same velocities — classic follow-through, fully deterministic
   const velLean = r.vel?.lean ?? 0;
   const velBob = r.vel?.rootY ?? 0;
   const tieSwayDeg = clamp(velLean * -0.9 + velBob * -0.5, -8, 8);
+  const bladeSwayDeg = clamp(tieSwayDeg * 0.55 + velBob * -0.85, -12, 12);
+  const tieG = ctx.createLinearGradient(0, 0, 0, 42);
+  tieG.addColorStop(0, PALETTE.goldBright);
+  tieG.addColorStop(1, PALETTE.goldDeep);
   ctx.save();
   ctx.translate(0, shY - 8);
   ctx.rotate(tieSwayDeg * D2R);
+  // segment 1: knot + upper blade
   ctx.beginPath();
   ctx.moveTo(-3.2, 0);
   ctx.lineTo(3.2, 0);
   ctx.lineTo(4.4, 16);
-  ctx.lineTo(0, 42);
+  ctx.lineTo(0, 18);
   ctx.lineTo(-4.4, 16);
   ctx.closePath();
-  const tieG = ctx.createLinearGradient(0, 0, 0, 42);
-  tieG.addColorStop(0, PALETTE.goldBright);
-  tieG.addColorStop(1, PALETTE.goldDeep);
   ctx.fillStyle = tieG;
   ctx.fill();
+  // segment 2: lower blade, trailing on its own angle about (0, 18)
+  ctx.save();
+  ctx.translate(0, 18);
+  ctx.rotate(bladeSwayDeg * D2R);
+  ctx.beginPath();
+  ctx.moveTo(-4.4, -2);
+  ctx.lineTo(4.4, -2);
+  ctx.lineTo(2.2, 10);
+  ctx.lineTo(0, 24);
+  ctx.lineTo(-2.2, 10);
+  ctx.closePath();
+  ctx.fillStyle = tieG;
+  ctx.fill();
+  ctx.restore();
   ctx.restore();
   // collar
   ctx.beginPath();
@@ -871,10 +934,10 @@ export function drawStickman(
   ctx.beginPath();
   ctx.moveTo(10, shY - 12); ctx.lineTo(3, shY - 8); ctx.lineTo(6.5, shY - 2); ctx.closePath();
   ctx.fill();
-  // pocket square (his left = screen right) — INSIDE the chest line (D7),
-  // with a micro-lag off the torso motion (D4 follow-through)
+  // pocket square (his left = screen right) — at 38% of shoulder width,
+  // INSIDE the chest line (U2.1), with a micro-lag off the torso motion (D4)
   ctx.save();
-  ctx.translate(shW * 0.40, shY + 18);
+  ctx.translate(shW * 0.38, shY + 18);
   ctx.rotate(-0.12 + tieSwayDeg * 0.12 * D2R);
   ctx.beginPath();
   ctx.moveTo(-7, -5); ctx.lineTo(7, -5); ctx.lineTo(3, 4); ctx.lineTo(-3, 4); ctx.closePath();
@@ -959,8 +1022,9 @@ export function drawStickman(
   joint(ctx, shX - shW * 0.74, shY + 2, 7.2, false);
   joint(ctx, shX + shW * 0.74, shY + 2, 7.2, false);
 
-  drawFace(ctx, headX, headY, p.headTilt * 0.6 + lagLean * 0.4, p, t, r.faceScale ?? 1, r.wordTexts ?? [], r.wordTimes ?? [], r.beatT ?? 0, p.look);
+  drawFace(ctx, headX, headY, p.headTilt * 0.6 + lagLean * 0.4, p, t, r.faceScale ?? 1, r.wordTexts ?? [], r.wordTimes ?? [], r.beatT ?? 0, p.look, lagLean);
 
+  ctx.restore(); // upper-body strike squash
   ctx.restore();
 }
 

@@ -173,16 +173,16 @@ export function memoCardScene(g: SceneCtx): void {
     }
     ctx.restore();
   });
-  // E&O EXCLUSION stamp — D12: a premium stamp overlaps a document CORNER
-  // with a cast shadow; it never parks on the memo's live text.
+  // E&O EXCLUSION stamp (U1.4): scaled to 80%, landed on the document's
+  // BOTTOM-RIGHT corner over only the last text line, with a soft shadow —
+  // the header, body and signature zones all stay readable.
   const stampT = t - 2100;
   if (stampT > 0) {
     const e = easeOutCubic(clamp01(stampT / 240));
     ctx.save();
-    // drop shadow first, then the stamp — the ink reads as pressed onto paper
-    ctx.translate(x + cardW - 168, y + 118);
+    ctx.translate(x + cardW - 178, y + cardH - 132);
     ctx.rotate(-0.14);
-    ctx.scale(e * 0.78, e * 0.78);
+    ctx.scale(e * 0.8, e * 0.8);
     ctx.shadowColor = 'rgba(0,0,0,0.45)';
     ctx.shadowBlur = 26;
     ctx.shadowOffsetY = 10;
@@ -485,17 +485,19 @@ export function signatureCurveScene(g: SceneCtx): void {
     impactRing(ctx, bx + bw / 2, by + bh / 2, t, 3000, 160, 1.1, PALETTE.gold);
     softBloom(ctx, W, H, t - 3000, 460, 0.14);
   }
-  // hold note: the script holds this 4 full seconds — panel title dims, badge stays.
-  // D10: lifted from H*0.94 (inside the caption pill zone, floor at 968px) to
-  // a clear strip above the caption area so payoff line and captions never fight.
+  // hold note (U1.3): relocated INTO the badge card's right column at y≈560 —
+  // the caption strip is never contested, even during the 4-second hold.
   const holdP = clamp01((t - (s.hold ?? 4200)) / 1200);
   if (holdP > 0) {
+    const bx = chartX + chartW + 50;
     ctx.save();
     ctx.globalAlpha = holdP * 0.9;
-    setFont(ctx, 34, 600, FONT_DISPLAY);
+    setFont(ctx, 30, 600, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.inkSoft;
     ctx.textAlign = 'center';
-    ctx.fillText('It isn’t a scare number. It’s arithmetic.', W / 2, H * 0.72);
+    wrapText(ctx, 'It isn’t a scare number. It’s arithmetic.', 480, 30, 600, FONT_DISPLAY).forEach((ln, i) => {
+      ctx.fillText(ln, bx + 165, 560 + i * 40);
+    });
     ctx.textAlign = 'left';
     ctx.restore();
   }
@@ -507,13 +509,12 @@ export function benchmarkBarScene(g: SceneCtx): void {
   paintStage(ctx, W, g.H, t, {});
   panelTitle(ctx, 'Before you buy complexity, beat this benchmark', W * 0.10, 250, W * 0.8, t / 2400, { kickerText: 'The floor' });
   const x = W * 0.10, w = W * 0.62;
-  // D12: ruler ticks turn the 2.0-max track into a readable scale, so the
-  // honestly-small 0.3% bar reads as a measured floor, not a rendering error.
+  // U1.4: maxV = 0.5 so the honest 0.3% stub fills ~60% of the track — the
+  // bar reads as a measured floor, and the value rides the dark cap zone.
   barRow(ctx, {
-    x, y: 420, w, h: 130, label: 'Plain index ETF, held for decades', value: 0.3, maxV: 2.0,
+    x, y: 420, w, h: 130, label: 'Plain index ETF, held for decades', value: 0.3, maxV: 0.5,
     p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'gold', valueText: '≈ 0.3%/yr',
-    sub: 'roughly the tax on its dividends', scaleTicks: true,
-    tickFormat: (v) => `${Math.round(v * 10) / 10}%`,
+    sub: 'roughly the tax on its dividends',
   });
   // competing pitches fade below the line
   const compA = clamp01((t - 1600) / 600);

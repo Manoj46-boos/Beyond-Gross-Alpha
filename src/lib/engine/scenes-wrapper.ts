@@ -224,24 +224,24 @@ export function pitchDeckScene(g: SceneCtx): void {
     ctx.fillText(['screenshot slide 04', 'slide 11 · confidential', 'slide 17 · draft'][i], x + 48, y + 180);
     ctx.restore();
   });
-  // red pen swoosh — D12: the annotation runs along the BOTTOM MARGIN under
-  // the three slides (it used to slash straight through all three card
-  // interiors with its caption sitting on the stroke)
+  // red pen swoosh (U1.4): routed BENEATH the cards, curving through the
+  // labels row — the annotation rides the curve and the stroke passes just
+  // under the words, so nothing crosses a card interior.
   const pa = clamp01((t - 2100) / 600);
   if (pa > 0) {
     ctx.save();
     ctx.globalAlpha = pa;
+    setFont(ctx, 26, 700, FONT_UI);
+    ctx.fillStyle = '#F08A8D';
+    ctx.fillText('separate the engineering from the sales deck', W * 0.30, 714);
     ctx.beginPath();
-    const startX = W * 0.10 + 20, startY = 726;
+    const startX = W * 0.10 + 20, startY = 730;
     ctx.moveTo(startX, startY);
-    ctx.quadraticCurveTo(W * 0.5, 706, W * 0.86, 724);
+    ctx.quadraticCurveTo(W * 0.5, 718, W * 0.86, 728);
     ctx.strokeStyle = rgba(PALETTE.down, 0.85);
     ctx.lineWidth = 4.4;
     ctx.lineCap = 'round';
     ctx.stroke();
-    setFont(ctx, 26, 700, FONT_UI);
-    ctx.fillStyle = '#F08A8D';
-    ctx.fillText('separate the engineering from the sales deck', W * 0.30, 768);
     ctx.restore();
   }
 }
@@ -263,26 +263,21 @@ export function diMosaicScene(g: SceneCtx): void {
   ctx.fillText('ONE ETF', bx + bw / 2, by + bh / 2);
   ctx.textAlign = 'left';
   ctx.restore();
-  // mosaic of small tiles — D12: every tile carries its ticker (real liquid
-  // names), and a 2×2 featured centerpiece gives the concept a face
+  // mosaic of small tiles — U1.4: plain colour tiles, with 3-character ticker
+  // chips stamped on 10 deterministic-random tiles
   const cols = 10, rows = 8;
   const mx = W * 0.44, my = 380;
   const tw = 44, th = 40;
-  const TICKERS = [
-    'AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL', 'META', 'BRK.B', 'LLY', 'AVGO', 'JPM',
-    'V', 'UNH', 'XOM', 'MA', 'JNJ', 'PG', 'HD', 'COST', 'ABBV', 'WMT',
-    'MRK', 'CVX', 'PEP', 'ADBE', 'KO', 'CSCO', 'ACN', 'MCD', 'NFLX', 'LIN',
-    'ABT', 'CRM', 'ORCL', 'TMO', 'DIS', 'NKE', 'VZ', 'AMD', 'QCOM', 'TXN',
-    'CAT', 'AMGN', 'IBM', 'GE', 'CVS', 'PFE', 'SBUX', 'MMM', 'BLK', 'ELV',
-    'MDT', 'SYK', 'BKNG', 'ISRG', 'GILD', 'PLD', 'ADP', 'MS', 'COF', 'TJX',
-    'VRTX', 'REGN', 'USB', 'PNC', 'ITW', 'FDX', 'UPS', 'LMT', 'RTX', 'HON',
-    'DHR', 'CL', 'EMR', 'AJG', 'AON', 'PH', 'BSX', 'ETN', 'CME', 'ICE',
-  ];
-  // the featured 2×2 centerpiece occupies tiles 33-34 and 43-44 (rows 3-4, cols 3-4)
-  const featured = (c: number, r: number) => (r === 3 || r === 4) && (c === 3 || c === 4);
+  const CHIPS = ['IBM', 'GE', 'CAT', 'KO', 'HD', 'BA', 'GM', 'JPM', 'DIS', 'NKE'];
+  const chipOn = new Map<number, string>();
+  for (let k = 0; k < CHIPS.length; k++) {
+    // deterministic "random" tiles, spread across the grid
+    let idx = Math.floor(hash01(k * 13.7 + 3.1) * cols * rows);
+    while (chipOn.has(idx)) idx = (idx + 7) % (cols * rows);
+    chipOn.set(idx, CHIPS[k]);
+  }
   for (let i = 0; i < cols * rows; i++) {
     const c = i % cols, r = Math.floor(i / cols);
-    if (featured(c, r)) continue;
     const ent = clamp01((shatter * cols * rows - i) / 3);
     if (ent <= 0) continue;
     const down = i % 7 === 3; // ~50 down stocks
@@ -300,32 +295,27 @@ export function diMosaicScene(g: SceneCtx): void {
       ctx.lineWidth = 1.6;
       ctx.stroke();
     }
-    // ticker label
-    ctx.fillStyle = 'rgba(8,12,22,0.85)';
-    setFont(ctx, 12, 800, FONT_UI);
-    ctx.textAlign = 'center';
-    ctx.fillText(TICKERS[i % TICKERS.length], 0, 4);
-    ctx.textAlign = 'left';
     ctx.restore();
-  }
-  // featured centerpiece — the face of the concept (enters with the tiles)
-  const fent = clamp01((shatter * cols * rows - 33) / 4);
-  if (fent > 0) {
-    ctx.save();
-    ctx.globalAlpha = fent;
-    const fx = mx + 3 * (tw + 6), fy = my + 3 * (th + 6);
-    const fw = tw * 2 + 6, fh = th * 2 + 6;
-    glassCard(ctx, fx, fy, fw, fh, { r: 8, goldEdge: true, fill: 'rgba(8,12,22,0.9)' });
-    setFont(ctx, 15, 800, FONT_UI);
-    ctx.fillStyle = PALETTE.goldBright;
-    ctx.textAlign = 'center';
-    ctx.fillText('DIRECT', fx + fw / 2, fy + fh / 2 - 8);
-    ctx.fillText('INDEXING', fx + fw / 2, fy + fh / 2 + 10);
-    setFont(ctx, 11, 600, FONT_UI);
-    ctx.fillStyle = PALETTE.inkMuted;
-    ctx.fillText('one account · many lots', fx + fw / 2, fy + fh / 2 + 26);
-    ctx.textAlign = 'left';
-    ctx.restore();
+    // 3-character ticker chip stamped over the tile
+    const ticker = chipOn.get(i);
+    if (ticker) {
+      ctx.save();
+      ctx.globalAlpha = ent * clamp01((t - 1900) / 500);
+      ctx.translate(px + tw / 2, py + th / 2);
+      ctx.rotate((hash01(i * 1.3) - 0.5) * 0.24 * shatter);
+      roundRect(ctx, -17, -9, 34, 18, 5);
+      ctx.fillStyle = 'rgba(8,12,22,0.88)';
+      ctx.fill();
+      ctx.strokeStyle = rgba(PALETTE.gold, 0.55);
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      setFont(ctx, 11, 800, FONT_UI);
+      ctx.fillStyle = 'rgba(246,241,230,0.95)';
+      ctx.textAlign = 'center';
+      ctx.fillText(ticker, 0, 4);
+      ctx.textAlign = 'left';
+      ctx.restore();
+    }
   }
   // legend
   const la = clamp01((t - 2000) / 500);
@@ -475,8 +465,8 @@ export function longShortScene(g: SceneCtx): void {
       { tone: 'down', points: ptsS, width: 4.6 },
     ],
     p: clamp01(t / 2200), t,
-    yMin: 60, yMax: 140, yFormat: (v) => `${Math.round(v)}`,
-    xLabels: ['Y1', 'Y3', 'Y6', 'Y9', 'Y12'],
+    yMin: 60, yMax: 140, yFormat: () => '',
+    xLabels: ['', '', '', ''],
     gridLines: 4, showAxis: true,
   });
   setFont(ctx, 24, 700, FONT_UI);

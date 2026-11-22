@@ -291,6 +291,8 @@ export function drawChapterCard(
       diamond(ctx, dx, dotY, 4.4, rgba(PALETTE.inkMuted, i <= index ? 0.7 : 0.3));
     }
   }
+  // the shared brand α (U1.4) — one glyph across watermark, chapter cards, end screen
+  drawAlphaGlyph(ctx, cx - 210, cy + 250, 30, rgba(PALETTE.gold, 0.9), 3.4, clamp01((tMs - 500) / 700));
   ctx.textAlign = 'left';
   ctx.restore();
 }
