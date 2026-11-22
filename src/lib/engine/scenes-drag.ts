@@ -7,7 +7,7 @@
 import { SceneCtx } from './scene-context';
 import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, kicker, chip, hexLerp } from './theme';
 import { clamp01, easeOutCubic, springTo, hash01, fmtComma, fmtMoney } from './easing';
-import { goldDust, impactRing, softBloom, glowLine, spinToken, floatY } from './fx';
+import { goldDust, impactRing, softBloom, glowLine, spinToken, floatY, focusPing } from './fx';
 import { panelTitle, lineChart, column, statCard, barRow } from './charts';
 import { paintStage } from './stage';
 
@@ -373,6 +373,8 @@ export function characterMatrixScene(g: SceneCtx): void {
     ctx.textAlign = 'left';
     ctx.restore();
   });
+  // U3.3 — the eye lands on the row being narrated
+  if (hotIdx >= 0) focusPing(ctx, W * 0.16, 350 + hotIdx * 88 + 36, g.sentenceT, 76);
   // the blunt BlackRock verdict — enters once four sentences have played
   const va = g.sentenceIdx != null ? clamp01((g.sentenceIdx - 3.5) / 0.9) : clamp01((t - 4200) / 600);
   if (va > 0) {
@@ -487,6 +489,10 @@ export function signatureCurveScene(g: SceneCtx): void {
   }
   // hold note (U1.3): relocated INTO the badge card's right column at y≈560 —
   // the caption strip is never contested, even during the 4-second hold.
+  // U3.3 — the eye rides the curve's leading edge at each sentence boundary
+  if (nShown >= 2 && (g.sentenceT ?? 9999) < 340) {
+    focusPing(ctx, px(nShown - 1), py(2 * Math.pow(1.08, nShown - 1)), g.sentenceT, 86);
+  }
   const holdP = clamp01((t - (s.hold ?? 4200)) / 1200);
   if (holdP > 0) {
     const bx = chartX + chartW + 50;
@@ -516,6 +522,8 @@ export function benchmarkBarScene(g: SceneCtx): void {
     p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'gold', valueText: '≈ 0.3%/yr',
     sub: 'roughly the tax on its dividends',
   });
+  // U3.3 — focus ping on the value the narration is talking about
+  focusPing(ctx, x + w * 0.72, 485, g.sentenceT, 96);
   // competing pitches fade below the line
   const compA = clamp01((t - 1600) / 600);
   if (compA > 0) {

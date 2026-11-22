@@ -6,7 +6,7 @@
 import { SceneCtx } from './scene-context';
 import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, kicker, chip, diamond, goldRule, drawAlphaGlyph } from './theme';
 import { clamp01, easeOutCubic, springTo, hash01 } from './easing';
-import { goldDust, impactRing, softBloom, godRays, bokehField, floatY } from './fx';
+import { goldDust, impactRing, softBloom, godRays, bokehField, floatY, focusPing } from './fx';
 import { panelTitle } from './charts';
 import { paintStage } from './stage';
 
@@ -141,11 +141,18 @@ export function fiveQuestionsScene(g: SceneCtx): void {
   goldFillText(ctx, 'Ask whoever manages your money.', W * 0.10, 250, 62, 800, FONT_DISPLAY);
   ctx.restore();
   QUESTIONS.forEach((q, i) => {
-    // D17: each question is hot while ITS sentence plays — keyed to the real
-    // sentence index instead of an evenly-staged fake window
-    const ent = clamp01((t - 700 - i * 800) / 500);
+    // U4.1 — each question pulses exactly when IT is asked: the questions are
+    // sentences 2-6 of the beat (after the two intro sentences), so the hot
+    // question is sentenceIdx − 2 and each card's entrance is keyed to its
+    // asking sentence, not an evenly-staged timer.
+    const qIdx = (g.sentenceIdx ?? -1) - 2;
+    const asksNow = qIdx === i;
+    const asked = qIdx > i;
+    const ent = g.sentenceIdx != null
+      ? (asked ? 1 : asksNow ? clamp01((g.sentenceT ?? 0) / 500) : 0)
+      : clamp01((t - 700 - i * 800) / 500);
     if (ent <= 0) return;
-    const hot = g.sentenceIdx != null && i === g.sentenceIdx;
+    const hot = asksNow;
     ctx.save();
     ctx.globalAlpha = ent;
     const x = W * 0.10, y = 320 + i * 110, w = W * 0.80, h = 92;
@@ -168,9 +175,15 @@ export function fiveQuestionsScene(g: SceneCtx): void {
     while (ctx.measureText(txt).width > maxW && txt.length > 10) txt = txt.slice(0, -4) + '…';
     ctx.fillText(txt, x + 130, y + h / 2 + 10);
     ctx.restore();
+    // U3.3 — focus ping on the question being asked
+    if (asksNow && (g.sentenceT ?? 9999) < 340) {
+      focusPing(ctx, x + w * 0.5, y + h / 2, g.sentenceT, 130);
+    }
   });
-  // footer (top-right, never behind the caption pill)
-  const fa = clamp01((t - 700 - 5 * 800) / 600);
+  // footer (top-right, never behind the caption pill) — arrives after Q5
+  const fa = g.sentenceIdx != null
+    ? ((g.sentenceIdx ?? 0) >= 7 ? clamp01((g.sentenceT ?? 0) / 500) : 0)
+    : clamp01((t - 700 - 5 * 800) / 600);
   if (fa > 0) {
     ctx.save();
     ctx.globalAlpha = fa;

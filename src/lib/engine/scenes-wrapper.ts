@@ -7,7 +7,7 @@
 import { SceneCtx } from './scene-context';
 import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, kicker, chip, hexLerp } from './theme';
 import { clamp01, easeOutCubic, easeInOutCubic, springTo, hash01 } from './easing';
-import { goldDust, impactRing, softBloom, glowLine, spinToken, floatY, microShake } from './fx';
+import { goldDust, impactRing, softBloom, glowLine, spinToken, floatY, microShake, focusPing } from './fx';
 import { panelTitle, barRow, statCard, lineChart } from './charts';
 import { paintStage } from './stage';
 
@@ -319,6 +319,10 @@ export function diMosaicScene(g: SceneCtx): void {
   }
   // legend
   const la = clamp01((t - 2000) / 500);
+  // U3.3 — focus ping on the harvest callout at its sentence boundary
+  if (la >= 1 && (g.sentenceT ?? 9999) < 340 && (g.sentenceIdx ?? 0) >= 1) {
+    focusPing(ctx, W * 0.44 + 40, 754, g.sentenceT, 90);
+  }
   if (la > 0) {
     ctx.save();
     ctx.globalAlpha = la;

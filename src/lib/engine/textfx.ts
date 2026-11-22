@@ -41,7 +41,7 @@ export function drawCaptions(
   const words = line.words.slice(winStart, winStart + maxWords);
 
   // build rows (break on clause punctuation near the middle, else greedy)
-  setFont(ctx, 52, 700, FONT_UI);
+  setFont(ctx, 54, 700, FONT_UI);
   const maxW = Math.min(W - 480, W * 0.64);
   const spaceW = ctx.measureText(' ').width;
   const items = words.map((w) => ({ ...w, ww: ctx.measureText(w.w).width }));
@@ -106,9 +106,9 @@ export function drawCaptions(
       const spoken = idx <= lastSpoken;
       let fill = spoken ? PALETTE.ink : rgba(PALETTE.inkMuted, 0.72);
       if (active) fill = PALETTE.goldBright;
-      setFont(ctx, 52, 700, FONT_UI);
+      setFont(ctx, 54, 700, FONT_UI);
       ctx.fillStyle = fill;
-      const punch = active ? 1 + 0.06 * (1 - clamp01((tMs - item.t) / 260)) : 1;
+      const punch = active ? 1 + 0.12 * (1 - clamp01((tMs - item.t) / 260)) : 1; // U4.4 — 1.12
       if (punch !== 1) {
         ctx.save();
         ctx.translate(cx + item.ww / 2, cy);
@@ -123,7 +123,7 @@ export function drawCaptions(
         const prog = clamp01((tMs - item.t) / Math.max(1, item.d));
         const ux = cx, uw = item.ww * easeOutCubic(prog);
         ctx.fillStyle = rgba(PALETTE.goldBright, 0.9);
-        ctx.fillRect(ux, cy + 13, uw, 4.5);
+        ctx.fillRect(ux, cy + 13, uw, 4); // U4.4 — 4px underline
       }
       cx += item.ww + spaceW;
     }
@@ -324,7 +324,8 @@ export function statementAnchor(
   chapterIdx: number, tMs: number, ghost?: string
 ): void {
   const a = clamp01(tMs / 700);
-  const m = 64;
+  // U4.2 — hairline gold rule frame inset 90 px (report spec)
+  const m = 90;
   // ruled frame + gold corner ticks
   ctx.save();
   ctx.globalAlpha = 0.55 * a;
@@ -346,7 +347,7 @@ export function statementAnchor(
   ctx.save();
   ctx.globalAlpha = a;
   setFont(ctx, 500, 800, FONT_DISPLAY);
-  ctx.fillStyle = rgba(PALETTE.inkGhost, 0.11);
+  ctx.fillStyle = rgba(PALETTE.inkGhost, 0.13); // U4.2 — ghost numeral at 13%
   ctx.textAlign = 'right';
   const num = ghost ?? String((chapterIdx % 10) + 1).padStart(2, '0');
   ctx.fillText(num, W - m - 24, H * 0.58);

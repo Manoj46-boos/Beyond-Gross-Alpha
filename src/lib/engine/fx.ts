@@ -259,6 +259,19 @@ export function impactRing(ctx: CanvasRenderingContext2D, cx: number, cy: number
   }
 }
 
+// ── U3.3 — the focus ping ────────────────────────────────────────────────────
+/** A 2-frame gold ring on the scene's NEWEST element, fired at each sentence
+ *  boundary so the viewer's eye lands exactly where the narration does. Pass
+ *  the current sentenceT (ms since the sentence began); the ring blooms at
+ *  ~40ms and is gone by ~340ms. */
+export function focusPing(
+  ctx: CanvasRenderingContext2D, x: number, y: number,
+  sentenceT: number | null | undefined, r = 90, col: string = PALETTE.goldBright
+): void {
+  if (sentenceT == null || sentenceT < 0 || sentenceT > 340) return;
+  impactRing(ctx, x, y, sentenceT, 40, r, 0.85, col);
+}
+
 // ── soft bloom (reveal flash) ────────────────────────────────────────────────
 export function softBloom(ctx: CanvasRenderingContext2D, W: number, H: number, age: number, dur = 420, strength = 0.16): void {
   if (age < 0 || age > dur) return;

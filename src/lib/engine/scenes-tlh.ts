@@ -7,7 +7,7 @@
 import { SceneCtx } from './scene-context';
 import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, kicker, chip, hexLerp } from './theme';
 import { clamp01, easeOutCubic, easeInOutCubic, springTo, hash01, fmtComma } from './easing';
-import { goldDust, impactRing, softBloom, glowLine, spinToken, floatY, microShake } from './fx';
+import { goldDust, impactRing, softBloom, glowLine, spinToken, floatY, microShake, focusPing } from './fx';
 import { panelTitle, waterfall, donut, column, dotGrid, barRow, statCard, lineChart } from './charts';
 import { paintStage } from './stage';
 
@@ -382,19 +382,33 @@ export function eraBarsScene(g: SceneCtx): void {
   const maxH = 380, baseY = 700;
   const colW = 150, gap = 90;
   const x0 = (W - (colW * 4 + gap * 3)) / 2;
+  // U4.1 — the narration walks the eras: each sentence discusses one era, the
+  // others dim to 42% so a visible change lands with the words. Sentence map:
+  // 1 → Depression, 2 → postwar boom, 3-4 → 1972-95 volatility, 5 → bull market.
+  const idx = g.sentenceIdx ?? -1;
+  const hotEra = idx < 0 ? -1 : idx <= 1 ? 0 : idx === 2 ? 1 : idx <= 4 ? 2 : 3;
   cols.forEach((c, i) => {
     const ent = clamp01((t - 300 - i * 380) / 700);
     if (ent <= 0) return;
+    const dim = hotEra >= 0 && i !== hotEra;
+    const cx = x0 + i * (colW + gap) + colW / 2;
+    ctx.save();
+    ctx.globalAlpha = ent * (dim ? 0.42 : 1);
     column(ctx, {
-      cx: x0 + i * (colW + gap) + colW / 2, baseY, maxH, maxV: 2.2, value: c.value,
+      cx, baseY, maxH, maxV: 2.2, value: c.value,
       p: ent, t, tone: c.tone as any, valueText: `${c.value.toFixed(2)}%`,
       label: c.label.split('\n')[0], width: colW, landT: 300 + i * 380 + 700,
     });
     setFont(ctx, 19, 500, FONT_UI);
-    ctx.fillStyle = PALETTE.inkFaint;
+    ctx.fillStyle = dim ? PALETTE.inkFaint : PALETTE.inkSoft;
     ctx.textAlign = 'center';
-    ctx.fillText(c.label.split('\n')[1], x0 + i * (colW + gap) + colW / 2, baseY + 62);
+    ctx.fillText(c.label.split('\n')[1], cx, baseY + 62);
     ctx.textAlign = 'left';
+    ctx.restore();
+    // U3.3 — the eye lands on the era being narrated
+    if (i === hotEra && ent >= 1) {
+      focusPing(ctx, cx, baseY - maxH * (c.value / 2.2) - 24, g.sentenceT, 84);
+    }
   });
   // verdict (right column, clear of the caption band)
   const va = clamp01((t - 2200) / 500);

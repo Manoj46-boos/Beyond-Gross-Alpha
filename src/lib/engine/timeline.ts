@@ -54,7 +54,7 @@ import { BeatSpec } from './script-data';
 
 const SENTENCE_GAP = 110;
 const BEAT_LEAD_IN = 70;
-const CHAPTER_CARD_DUR = 1500; // AURUM part cards breathe longer
+const CHAPTER_CARD_DUR = 4200; // U3.2 — long enough for the 1.5s walk-on, the present, and the exit
 const END_SCREEN_HOLD = 7500;
 
 export function buildTimeline(manifest: AudioManifest, fps: number): Timeline {

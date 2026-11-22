@@ -7,7 +7,7 @@
 import { SceneCtx } from './scene-context';
 import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, goldRule, chip, fitText } from './theme';
 import { clamp01, easeOutCubic, easeInOutCubic, springTo, hash01, fmtMoney } from './easing';
-import { goldDust, impactRing, softBloom, microShake, spinToken, floatY } from './fx';
+import { goldDust, impactRing, softBloom, microShake, spinToken, floatY, focusPing, lightBlade } from './fx';
 import { drawStatement, statementAnchor } from './textfx';
 import { panelTitle, barRow } from './charts';
 import { paintStage } from './stage';
@@ -104,12 +104,16 @@ function splitStatement(ctx: CanvasRenderingContext2D, W: number, H: number, t: 
 }
 
 export function coldOpenScene(g: SceneCtx): void {
-  const { ctx, W, H, t, s } = g;
+  const { ctx, W, H, t, s, beatT } = g;
   const mode = s.mode ?? 'numbers';
+  // U4.5 — reworked for the retention cliff: beat 1 opens on the SPLIT
+  // STATEMENT (both cards + the stamp land inside 3 seconds) arriving on a
+  // 1.5s light blade; beat 2 cuts to the two big numbers. All entrance clocks
+  // are beat-local (beatT) so each state animates fresh on its cut.
   if (mode === 'numbers') {
-    // a single white number fades in from the dark
-    const a1 = clamp01((t - 200) / 900);
-    const a2 = clamp01((t - 2100) / 900);
+    // the two numbers, fading in from the dark on their own cut
+    const a1 = clamp01((beatT - 200) / 900);
+    const a2 = clamp01((beatT - 2100) / 900);
     ctx.save();
     ctx.textAlign = 'center';
     // $13.7M
@@ -139,9 +143,11 @@ export function coldOpenScene(g: SceneCtx): void {
       ctx.stroke();
     }
     ctx.restore();
-    void mode;
+    void mode; void t;
   } else {
-    splitStatement(ctx, W, H, t, 1, 'full');
+    // the paradox arrives visually in ~3 seconds, on a light-blade arrival
+    lightBlade(ctx, W, H, clamp01(beatT / 1500));
+    splitStatement(ctx, W, H, beatT, 1, 'full');
   }
 }
 
@@ -152,14 +158,24 @@ export function gapBarsScene(g: SceneCtx): void {
     kickerText: 'BlackRock 2026 · advisor survey',
   });
   const x = 240, w = W - 700, y = 400, rh = 130;
-  // D17 cadence: the narration walks the layout — sentence 0-1 lands the two
-  // bars, sentence 2 draws the gap bracket, later sentences keep a live gold
-  // edge on whichever bar is being talked about. No more 21s dead hold.
+  // D17/U4.1 cadence: sentence 0-1 land the two bars, sentence 2 brings the
+  // survey chip, sentence 3 draws the gap annotation, later sentences keep a
+  // live gold edge on whichever bar is being talked about.
   const idx = g.sentenceIdx ?? 0;
   const fresh = g.sentenceT != null ? clamp01(1 - g.sentenceT / 900) : 0;
   const hotRow = idx <= 1 ? 0 : idx <= 3 ? 1 : (idx % 2 === 0 ? 0 : 1);
-  barRow(ctx, { x, y, w, h: rh, label: 'Asked for tax guidance', value: 92, maxV: 100, p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'gold', valueText: '92%', tag: 'constantly asked' });
+  barRow(ctx, { x, y, w, h: rh, label: 'Asked for tax guidance', value: 92, maxV: 100, p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'gold', valueText: '92%' });
   barRow(ctx, { x, y: y + rh + 70, w, h: rh, label: 'After-tax drives decisions', value: 17, maxV: 100, p: clamp01((t - 1300) / 900), t, landT: 2250, tone: 'down', valueText: '17%' });
+  // U4.1 — the survey chip arrives with sentence 2, not with the layout
+  if (idx >= 1) {
+    const chipA = g.sentenceIdx != null ? clamp01((g.sentenceT ?? 0) / 500) : clamp01((t - 1500) / 500);
+    ctx.save();
+    ctx.globalAlpha = chipA;
+    chip(ctx, 'constantly asked', x + 2, y - 42, { size: 22, gold: true });
+    ctx.restore();
+    // U3.3 — the eye lands on the bar being narrated
+    focusPing(ctx, x + w * 0.62, (idx === 1 ? y + rh + 70 : y) + rh * 0.5, g.sentenceT, 110);
+  }
   // live gold edge on the bar under discussion
   if (idx >= 2) {
     const hy = hotRow === 0 ? y : y + rh + 70;
@@ -171,8 +187,8 @@ export function gapBarsScene(g: SceneCtx): void {
     ctx.stroke();
     ctx.restore();
   }
-  // the gap annotation — enters when the narration reaches it
-  const gp = g.sentenceIdx != null ? clamp01((g.sentenceIdx - 1.6) / 0.8) : clamp01((t - 2400) / 700);
+  // the gap annotation — U4.1: enters exactly on sentence 3
+  const gp = g.sentenceIdx != null ? (g.sentenceIdx >= 2 ? clamp01((g.sentenceT ?? 0) / 600) : 0) : clamp01((t - 2400) / 700);
   if (gp > 0) {
     ctx.save();
     ctx.globalAlpha = gp;
@@ -182,6 +198,8 @@ export function gapBarsScene(g: SceneCtx): void {
     ctx.fillText('the 75-point gap', x + w * 0.545, y + rh + 55);
     ctx.textAlign = 'left';
     ctx.restore();
+    // U3.3 — focus ping on the newest element (the annotation)
+    focusPing(ctx, x + w * 0.545, y + rh + 44, g.sentenceT, 100);
   }
   void fmtMoney;
 }

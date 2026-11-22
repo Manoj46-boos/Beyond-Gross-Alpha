@@ -1123,3 +1123,19 @@ export function companionArm(
   pose.look = clamp((target.x - px) / 420, -1, 1);
   pose.headTilt += clamp((target.y - shy * rigScale) / 900, -2, 2);
 }
+
+/** U3.1 — the weigh contract: the FAR arm joins the scene. Mirrored 2-bone IK
+ *  through the same armIk(), angles negated for the left side. */
+export function companionArmL(
+  pose: Pose, px: number, groundY: number, rigScale: number,
+  target: { x: number; y: number }, mode: 'point' | 'present' = 'present'
+): void {
+  const shx = px + Math.sin((pose.lean + pose.torsoTilt) * D2R) * TORSO * rigScale;
+  const shy = groundY + (-(U_LEG + L_LEG) + pose.rootY - TORSO) * rigScale;
+  const dx = (target.x - shx) / rigScale;
+  const dy = (target.y - shy) / rigScale;
+  const ik = armIk(0, 0, -dx, dy, U_ARM, L_ARM, 1);
+  pose.lAU = -ik.aU;
+  pose.lAL = -ik.aL;
+  if (mode !== 'point') pose.hand = 'open';
+}

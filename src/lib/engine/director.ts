@@ -6,7 +6,7 @@
 
 import { Timeline, beatAt, chapterAt } from './timeline';
 import { BeatSpec } from './script-data';
-import { CaptionLine, drawCaptions, drawChapterCard, drawSourceChip, drawWatermark, drawProgressBar, CaptionStyle } from './textfx';
+import { CaptionLine, drawCaptions, drawSourceChip, drawWatermark, drawProgressBar, CaptionStyle } from './textfx';
 import { PALETTE, rgba, setFont } from './theme';
 import { clamp01, easeOutCubic, easeInOutSine, drift } from './easing';
 import { paintStage, toneOf } from './stage';
@@ -16,7 +16,7 @@ import { splitSentences } from './easing';
 import { SCRIPT } from './script-data';
 
 import { coldOpenScene, gapBarsScene, titleCardScene, statementScene, turnCardScene, quietBeatScene, policyRiskScene, finalLinesScene, circleBackScene, stampCardScene } from './scenes-open';
-import { hostScene } from './scenes-host';
+import { hostScene, drawChapterWalkOn } from './scenes-host';
 import { brokerageStatementScene, feeChipsScene, memoCardScene, taxRatesScene, turnoverBarsScene, growthCurvesScene, characterMatrixScene, signatureCurveScene, benchmarkBarScene } from './scenes-drag';
 import { locationMapScene, trapTileScene, iraSplitScene, bpsCompareScene, tlhMechanicScene, washSaleScene, waterfallScene, eraBarsScene, vendorCompareScene, wealthfrontCaseScene, decayCurveScene, secCaseScene } from './scenes-tlh';
 import { plumbingScene, heartbeatScene, distribBarsScene, taxManagedScene, pitchDeckScene, diMosaicScene, diDecayScene, exchangeFundScene, longShortScene, elmVerdictScene } from './scenes-wrapper';
@@ -115,19 +115,18 @@ function cameraFor(group: Group, gt: number, d: number, chapterIdx: number): Cam
   else if (type === 'coldOpen') { zBase = 1.02; zTarget = 0.07; }
   else if (type === 'host') { zBase = 1.0; zTarget = 0.035; }
   else if (type === 'secCase' || type === 'elmVerdict') { zBase = 1.0; zTarget = 0.028; }
-  // D14 — depth-aware camera: layered scenes (the figure, the room, cards)
-  // keep the full personality; flat data layouts on the fixed stage get a
-  // third of the drift and half the whip, so two frames of the same layout
-  // align and text edges stop softening in and out of the vignette.
+  // D14/U4.3 — depth-aware camera: layered scenes (the figure, the room, cards)
+  // keep the full personality; flat data layouts on the fixed stage get the
+  // report's discipline — drift ±18px at depth 0.35, NO alternating entry whip;
+  // the 2.2% punch stays everywhere.
   const layered = key === 'host' || key === 'coldOpen' || key === 'endScreen' || key === 'quietBeat' || key === 'titleCard' || key === 'chapterCard';
   if (!layered) zTarget = Math.min(zTarget, 0.018);
   const scale = zBase + zTarget * easeInOutSine(p);
   const driftBase = type.startsWith('statement') || type === 'finalLines' ? 0.12 : type === 'coldOpen' ? 0.35 : 0.6;
-  const driftK = layered ? driftBase : Math.min(driftBase, 0.2);
-  const dx = drift(gt, 1) * 46 * driftK;
-  const dy = drift(gt, 7) * 26 * driftK;
-  // entry whip (gentle; halved on flat layouts)
-  const whip = gt < 340 ? (1 - easeOutCubic(gt / 340)) * (layered ? 26 : 12) : 0;
+  const dx = drift(gt, 1) * (layered ? 46 * driftBase : 18);
+  const dy = drift(gt, 7) * (layered ? 26 : 10);
+  // entry whip only where there is a subject to track (host/chapter cards)
+  const whip = gt < 340 && layered ? (1 - easeOutCubic(gt / 340)) * 26 : 0;
   const dir = (group.beatIdx % 2 === 0 ? 1 : -1);
   return { dx: dx + whip * dir, dy, scale: Math.min(1.10, scale) };
 }
@@ -171,7 +170,7 @@ export function drawFrame(
     tone,
     grid: isStatement ? 0.5 : 1,
     floor: !isFullCard && !isStatement && type !== 'secCase',
-    sheen: isStatement ? 0.4 : 0.8,
+    sheen: 0.8, // U4.2 — the sheen sweep stays on through the statement family
   });
 
   // ── scene drawer ──
@@ -261,11 +260,11 @@ export function drawFrame(
   ctx.save();
   ctx.scale(W / 1920, H / 1080);
 
-  // part cards
+  // part cards — U3.2: the walk-on wrapper (card + The Principal's entrance)
   for (const c of tl.chapterCards) {
     if (t >= c.startMs && t < c.endMs) {
-      drawChapterCard(ctx, W, H, t - c.startMs, c.endMs - c.startMs, c.index, c.title, 0, tl.chapters.length);
-      // light blade accompanies the card
+      drawChapterWalkOn(ctx, W, H, t - c.startMs, c.endMs - c.startMs, c.index, c.title, tl.chapters.length);
+      // light blade accompanies the card (he exits through it)
       const bp = clamp01((t - c.startMs) / (c.endMs - c.startMs));
       lightBlade(ctx, W, H, bp);
     }
@@ -273,7 +272,7 @@ export function drawFrame(
 
   // captions (suppressed when the scene IS the on-screen text — no dupe)
   const textScenes = ['statement', 'finalLines', 'turnCard', 'policyRisk', 'quietBeat', 'titleCard'];
-  const capStyle: CaptionStyle = { mode: beat && textScenes.includes(type) ? 'off' : opts.captions, maxRows: 2, maxWords: 10 };
+  const capStyle: CaptionStyle = { mode: beat && textScenes.includes(type) ? 'off' : opts.captions, maxRows: 2, maxWords: 6 };
   drawCaptions(ctx, W, H, t, tl.captionLines, capStyle);
 
   // source chips (bottom-left, paper tick sound already scheduled in mix)
