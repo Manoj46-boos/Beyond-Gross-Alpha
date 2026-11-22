@@ -133,8 +133,8 @@ export function paintStage(
     const c = Math.min(0.98, Math.max(b + 0.001, fm + 0.055));
     const d = Math.min(0.99, Math.max(c + 0.001, f1));
     hg.addColorStop(a, rgba(PALETTE.gold, 0.26));
-    hg.addColorStop(b, rgba(PALETTE.gold, 0.05));
-    hg.addColorStop(c, rgba(PALETTE.gold, 0.05));
+    hg.addColorStop(b, rgba(PALETTE.gold, 0.02)); // C-10 — deeper dip: no hairline under the feet
+    hg.addColorStop(c, rgba(PALETTE.gold, 0.02));
     hg.addColorStop(d, rgba(PALETTE.gold, 0.26));
   }
   hg.addColorStop(0.72 + (1 - 0.72) * 0.25, rgba(PALETTE.gold, 0.34));

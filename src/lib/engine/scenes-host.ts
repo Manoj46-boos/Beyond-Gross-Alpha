@@ -115,7 +115,7 @@ export function hostScene(g: SceneCtx): void {
   // pool so he separates from the background — D2 + D13)
   paintStage(ctx, W, H, t, {
     tone: 'neutral',
-    horizonFade: { x: px, r: 320 },
+    horizonFade: { x: px, r: 400 }, // C-10 — wider dip so the hairline reads as depth, not a line under his feet
     keyLight: { x: px, y: groundY - 330, r: W * 0.45 },
   });
   godRays(ctx, W, H, t, { alpha: 0.4, x: W * 0.80 });
@@ -283,7 +283,7 @@ export function hostScene(g: SceneCtx): void {
     wordTimes: speaking ? wordTimes : [],
     wordTexts: speaking ? wordTexts : [],
     beatT: g.beatT,
-    faceScale: 1.25,
+    faceScale: 1.5, // C-02 — the head must carry the face at phone size
     reflection: true,
     rimBoost: 0.06,
     vel,
@@ -330,6 +330,7 @@ export function drawChapterWalkOn(
   drawStickman(ctx, px, groundY, rigScale, tMs, {
     pose,
     flip: tMs < 1500,
+    faceScale: 1.5, // C-02 — same mobile face floor as the host scenes
     reflection: true,
     rimBoost: 0.06,
     vel: { lean: 0, rootY: 0, rAL: 0, rAU: 0 },
