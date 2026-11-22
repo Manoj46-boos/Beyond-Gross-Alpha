@@ -236,8 +236,12 @@ export function taxRatesScene(g: SceneCtx): void {
     if (ent <= 0) return;
     ctx.save();
     ctx.globalAlpha = ent;
-    const w = 500, gx = W * 0.10 + i * (w + 40);
-    statCard(ctx, { x: gx, y: 330, w, h: 330, big: pl.big, label: pl.label, sub: pl.sub, p: ent, tone: pl.tone as any, bigSize: 92 });
+    // AUDIT K-04 — the grid used to run 3×500 + 40 gaps from W*0.10: plate 3
+    // ended flush against the right edge (~1880) while a 150px band sat empty
+    // below. Rebalanced: symmetric 192px margins (192…1728), plates grown to
+    // h=400 (330→730) so the frame carries to the caption guard.
+    const w = 480, gx = W * 0.10 + i * (w + 48);
+    statCard(ctx, { x: gx, y: 330, w, h: 400, big: pl.big, label: pl.label, sub: pl.sub, p: ent, tone: pl.tone as any, bigSize: 92 });
     ctx.restore();
   });
   // assumption footnote

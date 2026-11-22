@@ -186,23 +186,31 @@ export function taxManagedScene(g: SceneCtx): void {
   paintStage(ctx, W, g.H, t, {});
   panelTitle(ctx, 'The label matters less than the turnover', W * 0.10, 220, W * 0.8, t / 2400, { kickerText: 'Lever 3 · Tax-managed funds' });
   const x = W * 0.10, w = W * 0.55;
-  barRow(ctx, { x, y: 345, w, h: 120, label: 'Tax-managed small-cap', value: 7.16, maxV: 8, p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'gold', valueText: '7.16%', sub: '10-yr after-tax return' });
-  barRow(ctx, { x, y: 535, w, h: 120, label: 'Plain small-cap index', value: 6.76, maxV: 8, p: clamp01((t - 1300) / 900), t, landT: 2250, tone: 'platinum', valueText: '6.76%', sub: '10-yr after-tax return' });
+  // AUDIT K-04 — bars h 120→150 and the verdict card h 310→380: content used
+  // to end at y≈650 leaving a ~300px dead band; now it carries to 730 with
+  // the scene's punchline (7.16 − 6.76 = 0.40%/yr) inside the card.
+  barRow(ctx, { x, y: 345, w, h: 150, label: 'Tax-managed small-cap', value: 7.16, maxV: 8, p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'gold', valueText: '7.16%', sub: '10-yr after-tax return' });
+  barRow(ctx, { x, y: 555, w, h: 150, label: 'Plain small-cap index', value: 6.76, maxV: 8, p: clamp01((t - 1300) / 900), t, landT: 2250, tone: 'platinum', valueText: '6.76%', sub: '10-yr after-tax return' });
   const la = clamp01((t - 2200) / 600);
   if (la > 0) {
     ctx.save();
     ctx.globalAlpha = la;
-    glassCard(ctx, x + w + 90, 350, 480, 310, { r: 16 });
+    glassCard(ctx, x + w + 90, 350, 480, 380, { r: 16 });
     setFont(ctx, 30, 700, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.ink;
     wrapText(ctx, 'A low-turnover index fund is already a tax-managed fund.', 400, 30, 700, FONT_DISPLAY).forEach((ln, i) => {
-      ctx.fillText(ln, x + w + 128, 420 + i * 46);
+      ctx.fillText(ln, x + w + 128, 424 + i * 46);
     });
     setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     wrapText(ctx, 'The edge mostly came from a different index.', 420, 23, 600, FONT_UI).forEach((ln, i) => {
-      ctx.fillText(ln, x + w + 128, 640 + i * 32);
+      ctx.fillText(ln, x + w + 128, 556 + i * 32);
     });
+    // the punchline, composed as a stat (AUDIT K-04 — fills the card's foot)
+    goldFillText(ctx, '0.40%/yr', x + w + 128, 668, 46, 800, FONT_DISPLAY);
+    setFont(ctx, 24, 600, FONT_UI);
+    ctx.fillStyle = PALETTE.goldBright;
+    ctx.fillText('the entire after-tax edge', x + w + 128, 700);
     ctx.restore();
   }
 }

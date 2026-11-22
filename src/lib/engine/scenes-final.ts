@@ -87,12 +87,18 @@ export function hierarchyScene(g: SceneCtx): void {
   ctx.restore();
 
   const hold = s.hold ?? 5200;
+  // AUDIT K-02 — the grid used to run y 340→830: TIER 3 sat straight under
+  // the caption pill (top ≈ 796 for two rows) and was painted over mid-
+  // sentence on the scene the kicker calls "screenshot this". Grid shifted
+  // up and tightened: the last card ends at y=762, inside the caption guard;
+  // footer pulled above the grid. The save-rate artifact stays legible while
+  // the caption plays.
   TIERS.forEach((tr, i) => {
     const ent = clamp01((t - 700 + i * 900) / 700);
     if (ent <= 0) return;
     ctx.save();
     ctx.globalAlpha = ent;
-    const x = W * 0.10, y = 340 + i * 170, w = W * 0.80, h = 150;
+    const x = W * 0.10, y = 300 + i * 160, w = W * 0.80, h = 142;
     const e = springTo(0.94, 1, Math.max(0, t - 700 - i * 900), 160, 15);
     ctx.translate(x + w / 2, y + h / 2);
     ctx.scale(e, e);
@@ -121,7 +127,8 @@ export function hierarchyScene(g: SceneCtx): void {
     chip(ctx, tr.verdict, lx + w - 320, ly + h / 2 - 26, { size: 28, gold: tr.tone === 'gold' });
     ctx.restore();
   });
-  // footer benchmark (top-right, never behind the caption pill)
+  // footer benchmark (top-right, above the shifted grid, never behind the
+  // caption pill — AUDIT K-02)
   const fa = clamp01((t - 700 + 3 * 900 + 200) / 600);
   if (fa > 0) {
     ctx.save();
@@ -129,8 +136,8 @@ export function hierarchyScene(g: SceneCtx): void {
     setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkMuted;
     ctx.textAlign = 'right';
-    ctx.fillText('Benchmark to beat: plain index ETF held for decades ≈ 0.3%/yr drag', W - 120, 310);
-    ctx.fillText('Complexity is a cost you pay every year.', W - 120, 344);
+    ctx.fillText('Benchmark to beat: plain index ETF held for decades ≈ 0.3%/yr drag', W - 120, 250);
+    ctx.fillText('Complexity is a cost you pay every year.', W - 120, 284);
     ctx.textAlign = 'left';
     ctx.restore();
   }

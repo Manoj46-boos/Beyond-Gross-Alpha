@@ -38,3 +38,9 @@ export interface SceneCtx {
 }
 
 export type SceneDrawer = (g: SceneCtx) => void;
+
+/** AUDIT K-02 — the caption pill occupies y 796→968 for two rows
+ *  (CAP_FLOOR_Y 968 − pillH ~172). Save-assets the viewer is asked to keep —
+ *  the hierarchy tier cards, closing verdict lines — must end above this
+ *  line. Scenes keep their lowest content baseline ≤ CAPTION_SAFE_TOP − 22. */
+export const CAPTION_SAFE_TOP = 786;

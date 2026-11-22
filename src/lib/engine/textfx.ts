@@ -211,7 +211,8 @@ export function drawProgressBar(
 // ── chapter card — the AURUM interlude ───────────────────────────────────────
 export function drawChapterCard(
   ctx: CanvasRenderingContext2D, W: number, H: number, tMs: number, durMs: number,
-  index: number, title: string, overall: number, totalChapters: number
+  index: number, title: string, overall: number, totalChapters: number,
+  textAlpha = 1,
 ): void {
   const p = clamp01(tMs / durMs);
   const aIn = clamp01(tMs / 380);
@@ -258,6 +259,12 @@ export function drawChapterCard(
   ctx.fillText(num, 0, 60);
   ctx.restore();
 
+  // AUDIT K-06 — textAlpha lets the walk-on owner fade the card's MESSAGE
+  // (PART label, rules, title, dots, glyph) independently of its atmosphere
+  // (ghost numeral, dust): the figure's exit never crosses live text.
+  ctx.save();
+  ctx.globalAlpha = alpha * textAlpha;
+
   // PART label
   setFont(ctx, 28, 700, FONT_UI);
   try { (ctx as any).letterSpacing = '7px'; } catch { /* noop */ }
@@ -292,8 +299,9 @@ export function drawChapterCard(
     }
   }
   // the shared brand α (U1.4) — one glyph across watermark, chapter cards, end screen
-  drawAlphaGlyph(ctx, cx - 210, cy + 250, 30, rgba(PALETTE.gold, 0.9), 3.4, clamp01((tMs - 500) / 700));
+  drawAlphaGlyph(ctx, cx - 210, cy + 250, 30, rgba(PALETTE.gold, 0.9), 3.4, clamp01((tMs - 500) / 700) * textAlpha);
   ctx.textAlign = 'left';
+  ctx.restore();
   ctx.restore();
 }
 

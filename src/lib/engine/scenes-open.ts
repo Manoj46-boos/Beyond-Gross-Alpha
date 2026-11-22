@@ -13,7 +13,10 @@ import { panelTitle, barRow } from './charts';
 import { paintStage } from './stage';
 
 // ── G1 — the split statement (cold open + full-circle close) ────────────────
-function splitStatement(ctx: CanvasRenderingContext2D, W: number, H: number, t: number, alpha: number, mode: 'full' | 'compact'): void {
+function splitStatement(
+  ctx: CanvasRenderingContext2D, W: number, H: number, t: number, alpha: number,
+  mode: 'full' | 'compact', stage = 2, stageA = 1,
+): void {
   const cardW = mode === 'full' ? 660 : 560;
   const cardH = 330;
   const gap = 90;
@@ -22,6 +25,23 @@ function splitStatement(ctx: CanvasRenderingContext2D, W: number, H: number, t: 
   const e = easeOutCubic(clamp01(t / 900));
   ctx.save();
   ctx.globalAlpha = alpha;
+
+  // AUDIT K-05 stage 2 — spotlight dim: the room falls back, the two
+  // outcomes come forward (drawn before the cards so they paint over it)
+  if (stage >= 2) {
+    ctx.save();
+    ctx.globalAlpha = alpha * 0.42 * stageA;
+    ctx.fillStyle = '#05080F';
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+  // stage 2 — the cards breathe toward the viewer as the delta lands
+  if (stage >= 2 && stageA > 0) {
+    const sc = 1 + 0.045 * stageA;
+    ctx.translate(W / 2, y0 + cardH / 2);
+    ctx.scale(sc, sc);
+    ctx.translate(-W / 2, -(y0 + cardH / 2));
+  }
 
   for (let i = 0; i < 2; i++) {
     const ent = easeOutCubic(clamp01((t - 200 - i * 320) / 800));
@@ -66,10 +86,35 @@ function splitStatement(ctx: CanvasRenderingContext2D, W: number, H: number, t: 
     ctx.textAlign = 'left';
     ctx.restore();
   }
-  // center stamp — SAME PORTFOLIO (above the cards, never overlapping them)
+  // AUDIT K-05 stage 1 — a gold connector binds the two outcomes into one
+  // story (same money, two tax lines) — arrives with the stamp, not before
+  if (stage >= 1) {
+    const ca = (stage === 1 ? stageA : 1) * clamp01((t - 1400) / 400);
+    if (ca > 0) {
+      ctx.save();
+      ctx.globalAlpha = alpha * ca * 0.9;
+      ctx.strokeStyle = rgba(PALETTE.gold, 0.85);
+      ctx.lineWidth = 1.6;
+      ctx.setLineDash([2, 7]);
+      ctx.beginPath();
+      ctx.moveTo(x0 + cardW + 16, y0 + 205);
+      ctx.lineTo(x0 + cardW + gap - 16, y0 + 205);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = PALETTE.goldBright;
+      for (const cx2 of [x0 + cardW + 16, x0 + cardW + gap - 16]) {
+        ctx.beginPath();
+        ctx.arc(cx2, y0 + 205, 3.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+  // center stamp — SAME PORTFOLIO (above the cards, never overlapping them);
+  // AUDIT K-05 — lands on stage 1 (the "same portfolio" sentences), not at t+1.5s
   const stampT = t - 1500;
-  if (stampT > 0) {
-    const stampE = clamp01(stampT / 260);
+  if (stage >= 1 && stampT > 0) {
+    const stampE = clamp01(stampT / 260) * (stage === 1 ? stageA : 1);
     const shake = microShake(t, 1500, 7);
     ctx.save();
     ctx.globalAlpha = alpha;
@@ -92,6 +137,29 @@ function splitStatement(ctx: CanvasRenderingContext2D, W: number, H: number, t: 
     try { (ctx as any).letterSpacing = '0px'; } catch { /* noop */ }
     ctx.restore();
     void e;
+  }
+  // AUDIT K-05 stage 2 — the delta payoff restages the frame: $5,100,000
+  // ($13,700,000 − $8,600,000) lands under the cards with the impact ring —
+  // the number the whole episode is titled after, on its own composition
+  if (stage >= 2) {
+    const da = stageA;
+    ctx.save();
+    ctx.globalAlpha = alpha * da;
+    setFont(ctx, 24, 700, FONT_UI);
+    try { (ctx as any).letterSpacing = '6px'; } catch { /* noop */ }
+    ctx.fillStyle = PALETTE.inkFaint;
+    ctx.textAlign = 'center';
+    ctx.fillText('THE DIFFERENCE — THE FEE LINE, COMPOUNDING', W / 2, y0 + cardH + 42);
+    try { (ctx as any).letterSpacing = '0px'; } catch { /* noop */ }
+    const dg = ctx.createLinearGradient(0, y0 + cardH + 58, 0, y0 + cardH + 118);
+    dg.addColorStop(0, '#F08A8D');
+    dg.addColorStop(1, PALETTE.down);
+    setFont(ctx, 68, 800, FONT_DISPLAY);
+    ctx.fillStyle = dg;
+    ctx.fillText('$5,100,000', W / 2, y0 + cardH + 116);
+    ctx.textAlign = 'left';
+    ctx.restore();
+    impactRing(ctx, W / 2, y0 + cardH + 88, t, 3600, 150, 0.8 * da, PALETTE.down);
   }
   // footnote — L-07: exponents are COMPOSED (raised 62%-size runs), not raw
   // U+2075 codepoints: Manrope lacks them, so they used to render through
@@ -171,7 +239,21 @@ export function coldOpenScene(g: SceneCtx): void {
   } else {
     // the paradox arrives visually in ~3 seconds, on a light-blade arrival
     lightBlade(ctx, W, H, clamp01(beatT / 1500));
-    splitStatement(ctx, W, H, beatT, 1, 'full');
+    // AUDIT K-05 — the split statement held ONE composition from t≈3s to
+    // t≈15s (caption-only change) through the film's highest-retention-
+    // leverage window. Phase 3.1 — staged statement events on the BEAT CLOCK
+    // (robust to sentence-pacing differences between QA estimates and real
+    // TTS): (0-1) the cards land, (2-3) the stamp + connector bind them,
+    // (4-5) spotlight dim + the $5.1M delta band re-stage the payoff. Three
+    // distinct compositions instead of one, each ≤ ~5s.
+    const tb = g.beat as unknown as { startMs?: number; endMs?: number };
+    const bd = Math.max(9000, (tb.endMs ?? 14500) - (tb.startMs ?? 0));
+    const t1 = Math.min(5000, Math.max(3500, bd * 0.34));
+    const t2 = Math.min(10000, Math.max(7000, bd * 0.67));
+    const stage = beatT < t1 ? 0 : beatT < t2 ? 1 : 2;
+    const stageStart = stage === 0 ? 0 : stage === 1 ? t1 : t2;
+    const stageA = clamp01((beatT - stageStart) / 600);
+    splitStatement(ctx, W, H, beatT, 1, 'full', stage, stageA);
   }
 }
 
@@ -181,15 +263,21 @@ export function gapBarsScene(g: SceneCtx): void {
   panelTitle(ctx, 'The most expensive silence in wealth management', W / 2 - 560, 210, 1120, t / 2400, {
     kickerText: 'BlackRock 2026 · advisor survey',
   });
-  const x = 240, w = W - 700, y = 400, rh = 130;
+  // AUDIT K-04 — the tracks used to end at x=1460 (w = W−700), leaving the
+  // right third of the frame empty on the most-watched scene in the film.
+  // w = 1560 runs the tracks to x≈1800: edge-to-edge composition, no dead third.
+  const x = 240, w = 1560, y = 400, rh = 130;
   // D17/U4.1 cadence: sentence 0-1 land the two bars, sentence 2 brings the
   // survey chip, sentence 3 draws the gap annotation, later sentences keep a
   // live gold edge on whichever bar is being talked about.
   const idx = g.sentenceIdx ?? 0;
   const fresh = g.sentenceT != null ? clamp01(1 - g.sentenceT / 900) : 0;
   const hotRow = idx <= 1 ? 0 : idx <= 3 ? 1 : (idx % 2 === 0 ? 0 : 1);
-  barRow(ctx, { x, y, w, h: rh, label: 'Asked for tax guidance', value: 92, maxV: 100, p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'gold', valueText: '92%' });
-  barRow(ctx, { x, y: y + rh + 70, w, h: rh, label: 'After-tax drives decisions', value: 17, maxV: 100, p: clamp01((t - 1300) / 900), t, landT: 2250, tone: 'down', valueText: '17%' });
+  // AUDIT K-03 — barRow returns the filled tip (bx+fw). The old ping sat at a
+  // fixed track fraction (x + w·0.62), which on the 17% row floats ~290px past
+  // the fill in empty track — a gold ring on nothing, read as a render glitch.
+  const tipA = barRow(ctx, { x, y, w, h: rh, label: 'Asked for tax guidance', value: 92, maxV: 100, p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'gold', valueText: '92%' });
+  const tipB = barRow(ctx, { x, y: y + rh + 70, w, h: rh, label: 'After-tax drives decisions', value: 17, maxV: 100, p: clamp01((t - 1300) / 900), t, landT: 2250, tone: 'down', valueText: '17%' });
   // U4.1 — the survey chip arrives with sentence 2, not with the layout
   if (idx >= 1) {
     const chipA = g.sentenceIdx != null ? clamp01((g.sentenceT ?? 0) / 500) : clamp01((t - 1500) / 500);
@@ -197,8 +285,8 @@ export function gapBarsScene(g: SceneCtx): void {
     ctx.globalAlpha = chipA;
     chip(ctx, 'constantly asked', x + 2, y - 42, { size: 28, gold: true });
     ctx.restore();
-    // U3.3 — the eye lands on the bar being narrated
-    focusPing(ctx, x + w * 0.62, (idx === 1 ? y + rh + 70 : y) + rh * 0.5, g.sentenceT, 110);
+    // U3.3 — the eye lands on the FILLED TIP of the bar being narrated
+    focusPing(ctx, idx === 1 ? tipB : tipA, (idx === 1 ? y + rh + 70 : y) + rh * 0.5, g.sentenceT, 110);
   }
   // live gold edge on the bar under discussion
   if (idx >= 2) {

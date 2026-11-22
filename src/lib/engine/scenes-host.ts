@@ -352,14 +352,20 @@ export function drawChapterWalkOn(
   ctx: CanvasRenderingContext2D, W: number, H: number,
   tMs: number, durMs: number, index: number, title: string, totalChapters: number
 ): void {
-  drawChapterCard(ctx, W, H, tMs, durMs, index, title, 0, totalChapters);
+  // AUDIT K-06 — the exit used to walk the figure THROUGH the centred title
+  // (his head overlapped "How to Read This Video" mid-exit) — a depth-grammar
+  // break on the most-replayed moment of every chapter card. Phase 1.5: the
+  // card's message fades over ~450ms as he starts the exit, so the text has
+  // left the frame before he reaches it. The ghost numeral and room stay.
+  const EXIT_AT = Math.max(2350, durMs - 1950);
+  const exitFade = tMs < EXIT_AT ? 1 : 1 - clamp01((tMs - EXIT_AT - 120) / 450);
+  drawChapterCard(ctx, W, H, tMs, durMs, index, title, 0, totalChapters, exitFade);
   const groundY = H * 0.88;
   const rigScale = 2.3;
   const homeX = W * 0.115;
   // L-08 — the exit is the most-rehearsed move in the film: it starts earlier
   // and gets a full-stride window (was compressed into ≤1500ms — the skating
   // read) so the stride cadence matches the walk-on
-  const EXIT_AT = Math.max(2350, durMs - 1950);
   let px = homeX;
   let pose: Pose;
   if (tMs < 1500) {

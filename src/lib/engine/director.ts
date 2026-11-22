@@ -132,6 +132,10 @@ function cameraFor(group: Group, gt: number, d: number, chapterIdx: number): Cam
   return { dx: dx + whip * dir, dy, scale: Math.min(1.10, scale) };
 }
 
+// AUDIT K-01 — house-grid fallback rect for long scenes that don't declare a
+// payoff rect: the whole content column, guaranteed on-frame (fit ≈ 1.12).
+const DEFAULT_CLOSEUP = { x: 140, y: 210, w: 1640, h: 620 };
+
 // ── frame ────────────────────────────────────────────────────────────────────
 export function drawFrame(
   ctx: CanvasRenderingContext2D, tl: Timeline, tMs: number, opts: RenderOptions
@@ -169,11 +173,26 @@ export function drawFrame(
     if (!live) {
       const k = Math.floor(gt / 8000);
       if (k % 2 === 1) {
+        // AUDIT K-01 — the blind close-up (scale 1.30, dx +250) mapped the
+        // right-column payoffs past x=1920: the $5.1M badge, "A structural
+        // moat.", the 7-year padlock, the FAJ verdict card, "Most pitches
+        // can't." — the beats the script is built around — vanished for half
+        // the runtime of the longest scenes. Phase 0.1: each scene DECLARES
+        // the rect its payoff lives in; the close-up fits that rect (capped
+        // at the old zoom) and the offset is content-bbox-clamped so the
+        // payoff may never leave the frame. Scenes without a declared rect
+        // get the house-grid fallback — everything stays visible.
         const statementFam = sceneType === 'statement' || sceneType === 'finalLines' || sceneType === 'turnCard' || sceneType === 'policyRisk';
-        const s = statementFam ? 1.22 : 1.30;
-        const cdx = statementFam ? -140 : 250;
-        const cdy = statementFam ? -70 : 30;
-        camEff = { dx: cdx + drift(gt, 3) * 12, dy: cdy + drift(gt, 9) * 7, scale: s };
+        const cu = (beat.beat.scene.closeup ?? DEFAULT_CLOSEUP) as { x: number; y: number; w: number; h: number };
+        const m = 40;
+        const fit = Math.min((W - 2 * m) / cu.w, (H - 2 * m) / cu.h);
+        const s = Math.min(statementFam ? 1.22 : 1.30, Math.max(1.0, fit));
+        let cdx = -(cu.x + cu.w / 2 - W / 2) * s + drift(gt, 3) * 10;
+        let cdy = -(cu.y + cu.h / 2 - H / 2) * s + drift(gt, 9) * 6;
+        // content-bbox clamp — the payoff rect stays on-frame even with drift
+        cdx = Math.min((W - m) - W / 2 - (cu.x + cu.w - W / 2) * s, Math.max(m - W / 2 - (cu.x - W / 2) * s, cdx));
+        cdy = Math.min((H - m) - H / 2 - (cu.y + cu.h - H / 2) * s, Math.max(m - H / 2 - (cu.y - H / 2) * s, cdy));
+        camEff = { dx: cdx, dy: cdy, scale: s };
       }
       if (k > 0) cutPunch = scalePunch(gt - k * 8000, 240, 0.03);
     }

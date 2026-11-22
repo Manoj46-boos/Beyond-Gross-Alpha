@@ -4,7 +4,7 @@
  * waterfall · eraBars · vendorCompare · wealthfrontCase · decayCurve · secCase
  */
 
-import { SceneCtx } from './scene-context';
+import { CAPTION_SAFE_TOP, SceneCtx } from './scene-context';
 import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, kicker, chip, hexLerp } from './theme';
 import { clamp01, easeOutCubic, easeInOutCubic, springTo, hash01, fmtComma } from './easing';
 import { goldDust, impactRing, softBloom, glowLine, spinToken, floatY, microShake, focusPing } from './fx';
@@ -175,7 +175,7 @@ export function bpsCompareScene(g: SceneCtx): void {
     setFont(ctx, 32, 600, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.inkSoft;
     ctx.textAlign = 'center';
-    ctx.fillText('Which is why the next lever matters more.', W / 2, 790);
+    ctx.fillText('Which is why the next lever matters more.', W / 2, CAPTION_SAFE_TOP - 22);
     ctx.textAlign = 'left';
     ctx.restore();
   }
@@ -468,7 +468,10 @@ export function vendorCompareScene(g: SceneCtx): void {
     if (ent <= 0) return;
     ctx.save();
     ctx.globalAlpha = ent;
-    statCard(ctx, { x: c.x, y: 330, w: W * 0.36, h: 320, big: c.big, label: c.label, sub: c.sub, p: ent, tone: c.tone as any, bigSize: i === 0 ? 84 : 100, goldEdge: i === 0 });
+    // AUDIT K-04 — the cards used to end at y≈650, leaving a ~300px dead band
+    // above the caption zone. Enlarged + dropped: they now carry down to 740,
+    // inside the caption guard, so the composition fills the lower half.
+    statCard(ctx, { x: c.x, y: 350, w: W * 0.36, h: 390, big: c.big, label: c.label, sub: c.sub, p: ent, tone: c.tone as any, bigSize: i === 0 ? 84 : 100, goldEdge: i === 0 });
     ctx.restore();
   });
 }
