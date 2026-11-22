@@ -134,7 +134,7 @@ export function drawCaptions(
 // ── source chip (the script's retention device) ──────────────────────────────
 export function drawSourceChip(
   ctx: CanvasRenderingContext2D, W: number, tMs: number,
-  text: string, startMs: number, durMs = 3200
+  text: string, startMs: number, durMs = 3200, capOn = false
 ): void {
   const local = tMs - startMs;
   if (local < 0 || local > durMs) return;
@@ -145,7 +145,12 @@ export function drawSourceChip(
   // document glyph + text
   const tw = ctx.measureText(text).width;
   const w = tw + 74, h = 44;
-  const x = MARGIN_X, y = 1006;
+  // AUDIT T-09 — during caption beats the bottom band used to stack three UI
+  // layers within 60px (chip 1006-1050, caption pill bottom 968, progress bar
+  // 1066). While captions paint, the chip moves up to y=960 in the left
+  // column — horizontally clear of the centred pill — so the karaoke sweep
+  // owns the caption line.
+  const x = MARGIN_X, y = capOn ? 960 : 1006;
   ctx.save();
   ctx.globalAlpha = alpha;
   glassCard(ctx, x, y, w, h, { r: 10, shadow: false, fill: 'rgba(9,13,24,0.7)', border: rgba(PALETTE.gold, 0.3), sheen: false });

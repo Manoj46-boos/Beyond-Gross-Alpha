@@ -5,7 +5,7 @@
  */
 
 import { SceneCtx } from './scene-context';
-import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, kicker, chip, hexLerp } from './theme';
+import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, kicker, chip, hexLerp, fitText } from './theme';
 import { clamp01, easeOutCubic, easeInOutCubic, springTo, hash01 } from './easing';
 import { goldDust, impactRing, softBloom, glowLine, spinToken, floatY, microShake, focusPing } from './fx';
 import { panelTitle, barRow, statCard, lineChart } from './charts';
@@ -126,9 +126,10 @@ export function heartbeatScene(g: SceneCtx): void {
     ctx.save();
     ctx.globalAlpha = ca;
     glassCard(ctx, W * 0.55, 310, 640, 260, { r: 18, goldEdge: true });
-    setFont(ctx, 28, 700, FONT_UI);
-    ctx.fillStyle = PALETTE.inkFaint;
-    ctx.fillText('US TREASURY COST, PER YEAR (BLOOMBERG EST.)', W * 0.55 + 40, 370);
+    // AUDIT T-02 — the provenance label measured ~836px and ran past both the
+    // card and the frame edge; fitText keeps it inside the card interior
+    // (560px) instead.
+    fitText(ctx, 'US TREASURY COST, PER YEAR (BLOOMBERG EST.)', W * 0.55 + 40, 370, 560, 28, 700, FONT_UI, PALETTE.inkFaint, 18);
     goldFillText(ctx, '$48,000,000,000', W * 0.55 + 40, 470, 68, 800, FONT_DISPLAY);
     setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkSoft;
@@ -375,14 +376,18 @@ export function diDecayScene(g: SceneCtx): void {
   const x = W * 0.10, w = W * 0.58;
   barRow(ctx, { x, y: 345, w, h: 120, label: 'Years 1–5', value: 69, maxV: 80, p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'up', valueText: '69 bps/yr', sub: 'average tax benefit' });
   barRow(ctx, { x, y: 590, w, h: 120, label: 'Years 6–10', value: 9, maxV: 80, p: clamp01((t - 1300) / 900), t, landT: 2250, tone: 'down', valueText: '9 bps/yr', sub: 'as the portfolio appreciates' });
-  // cost line
+  // cost line — AUDIT T-06: at y=400 the dashed "your cost" line cut straight
+  // through the first bar (69 bps, y 345-465) and its value label — a
+  // comparison device crossing the thing it compares. Re-routed ABOVE both
+  // bars: the line now runs at y=320, its label above it at 304, so the
+  // gold dashed rule reads as a threshold the bars answer to.
   const ca = clamp01((t - 2200) / 500);
   if (ca > 0) {
     ctx.save();
     ctx.globalAlpha = ca;
     ctx.beginPath();
-    ctx.moveTo(x + 40, 400);
-    ctx.lineTo(x + w, 400);
+    ctx.moveTo(x + 40, 320);
+    ctx.lineTo(x + w, 320);
     ctx.strokeStyle = rgba(PALETTE.gold, 0.8);
     ctx.setLineDash([12, 8]);
     ctx.lineWidth = 2.6;
@@ -390,7 +395,7 @@ export function diDecayScene(g: SceneCtx): void {
     ctx.setLineDash([]);
     setFont(ctx, 28, 700, FONT_UI);
     ctx.fillStyle = PALETTE.goldBright;
-    ctx.fillText('your cost: 30–40 bps — forever', x + w - 380, 384);
+    ctx.fillText('your cost: 30–40 bps — forever', x + w - 380, 304);
     ctx.restore();
   }
 }

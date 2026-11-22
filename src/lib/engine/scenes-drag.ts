@@ -124,8 +124,9 @@ export function feeChipsScene(g: SceneCtx): void {
     setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.fillText('average advisory fee', x2 + 90, y2 + 62);
-    // "tax management: invisible" chip
-    chip(ctx, 'tax management — expensive to deliver, invisible when done', x2 + 60, y2 + 262, { size: 28, gold: true });
+    // "tax management: invisible" chip — AUDIT T-01: fitText guard so the
+    // 55-char pill fits to x=1880 instead of being guillotined at 1920
+    chip(ctx, 'tax management — expensive to deliver, invisible when done', x2 + 60, y2 + 262, { size: 28, gold: true, maxW: W - (x2 + 60) - 40 });
     ctx.restore();
   }
 }
@@ -266,13 +267,17 @@ export function turnoverBarsScene(g: SceneCtx): void {
   barRow(ctx, { x, y: 535, w, h: 120, label: '100% turnover', value: 1.94, maxV: 2.0, p: clamp01((t - 1300) / 900), t, landT: 2250, tone: 'down', valueText: '−1.94 pts/yr', sub: 'normal for many active funds' });
   // multiplier callout (below the second bar, clear of right-aligned values;
   // L-02 — raised to 746 so it clears the caption pill's 30px risk band)
+  // AUDIT T-05 — dropped to y=712: at 690 the 44px gold verdict painted
+  // directly over the second bar's sub-label ("normal for many active funds",
+  // baseline 681). At 712 the verdict's cap-line starts at ~680 and the two
+  // ink zones no longer share pixels.
   const ma = clamp01((t - 2300) / 500);
   if (ma > 0) {
     ctx.save();
     ctx.globalAlpha = ma;
     setFont(ctx, 44, 800, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.goldBright;
-    ctx.fillText('≈ 3× the drag', x + 8, 690);
+    ctx.fillText('≈ 3× the drag', x + 8, 712);
     ctx.restore();
   }
 }
@@ -281,7 +286,10 @@ export function turnoverBarsScene(g: SceneCtx): void {
 export function growthCurvesScene(g: SceneCtx): void {
   const { ctx, W, H, t } = g;
   paintStage(ctx, W, H, t, {});
-  panelTitle(ctx, 'A hundred forty thousand dollars — gone. Not to the market. To the calendar.', W * 0.10, 210, W * 0.84, t / 2600, { kickerText: 'Act II · $100,000 · 30 years · 6%' });
+  // AUDIT T-08 — the title wrapped at W*0.84 let its tail reach x≈1805,
+  // fighting the $469,970 endpoint card for the same corner of the frame;
+  // wrapped at W*0.72 the title stacks clear of the endpoint column.
+  panelTitle(ctx, 'A hundred forty thousand dollars — gone. Not to the market. To the calendar.', W * 0.10, 210, W * 0.72, t / 2600, { kickerText: 'Act II · $100,000 · 30 years · 6%' });
   // two curves
   const ptsA: [number, number][] = [], ptsB: [number, number][] = [];
   for (let i = 0; i <= 30; i++) {
@@ -382,7 +390,9 @@ export function characterMatrixScene(g: SceneCtx): void {
     ctx.fillText(r.label, x + 36, y + 45);
     chip(ctx, r.tag, x + 430, y + 18, { size: 28, gold: hot, dot: r.tone === 'down' ? PALETTE.down : PALETTE.up });
     setFont(ctx, 28, 500, FONT_UI);
-    ctx.fillStyle = hot ? PALETTE.inkSoft : PALETTE.inkFaint;
+    // AUDIT T-07 — the right notes are narration-critical; inkFaint
+    // (#5D6C85) disappeared on phones, inkMuted (#8494AE) holds the floor
+    ctx.fillStyle = hot ? PALETTE.inkSoft : PALETTE.inkMuted;
     ctx.textAlign = 'right';
     ctx.fillText(r.note, x + w - 36, y + 45);
     ctx.textAlign = 'left';

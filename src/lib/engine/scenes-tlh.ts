@@ -126,17 +126,21 @@ export function iraSplitScene(g: SceneCtx): void {
     { value: 70, tone: 'gold', label: 'yours' },
     { value: 30, tone: 'down', label: "government's" },
   ], clamp01((t - 300) / 1200), t, { thickness: 42, centerBig: '$1M', centerSub: 'pre-tax face value' });
-  // legend
+  // legend — AUDIT T-03: the gold line measured ~854px from x=1066 and was
+  // cut at the right frame edge (the scene's core money sentence, truncated).
+  // Wrapped to two lines and the stack raised so the red line clears the
+  // risk-note card at y=620.
   const la = clamp01((t - 1400) / 500);
   if (la > 0) {
     ctx.save();
     ctx.globalAlpha = la;
-    const lx = cx + 260, ly = cy - 60;
+    const lx = cx + 260, ly = cy - 92;
     setFont(ctx, 30, 700, FONT_UI);
     ctx.fillStyle = PALETTE.goldBright;
-    ctx.fillText('$700,000 — yours (at a 30% future rate)', lx, ly);
+    ctx.fillText('$700,000 — yours', lx, ly);
+    ctx.fillText('(at a 30% future rate)', lx, ly + 40);
     ctx.fillStyle = '#F08A8D';
-    ctx.fillText('$300,000 — the government’s', lx, ly + 52);
+    ctx.fillText('$300,000 — the government’s', lx, ly + 92);
     ctx.restore();
   }
   // the risk note
@@ -417,7 +421,9 @@ export function eraBarsScene(g: SceneCtx): void {
       label: c.label.split('\n')[0], width: colW, landT: 300 + i * 380 + 700,
     });
     setFont(ctx, 28, 500, FONT_UI);
-    ctx.fillStyle = dim ? PALETTE.inkFaint : PALETTE.inkSoft;
+    // AUDIT T-07 — dimmed era sub-labels are narration-critical; inkMuted
+    // keeps them above the phone-contrast floor even in the dimmed state
+    ctx.fillStyle = dim ? PALETTE.inkMuted : PALETTE.inkSoft;
     ctx.textAlign = 'center';
     ctx.fillText(c.label.split('\n')[1], cx, baseY + 62);
     ctx.textAlign = 'left';
@@ -495,9 +501,11 @@ export function wealthfrontCaseScene(g: SceneCtx): void {
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.fillText('LOSSES HARVESTED IN 3 DAYS', cardX + 44, cardY + 62);
     try { (ctx as any).letterSpacing = '0px'; } catch { /* noop */ }
-    goldFillText(ctx, '$100M', cardX + 44, cardY + 148, 80, 800, FONT_DISPLAY);
-    // 3-day mini chart inside the card
-    const x = cardX + 44, y = cardY + 180, w2 = cardW - 90, h2 = 84;
+    goldFillText(ctx, '$100M', cardX + 44, cardY + 136, 80, 800, FONT_DISPLAY);
+    // 3-day mini chart inside the card — AUDIT T-04: the tariff label used to
+    // start at x+w2*0.24 with no wrap (~508px) and crossed the card border;
+    // it now wraps to two lines inside the card above the shifted chart.
+    const x = cardX + 44, y = cardY + 206, w2 = cardW - 90, h2 = 64;
     ctx.strokeStyle = rgba(PALETTE.inkSoft, 0.2);
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -514,9 +522,11 @@ export function wealthfrontCaseScene(g: SceneCtx): void {
     ctx.fillRect(x + w2 * 0.35, y, w2 * 0.25, h2);
     ctx.strokeStyle = rgba(PALETTE.gold, 0.6);
     ctx.strokeRect(x + w2 * 0.35, y, w2 * 0.25, h2);
-    setFont(ctx, 28, 700, FONT_UI);
+    // AUDIT T-04 — wrapped to two lines, left-aligned at the card interior
+    setFont(ctx, 24, 700, FONT_UI);
     ctx.fillStyle = PALETTE.goldBright;
-    ctx.fillText('APRIL TARIFF SELLOFF — THE 3 DAYS', x + w2 * 0.24, y - 8);
+    ctx.fillText('APRIL TARIFF SELLOFF', x, cardY + 168);
+    ctx.fillText('— THE 3 DAYS', x, cardY + 192);
     ctx.restore();
   }
 }
@@ -635,14 +645,18 @@ export function secCaseScene(g: SceneCtx): void {
     impactRing(ctx, W * 0.78, H * 0.42, t, 3200, 200, 1.2, PALETTE.down);
   }
   // closing line (right column, clear of captions)
+  // AUDIT K-07 — the verdict wrapped 560px from x=1344 and ended ~1904, 16px
+  // off the right edge (flush-to-edge text reads as accidentally cropped
+  // beside the rotated stamp). Column moved to x=W*0.72 with a 376px wrap:
+  // every line now ends ≤ 1760, with a gutter off the press card.
   const ca = clamp01((t - 4200) / 600);
   if (ca > 0) {
     ctx.save();
     ctx.globalAlpha = ca;
     setFont(ctx, 38, 600, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.ink;
-    wrapText(ctx, 'Tax alpha you can’t verify is just a brochure.', 560, 38, 600, FONT_DISPLAY).forEach((ln, i) => {
-      ctx.fillText(ln, W * 0.70, 560 + i * 54);
+    wrapText(ctx, 'Tax alpha you can’t verify is just a brochure.', 376, 38, 600, FONT_DISPLAY).forEach((ln, i) => {
+      ctx.fillText(ln, W * 0.72, 560 + i * 54);
     });
     ctx.restore();
   }

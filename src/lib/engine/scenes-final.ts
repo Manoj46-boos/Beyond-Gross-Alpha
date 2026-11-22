@@ -185,7 +185,9 @@ export function fiveQuestionsScene(g: SceneCtx): void {
     // number
     diamond(ctx, x + 52, y + h / 2, 13, hot ? PALETTE.goldBright : rgba(PALETTE.inkMuted, 0.8));
     setFont(ctx, 28, 800, FONT_UI);
-    ctx.fillStyle = hot ? PALETTE.goldBright : PALETTE.inkFaint;
+    // AUDIT T-07 — the question numbers are the narrated anchor of each card:
+    // inkFaint vanished on phones, inkMuted holds the contrast floor
+    ctx.fillStyle = hot ? PALETTE.goldBright : PALETTE.inkMuted;
     ctx.fillText(String(i + 1), x + 88, y + h / 2 + 10);
     setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = hot ? PALETTE.ink : PALETTE.inkSoft;

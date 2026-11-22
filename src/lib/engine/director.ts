@@ -319,9 +319,12 @@ export function drawFrame(
   drawCaptions(ctx, W, H, t, tl.captionLines, capStyle);
 
   // source chips (bottom-left, paper tick sound already scheduled in mix)
+  // AUDIT T-09 — during caption beats the chip lifts to y=960 (left column)
+  // so the bottom band never stacks chip + caption pill + progress bar.
+  const capOn = capStyle.mode !== 'off' && tl.captionLines.some((l) => t >= l.start && t < l.end);
   for (const sc of tl.sourceChips) {
     if (t >= sc.time && t < sc.time + 3200) {
-      drawSourceChip(ctx, W, t, sc.text, sc.time, 3200);
+      drawSourceChip(ctx, W, t, sc.text, sc.time, 3200, capOn);
     }
   }
 

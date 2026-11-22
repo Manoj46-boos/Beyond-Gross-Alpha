@@ -243,13 +243,26 @@ export function goldRule(ctx: CanvasRenderingContext2D, cx: number, y: number, w
 /** pill chip — used for kickers, tags and data labels */
 export function chip(
   ctx: CanvasRenderingContext2D, text: string, x: number, y: number,
-  opts: { size?: number; padX?: number; padY?: number; bg?: string; fg?: string; border?: string; weight?: number; dot?: string; gold?: boolean; alpha?: number; center?: boolean } = {}
+  opts: { size?: number; padX?: number; padY?: number; bg?: string; fg?: string; border?: string; weight?: number; dot?: string; gold?: boolean; alpha?: number; center?: boolean; maxW?: number } = {}
 ): number {
-  const { size = 30, padX = 24, padY = 13, bg = 'rgba(255,255,255,0.055)', fg = PALETTE.inkSoft, border = PALETTE.glassBorder, weight = 600, dot = null as any, gold = false, alpha = 1, center = false } = opts;
-  setFont(ctx, size, weight, FONT_UI);
-  const tw = ctx.measureText(text).width;
-  const w = tw + padX * 2 + (dot ? 30 : 0);
-  const h = size + padY * 2;
+  const { size = 30, padX = 24, padY = 13, bg = 'rgba(255,255,255,0.055)', fg = PALETTE.inkSoft, border = PALETTE.glassBorder, weight = 600, dot = null as any, gold = false, alpha = 1, center = false, maxW = 0 } = opts;
+  // AUDIT T-01 — fitText guard: a chip may never run past the frame edge
+  // ("tax management — expensive to deliver, invisible when done" measured
+  // ~770px and was guillotined at x=1920). With maxW set, the font shrinks
+  // until the pill fits the budget; without it, behaviour is unchanged.
+  let sz = size;
+  setFont(ctx, sz, weight, FONT_UI);
+  let tw = ctx.measureText(text).width;
+  let w = tw + padX * 2 + (dot ? 30 : 0);
+  if (maxW > 0) {
+    while (w > maxW && sz > 14) {
+      sz -= 1;
+      setFont(ctx, sz, weight, FONT_UI);
+      tw = ctx.measureText(text).width;
+      w = tw + padX * 2 + (dot ? 30 : 0);
+    }
+  }
+  const h = sz + padY * 2;
   const px = center ? x - w / 2 : x;
   ctx.save();
   ctx.globalAlpha = alpha;

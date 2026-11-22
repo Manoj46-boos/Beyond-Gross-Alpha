@@ -385,7 +385,9 @@ export function waterfall(
     ctx.fill();
     if (s.valueText) goldFillText(ctx, s.valueText, cx, yTop - 30, 34, 800);
     setFont(ctx, 28, 600, FONT_UI);
-    ctx.fillStyle = PALETTE.inkFaint;
+    // AUDIT T-07 — the wrapped step labels are narration-critical: inkMuted
+    // keeps them readable on a phone at 60% brightness
+    ctx.fillStyle = PALETTE.inkMuted;
     ctx.textAlign = 'center';
     wrapText(ctx, s.label, stepW * 0.94, 22, 600, FONT_UI).forEach((ln, li) => {
       ctx.fillText(ln, cx, y + h + 26 + li * 24);

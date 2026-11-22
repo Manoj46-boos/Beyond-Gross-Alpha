@@ -122,13 +122,13 @@ export const SCRIPT: ChapterSpec[] = [
         pauseAfter: 420,
         voStyle: 'calm',
         source: S2,
-        scene: { type: 'feeChips', sceneKey: 'c2-fees' },
+        scene: { type: 'feeChips', sceneKey: 'c2-fees', closeup: { x: 130, y: 160, w: 1790, h: 680 } },
       },
       {
         vo: 'Then compliance. Many firms draw a hard legal line between tax planning and tax advice. Cross it without a CPA and the liability is real; errors-and-omissions policies often exclude it. So the rational advisor stays quiet. And then the human part: advisors are people. Loss aversion makes selling a loser feel like failure even when it\'s a win. Motivated reasoning makes the pre-tax number — the one that sells — feel like the real one.',
         pauseAfter: 380,
         voStyle: 'calm',
-        scene: { type: 'memoCard', sceneKey: 'c2-memo' },
+        scene: { type: 'memoCard', sceneKey: 'c2-memo', closeup: { x: 130, y: 160, w: 1790, h: 680 } },
       },
       {
         vo: 'To be fair: seventeen percent is not zero. The best firms do this beautifully, usually arm-in-arm with a CPA. And the survey measures what drives decisions, not what gets mentioned at lunch. But the structure is the point. Wealthy families now hold roughly fifty-four percent of US household financial assets — this is the industry\'s main event, not a niche. And yet you are scored on gross, your advisor is paid on gross, and the tax line is nobody\'s job. Unless you make it somebody\'s.',
@@ -171,7 +171,7 @@ export const SCRIPT: ChapterSpec[] = [
         voStyle: 'reveal',
         dropOut: true,
         source: S3,
-        scene: { type: 'growthCurves', sceneKey: 'c3-curves' },
+        scene: { type: 'growthCurves', sceneKey: 'c3-curves', closeup: { x: 130, y: 160, w: 1790, h: 680 } },
       },
       {
         vo: "Two mechanics drive this. First, every sale realizes a gain — and gains held under a year are taxed like salary. Second, the character of a return matters as much as its size. Bond interest is ordinary income. Most REIT distributions, ordinary. Qualified dividends and long-term gains get the discount. BlackRock's analysis of Morningstar data puts it bluntly: taxable bonds carry a similar five-year tax cost to equities — but on a much smaller pre-tax return. Taxes eat a far bigger share of a bond's return than a stock's.",
@@ -247,7 +247,7 @@ export const SCRIPT: ChapterSpec[] = [
         pauseAfter: 400,
         voStyle: 'calm',
         source: S8,
-        scene: { type: 'waterfall', sceneKey: 'c5-faj' },
+        scene: { type: 'waterfall', sceneKey: 'c5-faj', closeup: { x: 130, y: 160, w: 1790, h: 680 } },
       },
       {
         vo: "And the average hides the story. Two point one percent a year through the Depression's volatility. Zero point five through the calm postwar boom. Harvesting is a volatility strategy. It feeds on dispersion. In a straight-line bull market, it starves.",
@@ -436,7 +436,7 @@ export const SCRIPT: ChapterSpec[] = [
         voStyle: 'reveal',
         musicOut: true,
         dropOut: true,
-        scene: { type: 'finalLines', sceneKey: 'c8-final' },
+        scene: { type: 'finalLines', sceneKey: 'c8-final', closeup: { x: 130, y: 160, w: 1790, h: 680 } },
       },
       {
         vo: '',
