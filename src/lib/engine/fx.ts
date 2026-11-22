@@ -335,6 +335,10 @@ export function spinToken(
   rg.addColorStop(1, rgba(rim.startsWith('#') ? rim : PALETTE.gold, 0.75));
   ctx.fillStyle = rg;
   ctx.fill();
+  // Phase 1 — the token is a prop: it joins the ink system
+  ctx.strokeStyle = 'rgba(14,20,38,0.85)';
+  ctx.lineWidth = 2.2;
+  ctx.stroke();
   // face
   if (w > r * 0.28) {
     ctx.beginPath();
@@ -369,6 +373,14 @@ export function glowLine(
   ctx.save();
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
+  // Phase 1 — ONE ink system: every chart line carries the same #0E1426
+  // contour the figure and props wear, so the whole frame shares one line
+  // language (a 2.2px casing under the colour).
+  ctx.beginPath();
+  path(ctx);
+  ctx.strokeStyle = 'rgba(14,20,38,0.85)';
+  ctx.lineWidth = width + 2.2;
+  ctx.stroke();
   if (glow > 0) {
     ctx.shadowColor = rgba(col, 0.85);
     ctx.shadowBlur = glow;

@@ -19,6 +19,27 @@ const HEAD_R = 26.2; // 72% of the shoulder line — the head must carry the fac
 const SHOULDER_HW = 30, HIP_HW = 13;
 
 const SUIT = { lit: '#43598A', mid: '#2C3B63', dark: '#161F3A', ink: '#0E1426' };
+/** Phase 1 — the ONE ink: every silhouette in the frame (figure, props,
+ *  glowLine charts) shares this contour weight and colour. */
+const INK = 'rgba(14,20,38,0.92)';
+
+/** Phase 1 — designed skull silhouette: egg base with a brow-ridge shelf
+ *  over the eye line and a slight nose projection at the bottom centre, so
+ *  the head reads as architecture, not an ellipse. */
+function skullPath(ctx: CanvasRenderingContext2D, R: number): void {
+  ctx.beginPath();
+  ctx.moveTo(-R * 0.86, -R * 0.1);
+  ctx.quadraticCurveTo(-R * 0.85, -R * 0.72, -R * 0.4, -R * 0.94); // left temple → crown
+  ctx.quadraticCurveTo(0, -R * 1.06, R * 0.4, -R * 0.94);          // crown → right temple
+  ctx.quadraticCurveTo(R * 0.85, -R * 0.72, R * 0.86, -R * 0.1);   // right side
+  ctx.quadraticCurveTo(R * 0.85, R * 0.3, R * 0.62, R * 0.6);      // right cheek
+  // jaw — one clean curve (the nose PROFILE is the drawn two-plane form; the
+  // brow RIDGE is the shaded shelf; the silhouette stays tailored)
+  ctx.quadraticCurveTo(R * 0.4, R * 0.78, 0, R * 0.8);
+  ctx.quadraticCurveTo(-R * 0.4, R * 0.78, -R * 0.62, R * 0.6);    // left cheek
+  ctx.quadraticCurveTo(-R * 0.85, R * 0.3, -R * 0.86, -R * 0.1);   // left side close
+  ctx.closePath();
+}
 const SKIN = { lit: '#EFE3CF', dark: '#C6B296', deep: '#A08B70' };
 const HAIR = { lit: '#A7B0C0', dark: '#5F6B80' };
 const SHOE = { lit: '#1C2438', dark: '#0B101E' };
@@ -54,7 +75,7 @@ export function basePose(): Pose {
     rootY: 0, lean: 0, torsoTilt: 0, headTilt: 0, headNod: 0, shoulderTilt: 0, pelvisTilt: 0,
     rAU: 6, rAL: 8, lAU: -6, lAL: 8,
     rKnee: 4, rAnkle: 0, lKnee: 4, lAnkle: 0,
-    brow: 0, browAsym: 0, lid: 0, smile: 0.18, surprise: 0, blink: 0, mouth: 0,
+    brow: 0, browAsym: 0, lid: 0, smile: 0.08, surprise: 0, blink: 0, mouth: 0,
     hand: 'open',
     walkPhase: -1, walkSpeed: 0, look: 0,
   };
@@ -92,6 +113,7 @@ interface BoneOpts {
   lit: string; dark: string;
   rim?: number;          // rim-light stroke alpha on lit edge
   far?: boolean;
+  ink?: number;          // Phase 1 — the shared ink contour (2.2px at 1080p)
 }
 function bone(
   ctx: CanvasRenderingContext2D, sx: number, sy: number, ex: number, ey: number,
@@ -134,6 +156,12 @@ function bone(
   g.addColorStop(1, dark);
   ctx.fillStyle = g;
   ctx.fill();
+  // Phase 1 — the ink contour joins every silhouette to one line system
+  if (o.ink) {
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = o.ink;
+    ctx.stroke();
+  }
   if (o.rim) {
     // rim light along the lit edge
     ctx.beginPath();
@@ -157,7 +185,7 @@ function quadPt(a: number, c: number, b: number, t: number): number {
 /** C-03 — shoulder sleeve cap: a rounded deltoid pad that overlaps the torso
  *  edge and the arm root. Replaces the polished floating sphere — the shoulder
  *  now reads as one tailored silhouette. */
-function sleeveCap(ctx: CanvasRenderingContext2D, sx: number, sy: number, angDeg: number, w: number, far: boolean): void {
+function sleeveCap(ctx: CanvasRenderingContext2D, sx: number, sy: number, angDeg: number, w: number, far: boolean, ink = 0): void {
   ctx.save();
   ctx.translate(sx, sy);
   ctx.rotate((angDeg + 90) * D2R); // local +x along the arm axis
@@ -171,6 +199,11 @@ function sleeveCap(ctx: CanvasRenderingContext2D, sx: number, sy: number, angDeg
   roundRectPath(ctx, -w * 0.78, -w * 0.56, w * 1.72, w * 1.12, w * 0.54);
   ctx.fillStyle = g;
   ctx.fill();
+  if (ink > 0) {
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = ink;
+    ctx.stroke();
+  }
   ctx.restore();
 }
 
@@ -222,14 +255,14 @@ interface Gesture {
   brow: number; smile: number;
 }
 const GESTURES: Gesture[] = [
-  { name: 'present',   rAU: 42, rAL: 22, lAU: -14, lAL: 14, lean: 1.5, torsoTilt: 1, shoulderTilt: 2, headTilt: 1.5, brow: 0.2, smile: 0.3 },
-  { name: 'explain',   rAU: 30, rAL: 44, lAU: -10, lAL: 26, lean: 1, torsoTilt: 2.5, shoulderTilt: 3, headTilt: 2, brow: 0.1, smile: 0.22 },
-  { name: 'open',      rAU: 26, rAL: 18, lAU: -26, lAL: -16, lean: 0.5, torsoTilt: 0.5, shoulderTilt: 0, headTilt: 0, brow: 0.35, smile: 0.42 },
-  { name: 'count',     rAU: 52, rAL: 66, lAU: -8, lAL: 10, lean: 2, torsoTilt: 2, shoulderTilt: 4, headTilt: 2.5, brow: 0.15, smile: 0.2 },
+  { name: 'present',   rAU: 42, rAL: 22, lAU: -14, lAL: 14, lean: 1.5, torsoTilt: 1, shoulderTilt: 2, headTilt: 1.5, brow: 0.2, smile: 0.16 },
+  { name: 'explain',   rAU: 30, rAL: 44, lAU: -10, lAL: 26, lean: 1, torsoTilt: 2.5, shoulderTilt: 3, headTilt: 2, brow: 0.1, smile: 0.12 },
+  { name: 'open',      rAU: 26, rAL: 18, lAU: -26, lAL: -16, lean: 0.5, torsoTilt: 0.5, shoulderTilt: 0, headTilt: 0, brow: 0.35, smile: 0.2 },
+  { name: 'count',     rAU: 52, rAL: 66, lAU: -8, lAL: 10, lean: 2, torsoTilt: 2, shoulderTilt: 4, headTilt: 2.5, brow: 0.15, smile: 0.12 },
   { name: 'weigh',     rAU: 34, rAL: 30, lAU: -34, lAL: 28, lean: 0.5, torsoTilt: 1.5, shoulderTilt: 1, headTilt: -1.5, brow: 0.05, smile: 0.15 },
   { name: 'chin',      rAU: 64, rAL: 118, lAU: -6, lAL: 8, lean: -1, torsoTilt: 3, shoulderTilt: 2, headTilt: 4, brow: -0.15, smile: 0.1 },
-  { name: 'rest',      rAU: 8, rAL: 10, lAU: -8, lAL: 10, lean: 0, torsoTilt: 0.5, shoulderTilt: 0, headTilt: 0, brow: 0, smile: 0.2 },
-  { name: 'sweep',     rAU: 60, rAL: 34, lAU: -30, lAL: -34, lean: 2.5, torsoTilt: 1, shoulderTilt: 3, headTilt: 2, brow: 0.3, smile: 0.3 },
+  { name: 'rest',      rAU: 8, rAL: 10, lAU: -8, lAL: 10, lean: 0, torsoTilt: 0.5, shoulderTilt: 0, headTilt: 0, brow: 0, smile: 0.08 },
+  { name: 'sweep',     rAU: 60, rAL: 34, lAU: -30, lAL: -34, lean: 2.5, torsoTilt: 1, shoulderTilt: 3, headTilt: 2, brow: 0.3, smile: 0.18 },
 ];
 
 const STOPWORDS = new Set(['the', 'and', 'a', 'an', 'of', 'to', 'in', 'is', 'it', 'that', 'you', 'your', 'for', 'on', 'with', 'as', 'are', 'this', 'but', 'not', 'at', 'be', 'we', 'so', 'if', 'one', 'what']);
@@ -435,14 +468,14 @@ export function walkPose(phase: number, speed: number): Pose {
   p.walkPhase = ph;
   p.walkSpeed = speed;
   p.headTilt = 0.5 * speed;
-  p.smile = 0.2;
+  p.smile = 0.08;
   return p;
 }
 
 // ── face ─────────────────────────────────────────────────────────────────────
 function drawFace(
   ctx: CanvasRenderingContext2D, hx: number, hy: number, tiltDeg: number,
-  p: Pose, t: number, faceScale: number, wordTexts: string[], wordTimes: number[], beatT: number, look: number, quiffLag = 0
+  p: Pose, t: number, faceScale: number, wordTexts: string[], wordTimes: number[], beatT: number, look: number, quiffLag = 0, inkW = 0
 ): void {
   ctx.save();
   ctx.translate(hx, hy);
@@ -458,15 +491,23 @@ function drawFace(
   g.addColorStop(0.42, hexLerp(SKIN.lit, SKIN.dark, 0.42));
   g.addColorStop(0.8, SKIN.dark);
   g.addColorStop(1, SKIN.deep);
+  // Phase 1 — the skull PATH, not a bare ellipse: a designed head silhouette
+  // with the brow ridge built into the profile (a shelf over the eye line)
+  // and a slight nose projection at the bottom centre. One ink contour.
   ctx.beginPath();
-  ctx.ellipse(0, 0, R * 0.86, R, 0, 0, Math.PI * 2);
+  skullPath(ctx, R);
   ctx.fillStyle = g;
   ctx.fill();
+  if (inkW > 0) {
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = inkW;
+    ctx.stroke();
+  }
 
   // jaw shade (one-light rule)
   ctx.save();
   ctx.beginPath();
-  ctx.ellipse(0, 0, R * 0.86, R, 0, 0, Math.PI * 2);
+  skullPath(ctx, R);
   ctx.clip();
   const sh = ctx.createLinearGradient(0, R * 0.1, 0, R);
   sh.addColorStop(0, 'rgba(120,95,70,0)');
@@ -499,6 +540,13 @@ function drawFace(
   ctx.quadraticCurveTo(-R * 0.8, -R * 0.16, -R * 0.88, R * 0.14);  // nape close
   ctx.closePath();
   ctx.fill();
+  // Phase 1 — the hair silhouette joins the ink system
+  if (inkW > 0) {
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = inkW;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+  }
   // sideburn into the ear line
   ctx.beginPath();
   ctx.moveTo(-R * 0.88, R * 0.14);
@@ -528,6 +576,27 @@ function drawFace(
   const eyeX = R * 0.36;
   const lid = clamp01(p.lid + p.blink);
   const surprise = p.surprise;
+
+  // Phase 1 — brow RIDGE: a filled shelf over the eye line. Under-edge sits
+  // in shadow, top plane catches the single key light — skull architecture.
+  ctx.save();
+  ctx.beginPath();
+  skullPath(ctx, R);
+  ctx.clip();
+  const ridge = ctx.createLinearGradient(0, eyeY - 15, 0, eyeY - 3);
+  ridge.addColorStop(0, 'rgba(126,99,72,0.04)');
+  ridge.addColorStop(0.55, 'rgba(112,88,64,0.20)');
+  ridge.addColorStop(1, 'rgba(92,72,52,0.06)');
+  ctx.fillStyle = ridge;
+  ctx.fillRect(-R * 0.72, eyeY - 15, R * 1.44, 12);
+  // the ridge's lit top edge (one light, upper-left)
+  ctx.strokeStyle = 'rgba(232,208,178,0.30)';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(-R * 0.6, eyeY - 13.4);
+  ctx.quadraticCurveTo(0, eyeY - 15.6, R * 0.6, eyeY - 13.4);
+  ctx.stroke();
+  ctx.restore();
 
   // brows — filled tapered shapes that survive 20px (C-01); the LEADING brow
   // takes the content-word strike (U2.6)
@@ -570,24 +639,56 @@ function drawFace(
       ctx.fillStyle = 'rgba(255,255,255,0.9)';
       ctx.fill();
     }
-    // lid line
+    // Phase 1 — lids as FILLED shapes (≥2.5px read): a skin-tone lid plane
+    // sinking into the eye + a dark lash edge on its rim
     if (lid > 0.08) {
+      const lidH = Math.max(0.6, openH);
+      ctx.save();
       ctx.beginPath();
-      ctx.moveTo(ex - R * 0.16, eyeY);
-      ctx.quadraticCurveTo(ex, eyeY + openH * 0.8, ex + R * 0.16, eyeY);
-      ctx.strokeStyle = 'rgba(70,60,48,0.7)';
-      ctx.lineWidth = 1.6;
+      ctx.ellipse(ex, eyeY, R * 0.165, lidH, 0, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.fillStyle = hexLerp(hexLerp(SKIN.lit, SKIN.dark, 0.45), SKIN.deep, lid * 0.4);
+      ctx.fillRect(ex - R * 0.2, eyeY - lidH - 2, R * 0.4, lidH * 0.95 * (0.5 + lid * 0.5) + lid * 2);
+      ctx.restore();
+      ctx.beginPath();
+      ctx.moveTo(ex - R * 0.16, eyeY - lidH * 0.16);
+      ctx.quadraticCurveTo(ex, eyeY + lidH * 0.14, ex + R * 0.16, eyeY - lidH * 0.16);
+      ctx.strokeStyle = 'rgba(70,56,42,0.85)';
+      ctx.lineWidth = 2.5;
       ctx.stroke();
     }
   }
 
-  // nose — a quiet shade + bridge line
-  ctx.strokeStyle = rgba('#8A7357', 0.55);
-  ctx.lineWidth = 1.8;
+  // Phase 1 — nose as a PROFILE FORM, not a line: a shadow plane away from
+  // the key light, a lit plane toward it, a ball tip and nostril hints —
+  // filled shapes that survive 220px head height.
+  const noseY = eyeY + 3;
+  ctx.save();
+  // shadow plane (right of the bridge — away from the upper-left light)
   ctx.beginPath();
-  ctx.moveTo(0, eyeY + 3);
-  ctx.quadraticCurveTo(1.8, eyeY + 9, 0.5, eyeY + 12);
-  ctx.stroke();
+  ctx.moveTo(0.6, noseY);
+  ctx.quadraticCurveTo(R * 0.10, noseY + 6, R * 0.082, noseY + 11);
+  ctx.quadraticCurveTo(0.25, noseY + 12.6, 0, noseY + 12.8);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(116,90,66,0.32)';
+  ctx.fill();
+  // lit plane (left of the bridge — toward the light)
+  ctx.beginPath();
+  ctx.moveTo(-0.4, noseY);
+  ctx.quadraticCurveTo(-R * 0.082, noseY + 6, -R * 0.068, noseY + 11);
+  ctx.quadraticCurveTo(-0.3, noseY + 13.2, 0, noseY + 13.2);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(228,206,180,0.30)';
+  ctx.fill();
+  // ball tip + nostril shadows
+  ctx.beginPath();
+  ctx.ellipse(0, noseY + 11.2, R * 0.082, R * 0.06, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(150,116,86,0.36)';
+  ctx.fill();
+  ctx.fillStyle = 'rgba(74,56,40,0.5)';
+  ctx.beginPath(); ctx.ellipse(-R * 0.052, noseY + 12.4, R * 0.023, R * 0.016, 0.3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(R * 0.052, noseY + 12.4, R * 0.023, R * 0.016, -0.3, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
 
   // mouth — viseme-driven, soft shapes
   const talk = p.mouth;
@@ -847,6 +948,8 @@ export function drawStickman(
   const sx = 1 - (sy - 1) * 0.6;
   ctx.scale(sx, sy);
 
+  // Phase 1 — one ink weight for every silhouette (≈2.2px at 1080p)
+  const inkW = 2.2 / scale;
   const breath = 1 + 0.006 * Math.sin(t / 2400);
   const hipY = -(U_LEG + L_LEG) + p.rootY;
   const leanR = p.lean * D2R;
@@ -885,11 +988,11 @@ export function drawStickman(
     const knee2 = pt(knee.x, knee.y, thighAng + kneeBend, L_LEG);
     const foot = pt(knee2.x, knee2.y, thighAng + kneeBend + 90 + ankleAng, 7.5);
     const W = near ? 13.6 : 11.6;
-    bone(ctx, hipX, hipY, knee.x, knee.y, 2.5, { w0: W, w1: W * 0.82, lit: SUIT.lit, dark: SUIT.dark, rim: near ? rim * 0.7 : 0, far: !near });
+    bone(ctx, hipX, hipY, knee.x, knee.y, 2.5, { w0: W, w1: W * 0.82, lit: SUIT.lit, dark: SUIT.dark, rim: near ? rim * 0.7 : 0, far: !near, ink: inkW });
     // C-08 — sleeved knee: the shin starts 2.5px inside the joint (cloth
     // overlaps the joint) and a soft crease replaces the polished sphere
     const kSx = knee.x - Math.sin(thighAng * D2R) * 2.5, kSy = knee.y - Math.cos(thighAng * D2R) * 2.5;
-    bone(ctx, kSx, kSy, knee2.x, knee2.y, 2, { w0: W * 0.8, w1: W * 0.6, lit: SUIT.lit, dark: SUIT.dark, rim: near ? rim * 0.5 : 0, far: !near });
+    bone(ctx, kSx, kSy, knee2.x, knee2.y, 2, { w0: W * 0.8, w1: W * 0.6, lit: SUIT.lit, dark: SUIT.dark, rim: near ? rim * 0.5 : 0, far: !near, ink: inkW });
     clothCrease(ctx, knee.x + Math.sin((thighAng + kneeBend) * D2R) * 2.5, knee.y + Math.cos((thighAng + kneeBend) * D2R) * 2.5, thighAng + kneeBend - 90, W * 0.5);
     // shoe — tailored profile: heel, vamp, toe cap, sole line, gold welt (D2).
     // No more gold-outlined ellipse: the 'hoverboard ring' read is dead.
@@ -910,6 +1013,10 @@ export function drawStickman(
     ctx.closePath();
     ctx.fillStyle = sg;
     ctx.fill();
+    // Phase 1 — shoe silhouette joins the ink system
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = inkW;
+    ctx.stroke();
     ctx.strokeStyle = 'rgba(5,8,16,0.8)';
     ctx.lineWidth = 1.1;
     ctx.beginPath();
@@ -973,6 +1080,11 @@ export function drawStickman(
   ctx.closePath();
   ctx.fillStyle = tg;
   ctx.fill();
+  // Phase 1 — the jacket joins the ink system
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = inkW;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
 
   // hem vents — two short darker cuts (tailoring read, C-06)
   ctx.strokeStyle = 'rgba(5,8,16,0.45)';
@@ -1012,21 +1124,23 @@ export function drawStickman(
   const velBob = r.vel?.rootY ?? 0;
   const tieSwayDeg = clamp(velLean * -3.2 + velBob * -1.8, -28, 28);
   const bladeSwayDeg = clamp(tieSwayDeg * 0.55 + velBob * -3.0, -42, 42);
+  // Phase 1 — burgundy silk: gold is reserved for the pocket-watch chain,
+  // the one signature accessory of the gentleman arbitrageur
   const tieG = ctx.createLinearGradient(0, 0, 0, 42);
-  tieG.addColorStop(0, PALETTE.goldBright);
-  tieG.addColorStop(1, PALETTE.goldDeep);
+  tieG.addColorStop(0, '#6E2430');
+  tieG.addColorStop(1, '#3A121B');
   ctx.save();
   ctx.translate(0, shY - 8);
   ctx.rotate(tieSwayDeg * D2R);
   // C-04 — the knot: a proper kite above the blade, with a dimple shade
   ctx.beginPath();
-  ctx.moveTo(-3.6, -9);
-  ctx.lineTo(3.6, -9);
-  ctx.lineTo(4.6, -2);
+  ctx.moveTo(-4.0, -9);
+  ctx.lineTo(4.0, -9);
+  ctx.lineTo(5.0, -2);
   ctx.lineTo(0, 1.5);
-  ctx.lineTo(-4.6, -2);
+  ctx.lineTo(-5.0, -2);
   ctx.closePath();
-  ctx.fillStyle = hexLerp(PALETTE.goldBright, PALETTE.goldDeep, 0.28);
+  ctx.fillStyle = hexLerp('#6E2430', '#3A121B', 0.3);
   ctx.fill();
   ctx.beginPath();
   ctx.moveTo(-1.1, -8);
@@ -1036,11 +1150,11 @@ export function drawStickman(
   ctx.stroke();
   // segment 1: upper blade hanging from the knot
   ctx.beginPath();
-  ctx.moveTo(-3.4, 1);
-  ctx.lineTo(3.4, 1);
-  ctx.lineTo(4.4, 16);
+  ctx.moveTo(-3.8, 1);
+  ctx.lineTo(3.8, 1);
+  ctx.lineTo(4.9, 16);
   ctx.lineTo(0, 18);
-  ctx.lineTo(-4.4, 16);
+  ctx.lineTo(-4.9, 16);
   ctx.closePath();
   ctx.fillStyle = tieG;
   ctx.fill();
@@ -1049,11 +1163,11 @@ export function drawStickman(
   ctx.translate(0, 18);
   ctx.rotate(bladeSwayDeg * D2R);
   ctx.beginPath();
-  ctx.moveTo(-4.4, -2);
-  ctx.lineTo(4.4, -2);
-  ctx.lineTo(2.2, 10);
+  ctx.moveTo(-4.9, -2);
+  ctx.lineTo(4.9, -2);
+  ctx.lineTo(2.4, 10);
   ctx.lineTo(0, 24);
-  ctx.lineTo(-2.2, 10);
+  ctx.lineTo(-2.4, 10);
   ctx.closePath();
   ctx.fillStyle = tieG;
   ctx.fill();
@@ -1094,10 +1208,37 @@ export function drawStickman(
   ctx.lineTo(1.4, -6.2);
   ctx.lineTo(-1.6, -5.4);
   ctx.closePath();
-  ctx.fillStyle = rgba(PALETTE.goldBright, 0.92);
+  ctx.fillStyle = 'rgba(234,228,214,0.94)'; // ivory silk — gold reserved for the chain
   ctx.fill();
-  ctx.strokeStyle = 'rgba(120,90,20,0.5)';
+  ctx.strokeStyle = 'rgba(118,108,88,0.45)';
   ctx.lineWidth = 0.7;
+  ctx.stroke();
+  ctx.restore();
+  // Phase 1 — the pocket-watch chain: the ONE gold accessory. A link chain
+  // draping from the left breast to the button stance, swaying on the same
+  // pendulum driver as the tie, with the fob catching the light.
+  ctx.save();
+  ctx.translate(-shW * 0.42, shY + 16);
+  ctx.rotate(tieSwayDeg * 0.4 * D2R);
+  const cx2 = 14, cy2 = 34; // drape end (button stance)
+  const sagX = 4, sagY = 14; // catenary sag
+  ctx.strokeStyle = rgba(PALETTE.goldBright, 0.9);
+  ctx.lineWidth = 1.3;
+  for (let i = 0; i <= 8; i++) {
+    const q = i / 8;
+    const lx = quadPt(0, sagX, cx2, q) - Math.sin(q * Math.PI) * sagX * 0.4;
+    const ly = quadPt(0, sagY, cy2, q);
+    ctx.beginPath();
+    ctx.arc(lx, ly, i % 2 === 0 ? 1.5 : 1.15, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  // the fob — a small gold medallion at the drape end
+  ctx.beginPath();
+  ctx.arc(cx2, cy2 + 3, 2.8, 0, Math.PI * 2);
+  ctx.fillStyle = PALETTE.goldBright;
+  ctx.fill();
+  ctx.strokeStyle = rgba(PALETTE.goldDeep, 0.8);
+  ctx.lineWidth = 0.8;
   ctx.stroke();
   ctx.restore();
   ctx.restore(); // torso detail
@@ -1130,27 +1271,22 @@ export function drawStickman(
     const elbow = pt(shX2, shY2, aU, U_ARM);
     const wrist = pt(elbow.x, elbow.y, aU + aL, L_ARM);
     const W = near ? 12.4 : 10.4;
-    bone(ctx, shX2, shY2, elbow.x, elbow.y, 2.2, { w0: W, w1: W * 0.8, lit: SUIT.lit, dark: SUIT.dark, rim: near ? rim * 0.75 : 0, far: !near });
+    bone(ctx, shX2, shY2, elbow.x, elbow.y, 2.2, { w0: W, w1: W * 0.8, lit: SUIT.lit, dark: SUIT.dark, rim: near ? rim * 0.75 : 0, far: !near, ink: inkW });
     // C-03 — deltoid sleeve cap over the arm root: overlaps the torso edge and
     // the bone root, so the shoulder reads as one tailored silhouette
-    sleeveCap(ctx, shX2 + Math.sin(aU * D2R) * 5, shY2 + Math.cos(aU * D2R) * 5, aU, W * 1.18, !near);
+    sleeveCap(ctx, shX2 + Math.sin(aU * D2R) * 5, shY2 + Math.cos(aU * D2R) * 5, aU, W * 1.18, !near, inkW);
     // C-08 — sleeved elbow: the forearm starts 2.5px inside the joint and a
     // soft cloth crease replaces the polished sphere
     const eSx = elbow.x - Math.sin(aU * D2R) * 2.5, eSy = elbow.y - Math.cos(aU * D2R) * 2.5;
-    bone(ctx, eSx, eSy, wrist.x, wrist.y, 1.6, { w0: W * 0.78, w1: W * 0.52, lit: SUIT.lit, dark: SUIT.dark, rim: near ? rim * 0.5 : 0, far: !near });
+    bone(ctx, eSx, eSy, wrist.x, wrist.y, 1.6, { w0: W * 0.78, w1: W * 0.52, lit: SUIT.lit, dark: SUIT.dark, rim: near ? rim * 0.5 : 0, far: !near, ink: inkW });
     clothCrease(ctx, elbow.x + Math.sin((aU + aL) * D2R) * 2.5, elbow.y + Math.cos((aU + aL) * D2R) * 2.5, aU + aL - Math.sign(aL || 1) * 90, W * 0.44);
     // (C-07 — the cuff moved INSIDE drawHand: parented to the hand transform)
-    if (near) {
-      // gold watch
-      ctx.beginPath();
-      ctx.arc(lerp(elbow.x, wrist.x, 0.6), lerp(elbow.y, wrist.y, 0.6), 2.6, 0, Math.PI * 2);
-      ctx.fillStyle = PALETTE.goldBright;
-      ctx.fill();
-    }
+    // (Phase 1 — the wrist gold dot retired; the pocket-watch chain is the
+    // one gold accessory)
     // hand — wrist follow-through: the hand keeps moving after the forearm
     // settles (D4), and points when the scene asks it to touch data (D1)
     const handAng = aU + aL - (near ? (r.vel?.rAL ?? 0) * 0.9 : 0);
-    drawHand(ctx, wrist.x, wrist.y, handAng, near ? 7.2 : 6.2, near, p.hand ?? 'open', W);
+    drawHand(ctx, wrist.x, wrist.y, handAng, near ? 7.2 : 6.2, near, p.hand ?? 'open', W, inkW);
     return { wrist: { x: wrist.x, y: wrist.y } };
   };
   armDraw(-1);
@@ -1158,7 +1294,7 @@ export function drawStickman(
 
   // ── neck + head ──
   const neckX2 = shX, neckY2 = shY - 2;
-  bone(ctx, neckX2, neckY2, neckX2, neckY2 - NECK, 0, { w0: 9.5, w1: 8.5, lit: hexLerp(SKIN.lit, SKIN.dark, 0.35), dark: SKIN.deep, rim: rim * 0.4 });
+  bone(ctx, neckX2, neckY2, neckX2, neckY2 - NECK, 0, { w0: 9.5, w1: 8.5, lit: hexLerp(SKIN.lit, SKIN.dark, 0.35), dark: SKIN.deep, rim: rim * 0.4, ink: inkW });
   const headY = neckY2 - NECK - HEAD_R * 0.92 + p.headNod * -3;
   // overlapping action (D4): the head trails the torso — it arrives ~80ms late,
   // which is the classic animator's tell that the body has weight
@@ -1168,7 +1304,7 @@ export function drawStickman(
   // (C-03 — the old floating shoulder spheres are gone; the deltoid sleeve
   // caps are now drawn inside armDraw, overlapping torso edge and arm root)
 
-  drawFace(ctx, headX, headY, p.headTilt * 0.6 + lagLean * 0.4, p, t, r.faceScale ?? 1, r.wordTexts ?? [], r.wordTimes ?? [], r.beatT ?? 0, p.look, lagLean);
+  drawFace(ctx, headX, headY, p.headTilt * 0.6 + lagLean * 0.4, p, t, r.faceScale ?? 1, r.wordTexts ?? [], r.wordTimes ?? [], r.beatT ?? 0, p.look, lagLean, 2.2 / (scale * (r.faceScale ?? 1)));
 
   ctx.restore(); // upper-body strike squash
   ctx.restore();
@@ -1180,7 +1316,7 @@ export function drawStickman(
  *  figure can actually touch what it narrates. */
 function drawHand(
   ctx: CanvasRenderingContext2D, x: number, y: number, angDeg: number,
-  size: number, near: boolean, mode: 'open' | 'point' | 'cup' = 'open', sleeveW = 12
+  size: number, near: boolean, mode: 'open' | 'point' | 'cup' = 'open', sleeveW = 12, ink = 0
 ): void {
   ctx.save();
   ctx.translate(x, y);
@@ -1207,6 +1343,12 @@ function drawHand(
   ctx.quadraticCurveTo(-size * 0.62, size * 0.26, -size * 0.5, -size * 0.46);
   ctx.closePath();
   ctx.fill();
+  // Phase 1 — the hand joins the ink system
+  if (ink > 0) {
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = ink;
+    ctx.stroke();
+  }
   const fk = hexLerp(SKIN.lit, SKIN.dark, near ? 0.3 : 0.55);
   ctx.strokeStyle = fk;
   ctx.lineCap = 'round';

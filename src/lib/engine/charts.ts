@@ -253,6 +253,10 @@ export function barRow(ctx: CanvasRenderingContext2D, o: BarRowOpts): number {
     roundRect(ctx, bx, y + h * 0.18, fw, h * 0.64, 8);
     ctx.fillStyle = g;
     ctx.fill();
+    // Phase 1 — the bar joins the ink system (one contour weight everywhere)
+    ctx.strokeStyle = 'rgba(14,20,38,0.85)';
+    ctx.lineWidth = 2.2;
+    ctx.stroke();
     // gold cap
     roundRect(ctx, bx + fw - 4, y + h * 0.18, 4, h * 0.64, 2);
     ctx.fillStyle = rgba('#FFF3D6', 0.9);
@@ -283,12 +287,12 @@ export function barRow(ctx: CanvasRenderingContext2D, o: BarRowOpts): number {
     ctx.fillText(vText, Math.min(bx + fw + 16, bx + bw - vw - 8), y + h * 0.5 + 12);
   }
   if (o.sub) {
-    setFont(ctx, 27, 600, FONT_UI);
+    setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.fillText(o.sub, bx, y + h + 26);
   }
   if (o.tag) {
-    chip(ctx, o.tag, bx, y - 44, { size: 22, gold: tone === 'gold' });
+    chip(ctx, o.tag, bx, y - 44, { size: 28, gold: tone === 'gold' });
   }
   if (o.landT != null && o.t != null) {
     impactRing(ctx, bx + fw, y + h * 0.5, o.t, o.landT, h * 0.9, 0.7, col);
@@ -337,7 +341,7 @@ export function column(ctx: CanvasRenderingContext2D, o: ColOpts): void {
     if (o.landT != null && o.t != null) impactRing(ctx, o.cx, y, o.t, o.landT, 120, 0.8, col);
   }
   if (o.label) {
-    setFont(ctx, 26, 600, FONT_UI);
+    setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.textAlign = 'center';
     ctx.fillText(o.label, o.cx, o.baseY + 36);
@@ -517,12 +521,12 @@ export function statCard(ctx: CanvasRenderingContext2D, o: StatCardOpts): void {
     goldFillText(ctx, o.big, ix, iy + bigSize * 0.86, bigSize, 800);
   }
   if (o.sub) {
-    setFont(ctx, 26, 600, FONT_UI);
+    setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkSoft;
     wrapText(ctx, o.sub, o.w - 104, 26, 600, FONT_UI).forEach((ln, i) => {
       ctx.fillText(ln, ix, iy + bigSize * 1.12 + 14 + i * 34);
     });
   }
-  if (o.tag) chip(ctx, o.tag, ix, o.y + o.h - 58, { size: 24, gold: o.tone === 'gold' });
+  if (o.tag) chip(ctx, o.tag, ix, o.y + o.h - 58, { size: 28, gold: o.tone === 'gold' });
   ctx.restore();
 }

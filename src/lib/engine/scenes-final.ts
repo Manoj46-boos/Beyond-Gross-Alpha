@@ -46,7 +46,7 @@ export function stepUpScene(g: SceneCtx): void {
     ctx.moveTo(W * 0.24 + 36, 606);
     ctx.lineTo(W * 0.24 + 660, 612);
     ctx.stroke();
-    setFont(ctx, 26, 600, FONT_UI);
+    setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = PALETTE.up;
     ctx.fillText('stepped-up basis · 2025 law: $15M/person estate exemption', W * 0.24 + 40, 680);
     ctx.fillStyle = PALETTE.inkSoft;
@@ -118,7 +118,7 @@ export function hierarchyScene(g: SceneCtx): void {
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.fillText(tr.sub, lx + 92, ly + 124);
     // verdict chip (right)
-    chip(ctx, tr.verdict, lx + w - 320, ly + h / 2 - 26, { size: 26, gold: tr.tone === 'gold' });
+    chip(ctx, tr.verdict, lx + w - 320, ly + h / 2 - 26, { size: 28, gold: tr.tone === 'gold' });
     ctx.restore();
   });
   // footer benchmark (top-right, never behind the caption pill)
@@ -180,11 +180,11 @@ export function fiveQuestionsScene(g: SceneCtx): void {
     setFont(ctx, 28, 800, FONT_UI);
     ctx.fillStyle = hot ? PALETTE.goldBright : PALETTE.inkFaint;
     ctx.fillText(String(i + 1), x + 88, y + h / 2 + 10);
-    setFont(ctx, 27, 600, FONT_UI);
+    setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = hot ? PALETTE.ink : PALETTE.inkSoft;
     const maxW = w - 260;
     let txt = q;
-    setFont(ctx, 27, 600, FONT_UI);
+    setFont(ctx, 28, 600, FONT_UI);
     while (ctx.measureText(txt).width > maxW && txt.length > 10) txt = txt.slice(0, -4) + '…';
     ctx.fillText(txt, x + 130, y + h / 2 + 10);
     ctx.restore();
@@ -211,7 +211,7 @@ export function fiveQuestionsScene(g: SceneCtx): void {
   if (fa > 0) {
     ctx.save();
     ctx.globalAlpha = fa;
-    setFont(ctx, 27, 600, FONT_DISPLAY);
+    setFont(ctx, 28, 600, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.inkSoft;
     ctx.textAlign = 'right';
     ctx.fillText('A good advisor answers all five.', W - 120, 300);
@@ -244,7 +244,7 @@ export function endScreenScene(g: SceneCtx): void {
   wrapText(ctx, nextVideoTitle, w - 120, 54, 700, FONT_DISPLAY).forEach((ln, i) => {
     ctx.fillText(ln, 60, 180 + i * 68);
   });
-  setFont(ctx, 26, 600, FONT_UI);
+  setFont(ctx, 28, 600, FONT_UI);
   ctx.fillStyle = PALETTE.inkMuted;
   ctx.fillText('Every number sourced. Both sides, always.', 60, h - 80);
   ctx.restore();

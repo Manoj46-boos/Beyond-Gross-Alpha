@@ -25,7 +25,7 @@ export function plumbingScene(g: SceneCtx): void {
   if (showMutual) {
     // MUTUAL FUND: redemption → manager sells → gains spray
     glassCard(ctx, x, y, w, h, { r: 18, border: rgba(PALETTE.down, 0.35) });
-    setFont(ctx, 26, 800, FONT_UI);
+    setFont(ctx, 28, 800, FONT_UI);
     try { (ctx as any).letterSpacing = '3px'; } catch { /* noop */ }
     ctx.fillStyle = '#F08A8D';
     ctx.fillText('MUTUAL FUND', x + 40, y + 56);
@@ -78,7 +78,7 @@ export function plumbingScene(g: SceneCtx): void {
   } else {
     // ETF: in-kind basket swap — no sale
     glassCard(ctx, x, y, w, h, { r: 18, goldEdge: true });
-    setFont(ctx, 26, 800, FONT_UI);
+    setFont(ctx, 28, 800, FONT_UI);
     try { (ctx as any).letterSpacing = '3px'; } catch { /* noop */ }
     ctx.fillStyle = PALETTE.goldBright;
     ctx.fillText('ETF', x + 40, y + 56);
@@ -231,7 +231,7 @@ export function pitchDeckScene(g: SceneCtx): void {
     setFont(ctx, 40, 700, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.ink;
     ctx.fillText(it, x + 48, y + 130);
-    setFont(ctx, 27, 600, FONT_UI);
+    setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.fillText(['screenshot slide 04', 'slide 11 · confidential', 'slide 17 · draft'][i], x + 48, y + 180);
     ctx.restore();
@@ -243,7 +243,7 @@ export function pitchDeckScene(g: SceneCtx): void {
   if (pa > 0) {
     ctx.save();
     ctx.globalAlpha = pa;
-    setFont(ctx, 26, 700, FONT_UI);
+    setFont(ctx, 28, 700, FONT_UI);
     ctx.fillStyle = '#F08A8D';
     ctx.fillText('separate the engineering from the sales deck', W * 0.30, 714);
     ctx.beginPath();
@@ -275,7 +275,7 @@ export function diMosaicScene(g: SceneCtx): void {
   ctx.fillStyle = PALETTE.inkSoft;
   ctx.textAlign = 'center';
   ctx.fillText('ONE ETF', bx + bw / 2, by + bh / 2 - 10);
-  setFont(ctx, 26, 500, FONT_UI);
+  setFont(ctx, 28, 500, FONT_UI);
   ctx.fillStyle = PALETTE.inkFaint;
   ctx.fillText('dissolved into 80', bx + bw / 2, by + bh / 2 + 34);
   ctx.fillText('direct positions', bx + bw / 2, by + bh / 2 + 68);
@@ -289,9 +289,12 @@ export function diMosaicScene(g: SceneCtx): void {
   const CHIPS = ['IBM', 'GE', 'CAT', 'KO', 'HD', 'BA', 'GM', 'JPM', 'DIS', 'NKE'];
   const chipOn = new Map<number, string>();
   for (let k = 0; k < CHIPS.length; k++) {
-    // deterministic "random" tiles, spread across the grid
+    // deterministic "random" tiles, spread across the grid; a chip never sits
+    // beside another (54px boxes on a 50px pitch would merge — L-03)
     let idx = Math.floor(hash01(k * 13.7 + 3.1) * cols * rows);
-    while (chipOn.has(idx)) idx = (idx + 7) % (cols * rows);
+    const near = (i2: number) => chipOn.has(i2) || chipOn.has(i2 - 1) || chipOn.has(i2 + 1) ||
+      chipOn.has(i2 - cols) || chipOn.has(i2 + cols);
+    while (near(idx)) idx = (idx + 7) % (cols * rows);
     chipOn.set(idx, CHIPS[k]);
   }
   for (let i = 0; i < cols * rows; i++) {
@@ -299,12 +302,12 @@ export function diMosaicScene(g: SceneCtx): void {
     const ent = clamp01((shatter * cols * rows - i) / 3);
     if (ent <= 0) continue;
     const down = i % 7 === 3; // ~50 down stocks
-    const px = mx + c * (tw + 6) + hash01(i) * 8 * shatter;
-    const py = my + r * (th + 6) + hash01(i * 3.7) * 8 * shatter;
+    const px = mx + c * (tw + 6) + hash01(i) * 2 * shatter;
+    const py = my + r * (th + 6) + hash01(i * 3.7) * 2 * shatter;
     ctx.save();
     ctx.globalAlpha = ent;
     ctx.translate(px + tw / 2, py + th / 2);
-    ctx.rotate((hash01(i * 1.3) - 0.5) * 0.24 * shatter);
+    ctx.rotate((hash01(i * 1.3) - 0.5) * 0.12 * shatter);
     ctx.fillStyle = down ? rgba(PALETTE.down, 0.75) : rgba(PALETTE.up, 0.55);
     roundRect(ctx, -tw / 2, -th / 2, tw, th, 6);
     ctx.fill();
@@ -321,17 +324,17 @@ export function diMosaicScene(g: SceneCtx): void {
       ctx.save();
       ctx.globalAlpha = ent * clamp01((t - 1900) / 500);
       ctx.translate(px + tw / 2, py + th / 2);
-      ctx.rotate((hash01(i * 1.3) - 0.5) * 0.24 * shatter);
-      roundRect(ctx, -24, -14, 48, 28, 6);
+      ctx.rotate((hash01(i * 1.3) - 0.5) * 0.12 * shatter);
+      roundRect(ctx, -27, -15, 54, 30, 6);
       ctx.fillStyle = 'rgba(8,12,22,0.88)';
       ctx.fill();
       ctx.strokeStyle = rgba(PALETTE.gold, 0.55);
       ctx.lineWidth = 1;
       ctx.stroke();
-      setFont(ctx, 26, 800, FONT_UI);
+      setFont(ctx, 28, 800, FONT_UI);
       ctx.fillStyle = 'rgba(246,241,230,0.95)';
       ctx.textAlign = 'center';
-      ctx.fillText(ticker, 0, 9);
+      ctx.fillText(ticker, 0, 10);
       ctx.textAlign = 'left';
       ctx.restore();
     }
@@ -345,7 +348,7 @@ export function diMosaicScene(g: SceneCtx): void {
   if (la > 0) {
     ctx.save();
     ctx.globalAlpha = la;
-    chip(ctx, 'red = harvestable losses, harvested individually', W * 0.44, 742, { size: 24, dot: PALETTE.down });
+    chip(ctx, 'red = harvestable losses, harvested individually', W * 0.44, 742, { size: 28, dot: PALETTE.down });
     ctx.restore();
   }
   // S-05 — the Principal points at the ONE ETF block, then at the harvest
@@ -420,7 +423,7 @@ export function exchangeFundScene(g: SceneCtx): void {
       roundRect(ctx, bx2, by2, 76, 76, 10);
       ctx.fill();
       ctx.fillStyle = PALETTE.inkSoft;
-      setFont(ctx, 26, 700, FONT_UI);
+      setFont(ctx, 28, 700, FONT_UI);
       ctx.textAlign = 'center';
       ctx.fillText('STOCK', bx2 + 38, by2 + 44);
       ctx.textAlign = 'left';
@@ -521,7 +524,7 @@ export function longShortScene(g: SceneCtx): void {
     setFont(ctx, 30, 700, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.ink;
     wrapText(ctx, 'The engineering is real — peer-reviewed, 2020.', 480, 30, 700, FONT_DISPLAY).forEach((ln, i) => ctx.fillText(ln, x + w + 90, 440 + i * 46));
-    setFont(ctx, 26, 600, FONT_UI);
+    setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = PALETTE.goldBright;
     wrapText(ctx, 'Tax benefit: up to 2× the pre-tax return it sacrifices.', 470, 26, 600, FONT_UI).forEach((ln, i) => {
       ctx.fillText(ln, x + w + 90, 600 + i * 36);

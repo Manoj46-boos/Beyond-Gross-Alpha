@@ -33,7 +33,7 @@ export function locationMapScene(g: SceneCtx): void {
     const y = 350, h = 420;
     glassCard(ctx, x, y, colW, h, { r: 18, goldEdge: c.tone === 'gold', border: c.tone === 'down' ? rgba(PALETTE.down, 0.35) : c.tone === 'up' ? rgba(PALETTE.up, 0.35) : undefined });
     // header
-    setFont(ctx, 26, 800, FONT_UI);
+    setFont(ctx, 28, 800, FONT_UI);
     try { (ctx as any).letterSpacing = '3px'; } catch { /* noop */ }
     ctx.fillStyle = c.tone === 'down' ? '#F08A8D' : c.tone === 'up' ? PALETTE.up : PALETTE.goldBright;
     ctx.textAlign = 'center';
@@ -54,7 +54,7 @@ export function locationMapScene(g: SceneCtx): void {
       ctx.fillText(item, x + 58, iy + 32);
       ctx.restore();
     });
-    setFont(ctx, 27, 500, FONT_UI);
+    setFont(ctx, 28, 500, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.fillText(c.note, x + 36, y + h - 32);
     ctx.restore();
@@ -94,7 +94,7 @@ export function trapTileScene(g: SceneCtx): void {
       ctx.fillStyle = PALETTE.down;
       ctx.fillText(f, -30, 10);
     } else {
-      setFont(ctx, 26, 600, FONT_UI);
+      setFont(ctx, 28, 600, FONT_UI);
       ctx.fillStyle = i === 0 ? PALETTE.up : '#F08A8D';
       ctx.fillText(f, i === 0 ? -240 : 60, 10);
     }
@@ -229,7 +229,7 @@ export function tlhMechanicScene(g: SceneCtx): void {
       if (ta > 0) {
         ctx.save();
         ctx.globalAlpha = ta;
-        setFont(ctx, 27, 700, FONT_UI);
+        setFont(ctx, 28, 700, FONT_UI);
         ctx.fillStyle = PALETTE.goldBright;
         ctx.textAlign = 'center';
         ctx.fillText('TAX ASSET', cx, cy + 74);
@@ -254,19 +254,19 @@ export function tlhMechanicScene(g: SceneCtx): void {
       ctx.stroke();
       ctx.setLineDash([]);
       ctx.fillStyle = 'rgba(240,250,245,0.92)';
-      setFont(ctx, 27, 700, FONT_UI);
+      setFont(ctx, 28, 700, FONT_UI);
       ctx.textAlign = 'center';
       ctx.fillText('similar', 0, -4);
       ctx.fillText('not identical', 0, 20);
       ctx.textAlign = 'left';
       ctx.restore();
     }
-    setFont(ctx, 26, 700, FONT_UI);
+    setFont(ctx, 28, 700, FONT_UI);
     ctx.fillStyle = PALETTE.ink;
     ctx.textAlign = 'center';
     ctx.fillText(st.label, cx, y + 172);
     ctx.textAlign = 'left';
-    setFont(ctx, 27, 500, FONT_UI);
+    setFont(ctx, 28, 500, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     wrapText(ctx, st.sub, stepW - 60, 20, 500, FONT_UI).forEach((ln, li) => {
       ctx.fillText(ln, x + 30, y + 200 + li * 24);
@@ -416,7 +416,7 @@ export function eraBarsScene(g: SceneCtx): void {
       p: ent, t, tone: c.tone as any, valueText: `${c.value.toFixed(2)}%`,
       label: c.label.split('\n')[0], width: colW, landT: 300 + i * 380 + 700,
     });
-    setFont(ctx, 27, 500, FONT_UI);
+    setFont(ctx, 28, 500, FONT_UI);
     ctx.fillStyle = dim ? PALETTE.inkFaint : PALETTE.inkSoft;
     ctx.textAlign = 'center';
     ctx.fillText(c.label.split('\n')[1], cx, baseY + 62);
@@ -511,7 +511,7 @@ export function wealthfrontCaseScene(g: SceneCtx): void {
     ctx.fillRect(x + w2 * 0.35, y, w2 * 0.25, h2);
     ctx.strokeStyle = rgba(PALETTE.gold, 0.6);
     ctx.strokeRect(x + w2 * 0.35, y, w2 * 0.25, h2);
-    setFont(ctx, 27, 700, FONT_UI);
+    setFont(ctx, 28, 700, FONT_UI);
     ctx.fillStyle = PALETTE.goldBright;
     ctx.fillText('APRIL TARIFF SELLOFF — THE 3 DAYS', x + w2 * 0.24, y - 8);
     ctx.restore();
@@ -597,7 +597,7 @@ export function secCaseScene(g: SceneCtx): void {
       ctx.lineWidth = 1.2;
       ctx.strokeRect(40, 190 + i * 74, w - 90, 54);
     }
-    setFont(ctx, 27, 600, FONT_UI);
+    setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = ln.hot ? PALETTE.goldBright : PALETTE.inkSoft;
     ctx.fillText(ln.text, 56, 190 + i * 74 + 37);
     ctx.restore();

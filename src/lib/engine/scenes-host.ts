@@ -214,7 +214,7 @@ export function hostScene(g: SceneCtx): void {
       const cw = 320, chh = 96 + lines.length * 34;
       const cx = palmRS.x + 90, cy = palmRS.y - 130 - chh / 2 + floatY(t, 5, 5, 4200);
       glassCard(ctx, cx - cw / 2, cy, cw, chh, { r: 14, goldEdge: true });
-      setFont(ctx, 27, 700, FONT_UI);
+      setFont(ctx, 28, 700, FONT_UI);
       try { (ctx as any).letterSpacing = '3px'; } catch { /* noop */ }
       ctx.fillStyle = PALETTE.inkFaint;
       ctx.textAlign = 'center';
@@ -263,7 +263,7 @@ export function hostScene(g: SceneCtx): void {
         roundRect(ctx, bx + fw - capW, by, capW, bh, 10);
         ctx.fillStyle = cg2;
         ctx.fill();
-        setFont(ctx, 26, 800, FONT_DISPLAY);
+        setFont(ctx, 28, 800, FONT_DISPLAY);
         ctx.fillStyle = 'rgba(246,241,230,0.96)';
         ctx.textAlign = 'right';
         ctx.fillText(comp.value ?? '$5.1M', bx + fw - 14, by + bh / 2 + 9);
@@ -285,7 +285,7 @@ export function hostScene(g: SceneCtx): void {
         ctx.ellipse(0, 56, 62, 6.5, 0, 0, Math.PI * 2);
         ctx.fill();
         glassCard(ctx, -105, -52, 210, 104, { r: 12, goldEdge: true });
-        setFont(ctx, 27, 800, FONT_UI);
+        setFont(ctx, 28, 800, FONT_UI);
         try { (ctx as any).letterSpacing = '2px'; } catch { /* noop */ }
         ctx.fillStyle = PALETTE.ink;
         ctx.textAlign = 'center';

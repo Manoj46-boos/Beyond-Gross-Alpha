@@ -26,10 +26,10 @@ export function brokerageStatementScene(g: SceneCtx): void {
   ctx.translate(-cx, -cy);
   glassCard(ctx, x, y, cardW, cardH, { r: 14, fill: 'rgba(16,24,44,0.82)', border: rgba(PALETTE.inkSoft, 0.22), goldEdge: false });
   // header
-  setFont(ctx, 26, 700, FONT_UI);
+  setFont(ctx, 28, 700, FONT_UI);
   ctx.fillStyle = PALETTE.inkSoft;
   ctx.fillText('CLIENT PERFORMANCE SUMMARY', x + 44, y + 56);
-  setFont(ctx, 27, 500, FONT_UI);
+  setFont(ctx, 28, 500, FONT_UI);
   ctx.fillStyle = PALETTE.inkFaint;
   ctx.fillText('Account ····7042     Period · 25 years', x + 44, y + 88);
   // rows
@@ -55,7 +55,7 @@ export function brokerageStatementScene(g: SceneCtx): void {
       ctx.lineWidth = 1.4;
       ctx.stroke();
     }
-    setFont(ctx, 27, 600, FONT_UI);
+    setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = r.tone === 'red' ? '#F08A8D' : PALETTE.inkSoft;
     ctx.fillText(r.label, x + 44, ry);
     setFont(ctx, 36, 700, r.tone === 'gold' ? FONT_DISPLAY : FONT_UI);
@@ -125,7 +125,7 @@ export function feeChipsScene(g: SceneCtx): void {
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.fillText('average advisory fee', x2 + 90, y2 + 62);
     // "tax management: invisible" chip
-    chip(ctx, 'tax management — expensive to deliver, invisible when done', x2 + 60, y2 + 262, { size: 22, gold: true });
+    chip(ctx, 'tax management — expensive to deliver, invisible when done', x2 + 60, y2 + 262, { size: 28, gold: true });
     ctx.restore();
   }
 }
@@ -160,7 +160,7 @@ export function memoCardScene(g: SceneCtx): void {
     if (la <= 0) return;
     ctx.save();
     ctx.globalAlpha = la;
-    setFont(ctx, 26, 500, FONT_UI);
+    setFont(ctx, 28, 500, FONT_UI);
     ctx.fillStyle = PALETTE.inkMuted;
     ctx.fillText(ln, x + 52, y + 160 + i * 64);
     // redaction bars over the bracketed bits
@@ -245,7 +245,7 @@ export function taxRatesScene(g: SceneCtx): void {
   if (fa > 0) {
     ctx.save();
     ctx.globalAlpha = fa * 0.85;
-    setFont(ctx, 27, 500, FONT_UI);
+    setFont(ctx, 28, 500, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.fillText('Model: 30 years · 6% capital-gains return · 0% dividends · 2026 top federal rates · excludes state tax', W * 0.10, 800);
     ctx.restore();
@@ -306,7 +306,7 @@ export function growthCurvesScene(g: SceneCtx): void {
     setFont(ctx, 28, 800, FONT_DISPLAY);
     ctx.fillStyle = '#F08A8D';
     ctx.fillText('$330,190', chartX + chartW * 0.62 + 16, chartY + 230);
-    setFont(ctx, 26, 600, FONT_UI);
+    setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.fillText('high turnover', chartX + chartW * 0.62 + 16, chartY + 186 + 14);
     ctx.restore();
@@ -316,7 +316,7 @@ export function growthCurvesScene(g: SceneCtx): void {
     ctx.globalAlpha = epA;
     glassCard(ctx, chartX + chartW - 10, chartY + 6, 240, 62, { r: 10, goldEdge: true, shadow: false, fill: 'rgba(12,16,30,0.85)', sheen: false });
     goldFillText(ctx, '$469,970', chartX + chartW + 6, chartY + 46, 28, 800, FONT_DISPLAY);
-    setFont(ctx, 26, 600, FONT_UI);
+    setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.fillText('low turnover', chartX + chartW + 8, chartY - 6 + 8);
     ctx.restore();
@@ -376,7 +376,7 @@ export function characterMatrixScene(g: SceneCtx): void {
     setFont(ctx, 29, 700, FONT_UI);
     ctx.fillStyle = hot ? PALETTE.ink : PALETTE.inkSoft;
     ctx.fillText(r.label, x + 36, y + 45);
-    chip(ctx, r.tag, x + 430, y + 18, { size: 22, gold: hot, dot: r.tone === 'down' ? PALETTE.down : PALETTE.up });
+    chip(ctx, r.tag, x + 430, y + 18, { size: 28, gold: hot, dot: r.tone === 'down' ? PALETTE.down : PALETTE.up });
     setFont(ctx, 28, 500, FONT_UI);
     ctx.fillStyle = hot ? PALETTE.inkSoft : PALETTE.inkFaint;
     ctx.textAlign = 'right';
@@ -467,7 +467,7 @@ export function signatureCurveScene(g: SceneCtx): void {
   if (la > 0) {
     ctx.save();
     ctx.globalAlpha = la;
-    setFont(ctx, 26, 700, FONT_UI);
+    setFont(ctx, 28, 700, FONT_UI);
     ctx.fillStyle = PALETTE.goldBright;
     ctx.fillText('8% gross → $13.7M', chartX + chartW * 0.34, chartY + 64);
     ctx.restore();
@@ -475,7 +475,7 @@ export function signatureCurveScene(g: SceneCtx): void {
   if (lb > 0) {
     ctx.save();
     ctx.globalAlpha = lb;
-    setFont(ctx, 26, 700, FONT_UI);
+    setFont(ctx, 28, 700, FONT_UI);
     ctx.fillStyle = '#9BB0D6';
     ctx.fillText('6% net → $8.6M', chartX + chartW * 0.34, chartY + chartH - 26);
     ctx.restore();

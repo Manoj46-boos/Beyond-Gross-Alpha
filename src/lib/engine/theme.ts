@@ -279,7 +279,7 @@ export function chipWidth(ctx: CanvasRenderingContext2D, text: string, size = 30
 }
 
 /** kicker — the small letterspaced gold label above headlines */
-export function kicker(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, alpha = 1, size = 27): void {
+export function kicker(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, alpha = 1, size = 28): void {
   ctx.save();
   ctx.globalAlpha = alpha;
   setFont(ctx, size, 700, FONT_UI);

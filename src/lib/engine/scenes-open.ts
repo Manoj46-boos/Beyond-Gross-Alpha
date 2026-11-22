@@ -39,7 +39,7 @@ function splitStatement(ctx: CanvasRenderingContext2D, W: number, H: number, t: 
     ctx.textAlign = 'center';
     ctx.fillText('PORTFOLIO STATEMENT', x + cardW / 2, y0 + 52);
     try { (ctx as any).letterSpacing = '0px'; } catch { /* noop */ }
-    setFont(ctx, 26, 600, FONT_UI);
+    setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkSoft;
     ctx.fillText('$2,000,000 · 8% gross · 25 years', x + cardW / 2, y0 + 92);
     // the number
@@ -110,7 +110,7 @@ function splitStatement(ctx: CanvasRenderingContext2D, W: number, H: number, t: 
       else runs.push({ text: ch });
     }
   }
-  const baseSize = 27, supSize = Math.round(baseSize * 0.62), supRaise = Math.round(baseSize * 0.38);
+  const baseSize = 28, supSize = Math.round(baseSize * 0.62), supRaise = Math.round(baseSize * 0.38);
   ctx.globalAlpha = alpha * 0.8;
   ctx.fillStyle = PALETTE.inkFaint;
   ctx.textAlign = 'left';
@@ -195,7 +195,7 @@ export function gapBarsScene(g: SceneCtx): void {
     const chipA = g.sentenceIdx != null ? clamp01((g.sentenceT ?? 0) / 500) : clamp01((t - 1500) / 500);
     ctx.save();
     ctx.globalAlpha = chipA;
-    chip(ctx, 'constantly asked', x + 2, y - 42, { size: 22, gold: true });
+    chip(ctx, 'constantly asked', x + 2, y - 42, { size: 28, gold: true });
     ctx.restore();
     // U3.3 — the eye lands on the bar being narrated
     focusPing(ctx, x + w * 0.62, (idx === 1 ? y + rh + 70 : y) + rh * 0.5, g.sentenceT, 110);
@@ -360,7 +360,7 @@ export function circleBackScene(g: SceneCtx): void {
       ctx.translate(0, (1 - easeOutCubic(ent)) * 30 + floatY(t, i, 6, 4200));
       const bw = 560, bh = 120;
       glassCard(ctx, b.x - bw / 2, 380 + i * 150, bw, bh, { r: 60, goldEdge: b.tone === 'gold' });
-      setFont(ctx, 26, 600, FONT_UI);
+      setFont(ctx, 28, 600, FONT_UI);
       ctx.fillStyle = PALETTE.inkSoft;
       wrapText(ctx, b.text, bw - 80, 26, 600, FONT_UI).forEach((ln, li) => {
         ctx.fillText(ln, b.x - bw / 2 + 44, 380 + i * 150 + 52 + li * 34);

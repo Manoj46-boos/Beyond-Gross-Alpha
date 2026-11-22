@@ -259,7 +259,7 @@ export function drawChapterCard(
   ctx.restore();
 
   // PART label
-  setFont(ctx, 27, 700, FONT_UI);
+  setFont(ctx, 28, 700, FONT_UI);
   try { (ctx as any).letterSpacing = '7px'; } catch { /* noop */ }
   ctx.fillStyle = PALETTE.gold;
   ctx.textAlign = 'center';
