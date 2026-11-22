@@ -14,7 +14,7 @@
  */
 import { SceneCtx } from './scene-context';
 import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, drawAlphaGlyph, chip, FONT_DISPLAY, FONT_UI, kicker, headline } from './theme';
-import { clamp, clamp01, easeOutCubic } from './easing';
+import { clamp, clamp01, easeOutCubic, easeInOutSine } from './easing';
 import { goldDust, godRays, bokehField, floatY, impactRing, lightBlade } from './fx';
 import { poseAt, drawStickman, walkIn, applyMood, companionArm, companionArmL, palmPosition, type Pose } from './stickman';
 import { statCard } from './charts';
@@ -74,8 +74,11 @@ export function hostScene(g: SceneCtx): void {
   const plateY = 508;
   // S-06 — the palm aims just OUTSIDE the plate's left edge (was 14px INSIDE
   // the box): the hand presents the plate without ever entering it
-  const palmR = { x: plateX - 42, y: plateY + 95 };  // right palm, present height
-  const palmL = { x: px - 140, y: plateY + 95 };     // left palm (the weigh pair)
+  // AUDIT C-07 — the weigh carry drops 15px (y+95→y+110): the arms leave the
+  // "talent-show" horizontal and settle into a natural carry angle, and the
+  // plates then rest ON the palms instead of hanging off the hand corners
+  const palmR = { x: plateX - 42, y: plateY + 110 };  // right palm, present height
+  const palmL = { x: px - 140, y: plateY + 110 };     // left palm (the weigh pair)
   const pointTip = { x: headX + 60, y: 382 };        // pointing fingertip
   const companionOn = !walking && s.gesture !== 'leanIn' && s.gesture !== 'count';
   if (companionOn) {
@@ -84,6 +87,10 @@ export function hostScene(g: SceneCtx): void {
     } else if (comp?.kind === 'weigh') {
       companionArm(pose, px, groundY, rigScale, palmR, 'present');
       companionArmL(pose, px, groundY, rigScale, palmL, 'present');
+      // AUDIT C-07 — the cradling palm: fingers curl UP under the plate edges
+      // and the thumb wraps the near rim, so the plates rest IN the hands
+      // instead of being stapled to their corners
+      pose.hand = 'cup';
       // gaze settles between the two plates
       pose.look = clamp((palmR.x - px) / 420, -1, 1) * 0.55;
     } else if (comp?.kind === 'gapbar') {
@@ -277,12 +284,14 @@ export function hostScene(g: SceneCtx): void {
       const tilt = Math.sin(t / 1400) * 0.10;
       const plate = (p: { x: number; y: number }, label: string, rot: number, seed: number) => {
         ctx.save();
-        ctx.translate(p.x, p.y - 58 + floatY(t, seed, 2, 3000));
+        // AUDIT C-07 — the plate sits ON the palm centreline (was hovering 4px
+        // above it), sinking 2px into the curled fingers
+        ctx.translate(p.x, p.y - 54 + floatY(t, seed, 2, 3000));
         ctx.rotate(rot);
         // contact shadow on the palm under the plate
         ctx.fillStyle = 'rgba(2,4,9,0.24)';
         ctx.beginPath();
-        ctx.ellipse(0, 56, 62, 6.5, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 52, 62, 6.5, 0, 0, Math.PI * 2);
         ctx.fill();
         glassCard(ctx, -105, -52, 210, 104, { r: 12, goldEdge: true });
         setFont(ctx, 28, 800, FONT_UI);
@@ -382,12 +391,28 @@ export function drawChapterWalkOn(
     lightBlade(ctx, W, H, clamp01((tMs - EXIT_AT) / (exitDur * 0.62)));
     return;
   }
+  // AUDIT C-08 — the paper turn: the mirror scale animates CONTINUOUSLY from
+  // −1→1 over 120ms (a paper-turn that reads as rotation), the weight leans
+  // 6° AWAY from travel as the feet plant, and the head leads through the
+  // same finite-difference lag the rest of the rig uses. The old code popped
+  // the flip in one frame — an identity teleport at the most-replayed moment.
+  const flipScale = tMs < 1500 ? -1 : tMs < 1620 ? Math.sign(-1 + 2 * easeInOutSine((tMs - 1500) / 120)) * Math.max(0.08, Math.abs(-1 + 2 * easeInOutSine((tMs - 1500) / 120))) : 1;
+  let velTurn = { lean: 0, rootY: 0, rAL: 0, rAU: 0 };
+  if (tMs >= 1440 && tMs < 1740) {
+    const age = tMs - 1440;
+    const overshoot = Math.sin(clamp01(age / 120) * Math.PI / 2) * Math.exp(-Math.max(0, age - 120) / 130);
+    pose.lean += -6 * overshoot; // away from travel (+x) — plant and settle
+  }
+  if (tMs >= 1500 && tMs < 1800) {
+    const pPrev = poseAt(`chapter-${index}`, Math.max(0, tMs - 90 - 1500), tMs - 90, [], []);
+    velTurn = { lean: pose.lean - pPrev.lean, rootY: 0, rAL: 0, rAU: 0 };
+  }
   drawStickman(ctx, px, groundY, rigScale, tMs, {
     pose,
-    flip: tMs < 1500,
+    flipScale,
     faceScale: 1.5, // C-02 — same mobile face floor as the host scenes
     reflection: true,
     rimBoost: 0.06,
-    vel: { lean: 0, rootY: 0, rAL: 0, rAU: 0 },
+    vel: velTurn,
   }, 2);
 }

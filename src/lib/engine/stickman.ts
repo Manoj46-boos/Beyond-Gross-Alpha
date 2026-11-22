@@ -16,7 +16,10 @@ import { clamp01, clamp, lerp, springTo, hashStr, hash01, easeOutCubic, easeInOu
 const U_LEG = 58, L_LEG = 52, TORSO = 86, NECK = 11;
 const U_ARM = 54, L_ARM = 50;
 const HEAD_R = 26.2; // 72% of the shoulder line — the head must carry the face at phone size (C-02)
-const SHOULDER_HW = 30, HIP_HW = 13;
+// AUDIT C-06 — proportion re-balance: shoulders 30→34, hips 13→11. The
+// coat-hanger silhouette (wide flat bar over a hook) becomes a V-case —
+// the tailored-jacket read the premium tier lives on.
+const SHOULDER_HW = 34, HIP_HW = 11;
 
 const SUIT = { lit: '#43598A', mid: '#2C3B63', dark: '#161F3A', ink: '#0E1426' };
 /** Phase 1 — the ONE ink: every silhouette in the frame (figure, props,
@@ -328,13 +331,13 @@ function accentEnv(t: number, wordTimes: number[], words: string[]): number {
   return 0;
 }
 
-/** U2.4 — reusable anticipation. M-02 (§6.3): the old 30%/120ms counter-move
- *  lasted 3-4 frames and moved the limb 1-3° — under one pixel of wrist travel,
- *  i.e. jitter, not wind-up. Now: a 45% counter-move over a 170ms window that
- *  RISES, HOLDS its extreme for two frames (~66ms) and releases into the
- *  spring commit. Magnitude cap 14°. `st` = ms since the sentence boundary. */
-function anticipation(from: number, to: number, st: number, mag = 14): number {
-  const WINDOW = 170, HOLD = 66;
+/** U2.4 — reusable anticipation. M-02 (§6.3) + AUDIT C-09: the rise/hold/
+ * release window is now RISE 104ms → HOLD 100ms (two+ frames at the extreme —
+ * the classic animator's beat) → release, and the magnitude cap is 18°.
+ * Applied ONLY to the shoulder and elbow channels — hips and torso sway stay
+ * quiet, or the figure reads as nervous rather than intentional. */
+function anticipation(from: number, to: number, st: number, mag = 18): number {
+  const WINDOW = 204, HOLD = 100;
   const d = to - from;
   const amp = Math.min(mag, Math.abs(d) * 0.45);
   if (amp < 0.35 || st < 0) return 0;
@@ -376,13 +379,13 @@ export function poseAt(
   p.brow = g.brow;
   p.smile = g.smile;
 
-  // anticipation — channels counter-move first (with the two-frame hold),
-  // then commit (M-02: cap raised to 14° on every channel)
+  // anticipation — arm channels counter-move first (with the 100ms hold),
+  // then commit (AUDIT C-09: cap raised to 18°, shoulder+elbow channels only —
+  // the torso sway no longer anticipates, hips stay quiet)
   p.rAU += anticipation(gPrev.rAU, g.rAU, st);
   p.rAL += anticipation(gPrev.rAL, g.rAL, st);
   p.lAU += anticipation(gPrev.lAU, g.lAU, st);
   p.lAL += anticipation(gPrev.lAL, g.lAL, st);
-  p.lean += anticipation(gPrev.lean, g.lean, st);
   p.shoulderTilt += anticipation(gPrev.shoulderTilt, g.shoulderTilt, st);
 
   // word accent strikes the right forearm (and counter-leans the torso)
@@ -456,14 +459,15 @@ export function walkPose(phase: number, speed: number): Pose {
   p.lKnee = Math.max(0, Math.cos(pp)) * 44 * speed + 5;
   p.rAnkle = 0; p.lAnkle = 0;
   // pelvis height: HIGH at mid-stance (ph 0/.5), LOW at double support —
-  // M-01: the hip drop at contact is raised so it actually registers on film
+  // AUDIT C-09 — the hip drop at contact is 6px so the weight-shift actually
+  // registers on film at 1080p
   const contact = Math.max(0, -Math.cos(pp * 2));
-  p.rootY = (-6 * (0.5 + 0.5 * Math.cos(pp * 2)) + 5 * contact) * speed;
+  p.rootY = (-6 * (0.5 + 0.5 * Math.cos(pp * 2)) + 6 * contact) * speed;
   p.lean = 1.5 * speed;
   p.torsoTilt = 1.5 * speed;
-  // M-01 — shoulder counter-rotation 4° (speed-independent, was buried by the
-  // speed factor)
-  p.shoulderTilt = -s * 4;
+  // AUDIT C-09 — shoulder counter-rotation 7° (was 4° — buried; 7° reads as a
+  // real shoulder girdle rotation at rig scales 1.4–2.6)
+  p.shoulderTilt = -s * 7;
   p.pelvisTilt = s * 3 * speed;
   p.walkPhase = ph;
   p.walkSpeed = speed;
@@ -555,14 +559,17 @@ function drawFace(
   ctx.closePath();
   ctx.fillStyle = HAIR.dark;
   ctx.fill();
-  // silver strand highlights following the sweep
+  // AUDIT C-04 — silver strand highlights: only TWO strands now, both running
+  // ALONG the sweep (same start angle, no crossings). The old four strands
+  // crossed the sweep at opposing angles and read as a plaid/tartan artifact
+  // on the hair — the most damaging kind of face bug.
   ctx.strokeStyle = rgba('#D7DEEA', 0.45);
   ctx.lineWidth = 1.1;
   ctx.lineCap = 'round';
-  for (const [ox, len] of [[-0.5, 0.62], [-0.22, 0.74], [0.1, 0.66], [0.42, 0.52]] as const) {
+  for (const [ox, len] of [[-0.62, 0.66], [-0.30, 0.8]] as const) {
     ctx.beginPath();
-    ctx.moveTo(R * ox, -R * 0.4);
-    ctx.quadraticCurveTo(R * (ox + 0.14), -R * (0.4 + len * 0.7), R * (ox + 0.3), -R * (0.4 + len));
+    ctx.moveTo(R * ox, -R * 0.52);
+    ctx.quadraticCurveTo(R * (ox + 0.06), -R * (0.52 + len * 0.62), R * (ox + 0.1), -R * (0.52 + len));
     ctx.stroke();
   }
   ctx.restore();
@@ -896,8 +903,11 @@ export interface RenderOpts {
    *  wrist follow-through. Compute as pose(t) − pose(t−90) in the scene (D4). */
   vel?: { lean?: number; rootY?: number; rAL?: number; rAU?: number };
   /** M-03 — absolute time (same base as `t`) of a prop IMPACT (gap-bar catch,
-   *  stamp slam, bar landing): the body compresses to sy≈0.94 and recoils. */
+   *  stamp slam, bar landing): the body compresses to sy≈0.895 and recoils. */
   impactT?: number;
+  /** AUDIT C-08 — continuous mirror scale for the paper turn (−1..1);
+   *  overrides `flip` when present. */
+  flipScale?: number;
 }
 
 export function drawStickman(
@@ -915,7 +925,11 @@ export function drawStickman(
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.translate(cx, groundY);
-  if (r.flip) ctx.scale(-1, 1);
+  // AUDIT C-08 — the paper turn: flipScale animates continuously from −1→1
+  // over the turn window (scenes-host drives it), replacing the single-frame
+  // mirror pop. flip stays as the boolean shorthand for a static mirror.
+  const flipScale = r.flipScale ?? (r.flip ? -1 : 1);
+  if (flipScale !== 1) ctx.scale(flipScale, 1);
   ctx.scale(scale, scale);
   // squash & stretch (U2.3) — root transform, pivot at the feet (the origin),
   // so the shoes stay planted. Two components:
@@ -935,16 +949,24 @@ export function drawStickman(
   // (push-off) is vy < 0 → stretch, downward motion (landing) → squash
   const vyPS = (r.vel?.rootY ?? 0) * (1000 / 90);
   sy += clamp(-0.0009 * vyPS, -0.05, 0.05);
-  // M-03 — impact squash: ANY prop landing (the gap bar, the SEC stamp, bar
-  // landings) answers with a compress to sy≈0.94 and a damped spring recoil
+  // M-03 + AUDIT C-09 — impact squash at FILM-visible amplitude: a 2-frame
+  // rise to 9%, a 2-frame overshoot to 10.5%, then a damped recoil (stretch
+  // up to 6%) into settle. The old 6% cap was also being clipped by the
+  // sy clamp at 0.92 — the clamp now moves to 0.885..1.10 so the full
+  // compress actually reaches the screen.
+  let impactAmp = 0;
   if (r.impactT != null) {
     const age = t - r.impactT;
-    if (age >= 0 && age < 700) {
-      const ik = Math.exp(-age / 240) * Math.cos(age / 170);
-      sy -= ik * 0.06;
+    if (age >= 0 && age < 900) {
+      let a: number;
+      if (age < 66) a = 0.09 * (age / 66);                       // rise to 9%
+      else if (age < 100) a = 0.09 + 0.015 * ((age - 66) / 34);  // overshoot 10.5%
+      else a = 0.105 * Math.exp(-(age - 100) / 210) * Math.cos((age - 100) / 160);
+      impactAmp = Math.max(0, a);
+      sy -= Math.max(-0.06, a);
     }
   }
-  sy = clamp(sy, 0.92, 1.08);
+  sy = clamp(sy, 0.885, 1.10);
   const sx = 1 - (sy - 1) * 0.6;
   ctx.scale(sx, sy);
 
@@ -987,7 +1009,7 @@ export function drawStickman(
     const knee = pt(hipX, hipY, thighAng, U_LEG);
     const knee2 = pt(knee.x, knee.y, thighAng + kneeBend, L_LEG);
     const foot = pt(knee2.x, knee2.y, thighAng + kneeBend + 90 + ankleAng, 7.5);
-    const W = near ? 13.6 : 11.6;
+    const W = near ? 15.6 : 13.3; // AUDIT C-06 — thigh width +15%: legs read as trousered limbs, not 2px sticks
     bone(ctx, hipX, hipY, knee.x, knee.y, 2.5, { w0: W, w1: W * 0.82, lit: SUIT.lit, dark: SUIT.dark, rim: near ? rim * 0.7 : 0, far: !near, ink: inkW });
     // C-08 — sleeved knee: the shin starts 2.5px inside the joint (cloth
     // overlaps the joint) and a soft crease replaces the polished sphere
@@ -1053,7 +1075,10 @@ export function drawStickman(
   const strike = Math.max(0, accentEnv(r.beatT ?? t, r.wordTimes ?? [], r.wordTexts ?? []));
   ctx.save();
   ctx.translate(0, hipY);
-  ctx.scale(1 + (sx - 1) * 0.4, 1 - strike * 0.028);
+  // AUDIT C-09 — the torso ANSWERS prop impacts: a damped 2.5% compress
+  // riding on the same impact envelope as the root squash (the upper body
+  // settles when something lands, not just the scale)
+  ctx.scale(1 + (sx - 1) * 0.4, 1 - strike * 0.028 - impactAmp * 0.24);
   ctx.translate(0, -hipY);
   const shX = Math.sin(leanR + tiltR) * TORSO;
   const shY = hipY - Math.cos(leanR + tiltR) * TORSO;
@@ -1096,6 +1121,27 @@ export function drawStickman(
     ctx.stroke();
   }
 
+  // AUDIT C-09 — coat-hem secondary motion: two trailing cloth flaps hang from
+  // the hem and lag the walk cycle by ~90ms (phase-shifted), so the jacket
+  // visibly answers the stride. Frozen when standing; scaled by walk speed.
+  if (p.walkPhase >= 0 && p.walkSpeed > 0.05) {
+    const lag = -Math.sin(p.walkPhase * Math.PI * 2 + 0.9);
+    for (const s of [-1, 1]) {
+      ctx.save();
+      ctx.translate(s * (HIP_HW + 5), hipY + 6);
+      ctx.rotate(lag * 2.6 * D2R * p.walkSpeed * s);
+      ctx.beginPath();
+      ctx.moveTo(-3.2, 0);
+      ctx.quadraticCurveTo(-1.6, 7, -2.6, 12);
+      ctx.lineTo(3.2, 11);
+      ctx.quadraticCurveTo(4.6, 5, 3.6, 0);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(10,15,28,0.55)';
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
   // rim light along the lit edge (upper-left)
   ctx.beginPath();
   ctx.moveTo(-shW * 0.92, shY + 4);
@@ -1106,12 +1152,14 @@ export function drawStickman(
   ctx.lineWidth = 1.6;
   ctx.stroke();
 
-  // shirt V + tie (premium detail)
+  // shirt V + tie (premium detail) — AUDIT C-05: the V widens ×1.3 (±9→±12,
+  // depth 26→30) so the dress shirt reads at phone size instead of vanishing
+  // into the jacket slab
   ctx.save();
   ctx.beginPath();
-  ctx.moveTo(-9, shY - 10);
-  ctx.lineTo(9, shY - 10);
-  ctx.lineTo(0, shY + 26);
+  ctx.moveTo(-12, shY - 10);
+  ctx.lineTo(12, shY - 10);
+  ctx.lineTo(0, shY + 30);
   ctx.closePath();
   ctx.fillStyle = 'rgba(226,232,242,0.92)';
   ctx.fill();
@@ -1132,29 +1180,30 @@ export function drawStickman(
   ctx.save();
   ctx.translate(0, shY - 8);
   ctx.rotate(tieSwayDeg * D2R);
-  // C-04 — the knot: a proper kite above the blade, with a dimple shade
+  // AUDIT C-05 — the knot: a proper kite above the blade (width ×1.25), with
+  // a dimple shade — the tie reads as silk, not a red sliver
   ctx.beginPath();
-  ctx.moveTo(-4.0, -9);
-  ctx.lineTo(4.0, -9);
-  ctx.lineTo(5.0, -2);
+  ctx.moveTo(-5.0, -9);
+  ctx.lineTo(5.0, -9);
+  ctx.lineTo(6.2, -2);
   ctx.lineTo(0, 1.5);
-  ctx.lineTo(-5.0, -2);
+  ctx.lineTo(-6.2, -2);
   ctx.closePath();
   ctx.fillStyle = hexLerp('#6E2430', '#3A121B', 0.3);
   ctx.fill();
   ctx.beginPath();
-  ctx.moveTo(-1.1, -8);
-  ctx.quadraticCurveTo(0, -4.5, 1.1, -8); // dimple
+  ctx.moveTo(-1.3, -8);
+  ctx.quadraticCurveTo(0, -4.5, 1.3, -8); // dimple
   ctx.strokeStyle = 'rgba(110,87,22,0.55)';
   ctx.lineWidth = 0.9;
   ctx.stroke();
-  // segment 1: upper blade hanging from the knot
+  // segment 1: upper blade hanging from the knot (width ×1.25)
   ctx.beginPath();
-  ctx.moveTo(-3.8, 1);
-  ctx.lineTo(3.8, 1);
-  ctx.lineTo(4.9, 16);
+  ctx.moveTo(-4.8, 1);
+  ctx.lineTo(4.8, 1);
+  ctx.lineTo(6.1, 16);
   ctx.lineTo(0, 18);
-  ctx.lineTo(-4.9, 16);
+  ctx.lineTo(-6.1, 16);
   ctx.closePath();
   ctx.fillStyle = tieG;
   ctx.fill();
@@ -1163,11 +1212,11 @@ export function drawStickman(
   ctx.translate(0, 18);
   ctx.rotate(bladeSwayDeg * D2R);
   ctx.beginPath();
-  ctx.moveTo(-4.9, -2);
-  ctx.lineTo(4.9, -2);
-  ctx.lineTo(2.4, 10);
+  ctx.moveTo(-6.1, -2);
+  ctx.lineTo(6.1, -2);
+  ctx.lineTo(3.0, 10);
   ctx.lineTo(0, 24);
-  ctx.lineTo(-2.4, 10);
+  ctx.lineTo(-3.0, 10);
   ctx.closePath();
   ctx.fillStyle = tieG;
   ctx.fill();
@@ -1214,47 +1263,62 @@ export function drawStickman(
   ctx.lineWidth = 0.7;
   ctx.stroke();
   ctx.restore();
-  // Phase 1 — the pocket-watch chain: the ONE gold accessory. A link chain
-  // draping from the left breast to the button stance, swaying on the same
-  // pendulum driver as the tie, with the fob catching the light.
+  // AUDIT C-03 — the pocket-watch chain as a TRUE catenary: a 12-link chain
+  // draping from the left breast to the watch pocket at the button stance,
+  // sagging outward-down (the old sagX=4 rendered as a near-vertical dot
+  // string that read as buttons). The fob is a 6.4px medallion with a rim
+  // light catching the key light — the ONE gold accessory, now drawn like one.
   ctx.save();
   ctx.translate(-shW * 0.42, shY + 16);
   ctx.rotate(tieSwayDeg * 0.4 * D2R);
-  const cx2 = 14, cy2 = 34; // drape end (button stance)
-  const sagX = 4, sagY = 14; // catenary sag
+  const cx2 = 8, cy2 = 46;  // watch pocket (button stance)
+  const sagCX = 14, sagCY = 26; // catenary control — a real outward drape
   ctx.strokeStyle = rgba(PALETTE.goldBright, 0.9);
-  ctx.lineWidth = 1.3;
-  for (let i = 0; i <= 8; i++) {
-    const q = i / 8;
-    const lx = quadPt(0, sagX, cx2, q) - Math.sin(q * Math.PI) * sagX * 0.4;
-    const ly = quadPt(0, sagY, cy2, q);
+  ctx.lineWidth = 1.35;
+  for (let i = 0; i <= 12; i++) {
+    const q = i / 12;
+    const lx = quadPt(0, sagCX, cx2, q);
+    const ly = quadPt(0, sagCY, cy2, q);
     ctx.beginPath();
-    ctx.arc(lx, ly, i % 2 === 0 ? 1.5 : 1.15, 0, Math.PI * 2);
+    ctx.arc(lx, ly, i % 2 === 0 ? 1.6 : 1.25, 0, Math.PI * 2);
     ctx.stroke();
   }
-  // the fob — a small gold medallion at the drape end
+  // the fob — a small gold ring into a 6.4px medallion at the pocket
   ctx.beginPath();
-  ctx.arc(cx2, cy2 + 3, 2.8, 0, Math.PI * 2);
+  ctx.arc(cx2, cy2, 1.8, 0, Math.PI * 2);
   ctx.fillStyle = PALETTE.goldBright;
   ctx.fill();
-  ctx.strokeStyle = rgba(PALETTE.goldDeep, 0.8);
-  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.arc(cx2, cy2 + 4.4, 3.2, 0, Math.PI * 2);
+  const fg = ctx.createRadialGradient(cx2 - 1, cy2 + 3.2, 0.5, cx2, cy2 + 4.4, 3.4);
+  fg.addColorStop(0, PALETTE.goldPale);
+  fg.addColorStop(0.6, PALETTE.goldBright);
+  fg.addColorStop(1, PALETTE.goldDeep);
+  ctx.fillStyle = fg;
+  ctx.fill();
+  // rim light on the medallion's lit edge (one light, upper-left)
+  ctx.strokeStyle = 'rgba(255,243,214,0.85)';
+  ctx.lineWidth = 0.9;
+  ctx.beginPath();
+  ctx.arc(cx2, cy2 + 4.4, 2.6, Math.PI * 0.8, Math.PI * 1.45);
   ctx.stroke();
   ctx.restore();
   ctx.restore(); // torso detail
 
-  // lapels — the suit's tailoring signature (D7): two long panels collar→button stance
+  // lapels — the suit's tailoring signature (D7) — AUDIT C-05: fill 0.5→0.75,
+  // edge brightened to the ivory family at 0.35, panels extended to the button
+  // stance so the lapels read as cut cloth instead of dark smudges
   const lapel = (s: -1 | 1) => {
     ctx.beginPath();
     ctx.moveTo(s * 10, shY - 11);
     ctx.lineTo(s * (shW * 0.46), shY - 4);
-    ctx.lineTo(s * (shW * 0.30), shY + 32);
-    ctx.lineTo(s * 5.5, shY + 3);
+    ctx.lineTo(s * (shW * 0.30), shY + 44);
+    ctx.lineTo(s * 5.5, shY + 6);
     ctx.closePath();
-    ctx.fillStyle = 'rgba(13,19,36,0.5)';
+    ctx.fillStyle = 'rgba(13,19,36,0.75)';
     ctx.fill();
-    ctx.strokeStyle = 'rgba(244,229,191,0.22)';
-    ctx.lineWidth = 0.9;
+    ctx.strokeStyle = 'rgba(244,229,191,0.35)';
+    ctx.lineWidth = 1.1;
     ctx.stroke();
   };
   lapel(-1);
@@ -1286,7 +1350,46 @@ export function drawStickman(
     // hand — wrist follow-through: the hand keeps moving after the forearm
     // settles (D4), and points when the scene asks it to touch data (D1)
     const handAng = aU + aL - (near ? (r.vel?.rAL ?? 0) * 0.9 : 0);
-    drawHand(ctx, wrist.x, wrist.y, handAng, near ? 7.2 : 6.2, near, p.hand ?? 'open', W, inkW);
+    // AUDIT C-02 — hands ×1.4 (7.2→10.0 near, 6.2→8.4 far): fingers resolve as
+    // fingers at 1080p instead of a cream smudge
+    drawHand(ctx, wrist.x, wrist.y, handAng, near ? 10.0 : 8.4, near, p.hand ?? 'open', W, inkW);
+    // AUDIT C-01 — the presentation pointer: a slim rod parented to the point
+    // hand, ~200px on screen at ANY rig scale (length is scale-compensated),
+    // ink shaft with a gold tip. Extends the reach contract so mid-distance
+    // targets are TOUCHED, not gestured at; beyond even the pointer, the data
+    // scenes draw the sight line (scenes-figure).
+    if (near && (p.hand ?? 'open') === 'point') {
+      const pLen = clamp(200 / scale, 70, 150);
+      const tipP = pt(wrist.x, wrist.y, handAng, pLen);
+      const buttP = pt(wrist.x, wrist.y, handAng, -5);
+      ctx.lineCap = 'round';
+      // butt counterweight
+      ctx.strokeStyle = 'rgba(90,110,150,0.9)';
+      ctx.lineWidth = 3.6;
+      ctx.beginPath();
+      ctx.moveTo(buttP.x, buttP.y);
+      ctx.lineTo(wrist.x, wrist.y);
+      ctx.stroke();
+      // ink shaft
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = 2.1;
+      ctx.beginPath();
+      ctx.moveTo(wrist.x + Math.sin(handAng * D2R) * 3, wrist.y + Math.cos(handAng * D2R) * 3);
+      ctx.lineTo(tipP.x, tipP.y);
+      ctx.stroke();
+      // gold business end — the light-catching tip
+      const gTip = pt(wrist.x, wrist.y, handAng, pLen - 12);
+      ctx.strokeStyle = rgba(PALETTE.goldBright, 0.95);
+      ctx.lineWidth = 2.7;
+      ctx.beginPath();
+      ctx.moveTo(gTip.x, gTip.y);
+      ctx.lineTo(tipP.x, tipP.y);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(tipP.x, tipP.y, 1.8, 0, Math.PI * 2);
+      ctx.fillStyle = PALETTE.goldPale;
+      ctx.fill();
+    }
     return { wrist: { x: wrist.x, y: wrist.y } };
   };
   armDraw(-1);
@@ -1365,18 +1468,29 @@ function drawHand(
       ctx.quadraticCurveTo(size * (0.5 + fl * 0.9), fy * size * 1.02, size * (0.5 + fl * 0.5), fy * size * 0.22);
       ctx.stroke();
     }
-    // thumb wraps across the near edge
-    ctx.lineWidth = size * 0.36;
+    // thumb wraps across the near edge (AUDIT C-02 — thickened so the wrap
+    // reads as a gripping thumb at phone size)
+    ctx.lineWidth = size * 0.40;
     ctx.beginPath();
     ctx.moveTo(-size * 0.22, -size * 0.44);
     ctx.quadraticCurveTo(size * 0.2, -size * 0.8, size * 0.56, -size * 0.4);
     ctx.stroke();
   } else if (mode === 'point') {
-    // index extended along the arm axis — the data-contact hand
-    ctx.lineWidth = size * 0.32;
+    // AUDIT C-02 — the index is TWO segments with a 12° knuckle bend: the
+    // pointing read becomes a gesture with a real joint, not a straight spike
+    const seg1 = size * 0.95, seg2 = size * 0.82;
+    const knX = size * 0.5 + seg1, knY = -size * 0.20;
+    const bendR = 12 * D2R;
+    const tipX2 = knX + Math.cos(bendR) * seg2, tipY2 = knY + Math.sin(bendR) * seg2;
+    ctx.lineWidth = size * 0.30;
     ctx.beginPath();
     ctx.moveTo(size * 0.5, -size * 0.18);
-    ctx.quadraticCurveTo(size * 1.15, -size * 0.22, size * 1.8, -size * 0.26);
+    ctx.lineTo(knX, knY);
+    ctx.stroke();
+    ctx.lineWidth = size * 0.24;
+    ctx.beginPath();
+    ctx.moveTo(knX, knY);
+    ctx.quadraticCurveTo(knX + seg2 * 0.6, knY + seg2 * 0.08, tipX2, tipY2);
     ctx.stroke();
     // folded middle/ring/pinky + thumb wrapped across the palm
     ctx.fillStyle = fk;
@@ -1405,7 +1519,8 @@ function drawHand(
       ctx.stroke();
     }
     // thumb — a thicker capsule from the near edge crossing the palm
-    ctx.lineWidth = size * 0.36;
+    // (AUDIT C-02 — thickened to 0.40 so the opposing thumb survives phone size)
+    ctx.lineWidth = size * 0.40;
     ctx.beginPath();
     ctx.moveTo(-size * 0.28, -size * 0.42);
     ctx.quadraticCurveTo(size * 0.16, -size * 0.78, size * 0.52, -size * 0.5);
@@ -1475,9 +1590,11 @@ export function companionArmL(
  *  same forward kinematics as drawStickman's armDraw. Companion props anchor
  *  to this so "resting on the palm" is geometrically true instead of
  *  aspirational: the prop is placed on the rendered hand, whatever the IK
- *  did with the arm. */
+ *  did with the arm. `extra` extends the point past the palm along the hand
+ *  axis (AUDIT C-01 — the pointer tip lives 200/rigScale px past the palm). */
 export function palmPosition(
-  pose: Pose, side: 1 | -1, cx: number, groundY: number, scale: number
+  pose: Pose, side: 1 | -1, cx: number, groundY: number, scale: number,
+  extra = 0
 ): { x: number; y: number } {
   const hipY = -(U_LEG + L_LEG) + pose.rootY;
   const leanR = pose.lean * D2R, tiltR = pose.torsoTilt * D2R;
@@ -1489,6 +1606,22 @@ export function palmPosition(
   const elbow = pt(shX, shY, aU, U_ARM);
   const wrist = pt(elbow.x, elbow.y, aU + aL, L_ARM);
   // the palm centre rides ~5 local units past the wrist along the hand axis
-  const palm = pt(wrist.x, wrist.y, aU + aL, 5);
+  const palm = pt(wrist.x, wrist.y, aU + aL, 5 + extra);
   return { x: cx + palm.x * scale, y: groundY + palm.y * scale };
+}
+
+// ── AUDIT C-01 — reach-contract helpers ─────────────────────────────────────
+/** Screen-space shoulder position of the near arm (the same math companionArm
+ *  uses to aim the IK, so sight-line geometry matches the aiming geometry). */
+export function shoulderScreen(
+  pose: Pose, px: number, groundY: number, rigScale: number
+): { x: number; y: number } {
+  const shx = px + Math.sin((pose.lean + pose.torsoTilt) * D2R) * TORSO * rigScale;
+  const shy = groundY + (-(U_LEG + L_LEG) + pose.rootY - TORSO) * rigScale;
+  return { x: shx, y: shy };
+}
+/** Maximum honest reach of the near arm in screen px: full arm extension
+ *  (the armIk clamp) plus the presentation pointer's 200px when carried. */
+export function armReachPx(rigScale: number, pointerPx = 0): number {
+  return (U_ARM + L_ARM) * 0.985 * rigScale + pointerPx;
 }

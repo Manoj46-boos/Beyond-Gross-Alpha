@@ -12,7 +12,9 @@
  * (figure span ≈ x 90..330 at rigScale 1.42).
  */
 import { SceneCtx } from './scene-context';
-import { poseAt, drawStickman, applyMood, companionArm, companionArmL } from './stickman';
+import { poseAt, drawStickman, applyMood, companionArm, companionArmL, palmPosition, shoulderScreen, armReachPx } from './stickman';
+import { PALETTE, rgba } from './theme';
+import { clamp01 } from './easing';
 
 export interface FigureOpts {
   /** focal target per playing sentence (screen coords); null = idle stance */
@@ -66,4 +68,36 @@ export function dataSceneFigure(g: SceneCtx, rigScale: number, opts: FigureOpts)
     vel,
     impactT: opts.impactT,
   }, opts.seed ?? 11);
+
+  // AUDIT C-01 — the sight line: when the focal target lies beyond even the
+  // arm + 200px pointer, a 1.4px gold line marks the data from the fingertip
+  // with a small contact dot ON the element. It fades in over 200ms and dies
+  // at the sentence boundary (sentenceT resets each sentence → alpha resets),
+  // exactly per the audit's Phase 1.1b. Contact becomes a drawn fact instead
+  // of a broken promise.
+  if (focal && !opts.avoid) {
+    const POINTER_PX = 200;
+    const sh = shoulderScreen(pose, px, groundY, rigScale);
+    const reach = armReachPx(rigScale, POINTER_PX);
+    const dist = Math.hypot(focal.x - sh.x, focal.y - sh.y);
+    if (dist > reach) {
+      const tip = palmPosition(pose, 1, px, groundY, rigScale, 5 + POINTER_PX / rigScale);
+      const a = clamp01((sentenceT ?? 0) / 200) * (speaking ? 0.62 : 0.3);
+      if (a > 0.02) {
+        ctx.save();
+        ctx.strokeStyle = rgba(PALETTE.goldBright, a);
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(tip.x, tip.y);
+        ctx.lineTo(focal.x, focal.y);
+        ctx.stroke();
+        // the contact mark — a small gold dot exactly ON the data being discussed
+        ctx.beginPath();
+        ctx.arc(focal.x, focal.y, 3.4, 0, Math.PI * 2);
+        ctx.fillStyle = rgba(PALETTE.goldPale, Math.min(1, a * 1.6));
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+  }
 }
