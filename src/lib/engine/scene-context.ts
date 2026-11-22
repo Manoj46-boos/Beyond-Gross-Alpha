@@ -32,6 +32,10 @@ export interface SceneCtx {
    *  per-sentence reveals off this. */
   sentenceIdx?: number;
   sentenceCount?: number;
+  /** AUDIT R-04 — script-level gesture for the playing sentence
+   *  (beat.gestures[sentenceIdx] from script-data), overriding the
+   *  sentenceHash pick inside poseAt when it names a pool gesture. */
+  gesture?: string;
   channelName: string;
   nextVideoTitle: string;
   chapterIdx: number;

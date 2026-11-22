@@ -16,6 +16,12 @@ export interface BeatSpec {
   dropOut?: boolean;
   /** score drops out entirely for this beat */
   musicOut?: boolean;
+  /** AUDIT R-04 — script-level gesture beats for key sentences: maps the
+   *  0-based sentence index (splitSentences order) to a poseAt pool gesture
+   *  (present · explain · open · count · weigh · chin · rest · sweep).
+   *  Unlisted sentences keep the hash pick; the figure only renders where
+   *  dataSceneFigure runs, so entries are placed on figure-bearing beats. */
+  gestures?: Record<number, string>;
 }
 
 export interface ChapterSpec {
@@ -171,6 +177,7 @@ export const SCRIPT: ChapterSpec[] = [
         voStyle: 'reveal',
         dropOut: true,
         source: S3,
+        gestures: { 1: 'present', 3: 'weigh', 5: 'chin' },
         scene: { type: 'growthCurves', sceneKey: 'c3-curves', closeup: { x: 130, y: 160, w: 1790, h: 680 } },
       },
       {
@@ -186,6 +193,7 @@ export const SCRIPT: ChapterSpec[] = [
         voStyle: 'reveal',
         dropOut: true,
         source: S3,
+        gestures: { 1: 'present', 3: 'weigh' },
         scene: { type: 'signatureCurve', sceneKey: 'c3-signature', closeup: { x: 600, y: 240, w: 1300, h: 560 }, hold: 4200 },
       },
     ],
@@ -212,6 +220,7 @@ export const SCRIPT: ChapterSpec[] = [
         vo: "Trap two: location changes your real risk. A million in a traditional IRA is not a million — at a thirty percent future rate, it's seven hundred thousand of your money and three hundred thousand of the government's. Park all your bonds in the IRA and your taxable account — the one you actually spend from — is now all equity. Your after-tax allocation is riskier than the spreadsheet says.",
         pauseAfter: 400,
         voStyle: 'calm',
+        gestures: { 2: 'open', 3: 'weigh' },
         scene: { type: 'iraSplit', sceneKey: 'c4-ira' },
       },
       {
@@ -247,6 +256,7 @@ export const SCRIPT: ChapterSpec[] = [
         pauseAfter: 400,
         voStyle: 'calm',
         source: S8,
+        gestures: { 1: 'sweep', 2: 'count', 4: 'weigh' },
         scene: { type: 'waterfall', sceneKey: 'c5-faj', closeup: { x: 130, y: 160, w: 1790, h: 680 } },
       },
       {
@@ -254,6 +264,7 @@ export const SCRIPT: ChapterSpec[] = [
         pauseAfter: 420,
         voStyle: 'calm',
         source: S8,
+        gestures: { 1: 'count', 3: 'explain', 5: 'chin' },
         scene: { type: 'eraBars', sceneKey: 'c5-eras' },
       },
       {
@@ -283,6 +294,7 @@ export const SCRIPT: ChapterSpec[] = [
         voStyle: 'reveal',
         musicOut: true,
         source: S11,
+        gestures: { 1: 'count', 3: 'open' },
         scene: { type: 'secCase', sceneKey: 'c5-sec' },
       },
       {
@@ -298,7 +310,7 @@ export const SCRIPT: ChapterSpec[] = [
     title: 'Lever 3 — The Wrapper',
     beats: [
       {
-        vo: 'Lever three: the wrapper. Same index, same stocks — different tax outcome, depending on the legal structure you hold them through. Here\'s the mechanism most investors never learn. When you redeem a mutual fund, the manager often has to sell holdings to pay you out — and those gains get distributed to everyone who stayed. You can buy a fund in December and owe taxes on gains it realized in March, before you owned a single share.',
+        vo: 'Lever three: the wrapper. Same index, same stocks — different tax outcome, depending on the legal structure you hold them through. Here\'s the mechanism most investors never learn. When you redeem a mutual fund, the manager often has to sell holdings to pay you out — and those gains get distributed to everyone who stayed. You can buy a fund in December and owe taxes on gains it realized in March, before you owned a single share. And keep watching — at the end of this video I hand you the five questions that lock all four levers into one written plan.',
         pauseAfter: 420,
         voStyle: 'neutral',
         scene: { type: 'plumbing', sceneKey: 'c6-plumbing', mode: 'mutual' },
@@ -315,6 +327,7 @@ export const SCRIPT: ChapterSpec[] = [
         pauseAfter: 400,
         voStyle: 'neutral',
         source: S13,
+        gestures: { 0: 'count', 1: 'count', 3: 'weigh' },
         scene: { type: 'distribBars', sceneKey: 'c6-distrib', closeup: { x: 80, y: 180, w: 1660, h: 560 } },
       },
       {
@@ -350,6 +363,7 @@ export const SCRIPT: ChapterSpec[] = [
         pauseAfter: 400,
         voStyle: 'neutral',
         scene: { type: 'diMosaic', sceneKey: 'c7-di' },
+        gestures: { 0: 'open', 3: 'weigh' },
       },
       {
         vo: "The costs, from Schwab's own disclosure: thirty to forty basis points a year, versus a few basis points for a broad index ETF. Hundreds of cost-basis lots to administer. And — their words — diminishing tax benefits over time as the portfolio appreciates. How fast does it decay? In one study's simulations, the tax benefit averaged sixty-nine basis points a year in years one through five — and nine basis points in years six through ten. Pay forty basis points forever to harvest a benefit that decays: that's the trade. Run the math on your situation, not the brochure's.",

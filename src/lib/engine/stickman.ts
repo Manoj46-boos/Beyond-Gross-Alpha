@@ -356,11 +356,17 @@ function anticipation(from: number, to: number, st: number, mag = 18): number {
 export function poseAt(
   sentenceId: string, sentenceT: number, t: number,
   wordTimes: number[], wordTexts: string[],
-  prevSentenceId?: string
+  prevSentenceId?: string,
+  gestureOverride?: string,
 ): Pose {
   const p = basePose();
   const h = sentenceHash(sentenceId);
-  const g = GESTURES[Math.floor(h * GESTURES.length) % GESTURES.length];
+  // AUDIT R-04 — script-level gesture beats the hash pick: when the playing
+  // sentence carries a `gestures` entry naming a pool gesture, the body
+  // MEANS the sentence instead of decorating it. Unknown names fall through
+  // to the sentenceHash pick, so old behaviour is the default.
+  const oi = gestureOverride ? GESTURES.findIndex((x) => x.name === gestureOverride) : -1;
+  const g = oi >= 0 ? GESTURES[oi] : GESTURES[Math.floor(h * GESTURES.length) % GESTURES.length];
   const gPrev = prevSentenceId ? GESTURES[Math.floor(sentenceHash(prevSentenceId) * GESTURES.length) % GESTURES.length] : g;
 
   // gesture spring per channel (150ms behind sentence start handled by spring time)

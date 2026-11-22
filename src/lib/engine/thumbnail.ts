@@ -1,11 +1,14 @@
 /**
- * Thumbnail generator — the script's three concepts, 1280×720.
- * T1 split statement · T2 gold line NOT REPORTED · T3 the 92/17 gap
+ * Thumbnail generator — the script's four concepts, 1280×720.
+ * T1 split statement · T2 gold line NOT REPORTED · T3 the 92/17 gap ·
+ * T4 the Principal + the $5.1M gap (AUDIT R-05 — face/character + one
+ * number, the dominant CTR pattern in finance-education feeds)
  */
 
-export type ThumbnailVariant = 0 | 1 | 2;
+export type ThumbnailVariant = 0 | 1 | 2 | 3;
 
 import { PALETTE, rgba, setFont, roundRect, glassCard, goldFillText, FONT_DISPLAY, FONT_UI } from './theme';
+import { poseAt, applyMood, drawStickman } from './stickman';
 
 export function drawThumbnail(ctx: CanvasRenderingContext2D, W: number, H: number, variant: ThumbnailVariant, channelName: string): void {
   // navy room
@@ -81,6 +84,33 @@ export function drawThumbnail(ctx: CanvasRenderingContext2D, W: number, H: numbe
     setFont(ctx, 38, 700, FONT_UI);
     ctx.fillStyle = PALETTE.inkSoft;
     ctx.fillText('The line your advisor never shows you.', W * 0.12, H * 0.85);
+  } else if (variant === 3) {
+    // T4 — AUDIT R-05: the film's only ownable visual asset — the Principal —
+    // presents the $5.1M gap number. Face + one number, not typography alone.
+    // left column: the gap number
+    setFont(ctx, 30, 700, FONT_UI);
+    try { (ctx as any).letterSpacing = '6px'; } catch { /* noop */ }
+    ctx.fillStyle = PALETTE.goldBright;
+    ctx.fillText('THE FEE LINE, COMPOUNDING', W * 0.09, H * 0.24);
+    try { (ctx as any).letterSpacing = '0px'; } catch { /* noop */ }
+    goldFillText(ctx, '$5,100,000', W * 0.09, H * 0.48, 118, 900, FONT_DISPLAY);
+    setFont(ctx, 40, 700, FONT_UI);
+    ctx.fillStyle = PALETTE.ink;
+    ctx.fillText('$13.7M − $8.6M — gone in 25 years.', W * 0.09, H * 0.60);
+    setFont(ctx, 30, 600, FONT_UI);
+    ctx.fillStyle = PALETTE.inkSoft;
+    ctx.fillText('It never left through the front door.', W * 0.09, H * 0.68);
+    // gold hairline beneath the copy, so the type sits on the system
+    ctx.strokeStyle = rgba(PALETTE.gold, 0.55);
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(W * 0.09, H * 0.735);
+    ctx.lineTo(W * 0.52, H * 0.735);
+    ctx.stroke();
+    // the Principal, right column — presenting pose on the same floor
+    const pose = poseAt('thumb-gap', 620, 620, [], [], undefined, 'present');
+    applyMood(pose, 'reveal', 620, 3);
+    drawStickman(ctx, W * 0.78, H * 0.905, 1.28, 620, { pose, alpha: 1, faceScale: 1.5, rimBoost: 0.06 }, 7);
   } else {
     // T3 — 92% vs 17% THE GAP
     setFont(ctx, 140, 900, FONT_DISPLAY);

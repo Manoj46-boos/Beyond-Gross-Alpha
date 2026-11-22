@@ -286,6 +286,19 @@ export function chip(
   return w;
 }
 
+/** AUDIT R-02 — spotlight dim for self-managing components (statCard,
+ *  barRow, lineChart, … set their own globalAlpha, so an inherited dim
+ *  cannot reach them). Painting the room colour back over the element's
+ *  bbox recedes it — the same device as the cold open's stage-2 dim. */
+export function dimRect(
+  ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, k = 1
+): void {
+  ctx.save();
+  ctx.fillStyle = `rgba(5,8,15,${0.52 * Math.min(1, Math.max(0, k))})`;
+  ctx.fillRect(x, y, w, h);
+  ctx.restore();
+}
+
 export function chipWidth(ctx: CanvasRenderingContext2D, text: string, size = 30, padX = 24, dot = false): number {
   setFont(ctx, size, 600, FONT_UI);
   return ctx.measureText(text).width + padX * 2 + (dot ? 30 : 0);

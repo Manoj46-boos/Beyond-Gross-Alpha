@@ -5,7 +5,7 @@
  */
 
 import { SceneCtx } from './scene-context';
-import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, kicker, chip, hexLerp } from './theme';
+import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, kicker, chip, hexLerp, dimRect } from './theme';
 import { clamp01, easeOutCubic, springTo, hash01, fmtComma, fmtMoney } from './easing';
 import { goldDust, impactRing, softBloom, glowLine, spinToken, floatY, focusPing } from './fx';
 import { panelTitle, lineChart, column, statCard, barRow } from './charts';
@@ -99,18 +99,25 @@ export function feeChipsScene(g: SceneCtx): void {
   panelTitle(ctx, 'When the fee compresses, the tax work disappears', W * 0.10, 220, W * 0.8, t / 2400, {
     kickerText: 'Act I · Incentives',
   });
-  // hero stat: 83%
+  // AUDIT R-02 — D17 sentence-cadence wiring: the narration walks
+  // stat card → squeeze chart → invisible-tax chip, so this 40s hold
+  // changes its layout every few seconds instead of freezing once.
+  const hotIdx = g.sentenceIdx != null && g.sentenceIdx >= 0 ? g.sentenceIdx % 3 : -1;
+  // hero stat: 83% (statCard manages its own alpha — the dim is an overlay)
   statCard(ctx, {
     x: W * 0.10, y: 350, w: 560, h: 380,
     big: '83%', label: 'advisors charging <1% on $5M+ clients by 2026', sub: 'average fees → ⅔ of a point (Cerulli)', p: clamp01((t - 300) / 900), tone: 'gold', bigSize: 130,
   });
+  if (hotIdx >= 0 && hotIdx !== 0) dimRect(ctx, W * 0.10, 350, 560, 380);
+  if (hotIdx === 0) focusPing(ctx, W * 0.10 + 280, 540, g.sentenceT, 96);
   // the squeeze visual: fee arrow down, tax work fading
   const x2 = W * 0.58, y2 = 380;
   const ent2 = clamp01((t - 1100) / 700);
   if (ent2 > 0) {
+    const dimSqueeze = hotIdx === 0 || hotIdx === 2;
     ctx.save();
     ctx.globalAlpha = ent2;
-    glassCard(ctx, x2, y2, 620, 320, { r: 18 });
+    glassCard(ctx, x2, y2, 620, 320, { r: 18, alpha: dimSqueeze ? 0.55 : 1 });
     // fee line descending
     const pts: [number, number][] = [];
     for (let i = 0; i <= 8; i++) pts.push([i / 8, 1.0 - (i / 8) * 0.62]);
@@ -125,8 +132,16 @@ export function feeChipsScene(g: SceneCtx): void {
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.fillText('average advisory fee', x2 + 90, y2 + 62);
     // "tax management: invisible" chip — AUDIT T-01: fitText guard so the
-    // 55-char pill fits to x=1880 instead of being guillotined at 1920
-    chip(ctx, 'tax management — expensive to deliver, invisible when done', x2 + 60, y2 + 262, { size: 28, gold: true, maxW: W - (x2 + 60) - 40 });
+    // 55-char pill fits to x=1880 instead of being guillotined at 1920.
+    // R-02 — the chip is the third cadence element: it pops when its
+    // sentence plays and recedes otherwise.
+    if (dimSqueeze) dimRect(ctx, x2, y2, 620, hotIdx === 2 ? 244 : 316);
+    ctx.save();
+    ctx.globalAlpha = hotIdx === 1 || hotIdx < 0 ? 0.55 : 1;
+    chip(ctx, 'tax management — expensive to deliver, invisible when done', x2 + 60, y2 + 262, { size: 28, gold: true, maxW: W - (x2 + 60) - 40, alpha: hotIdx === 1 || hotIdx < 0 ? 0.55 : 1 });
+    ctx.restore();
+    if (hotIdx === 1) focusPing(ctx, x2 + 310, y2 + 160, g.sentenceT, 96);
+    if (hotIdx === 2) focusPing(ctx, x2 + 360, y2 + 286, g.sentenceT, 120);
     ctx.restore();
   }
 }
@@ -156,14 +171,26 @@ export function memoCardScene(g: SceneCtx): void {
     'E&O coverage: tax advice [EXCLUDED]',
     'Approved response: “[REDACTED] consult your CPA.”',
   ];
+  // AUDIT R-02 + R-03 — the memo was a reading wall (4 redacted lines + a
+  // stamp, all legible at once): the sentence cadence now strips it to the
+  // HOT line — full ink with a gold marker — while the others recede to a
+  // quiet label. One thing on screen per sentence.
+  const hotLine = g.sentenceIdx != null && g.sentenceIdx >= 0 ? g.sentenceIdx % lines.length : -1;
   lines.forEach((ln, i) => {
     const la = clamp01((t - 500 - i * 320) / 460);
     if (la <= 0) return;
+    const stripped = hotLine >= 0 && i !== hotLine;
     ctx.save();
-    ctx.globalAlpha = la;
+    ctx.globalAlpha = la * (stripped ? 0.38 : 1);
     setFont(ctx, 28, 500, FONT_UI);
-    ctx.fillStyle = PALETTE.inkMuted;
+    // the hot line reads at full ink; stripped lines recede to ghost ink
+    ctx.fillStyle = i === hotLine ? PALETTE.ink : stripped ? PALETTE.inkGhost : PALETTE.inkMuted;
     ctx.fillText(ln, x + 52, y + 160 + i * 64);
+    // gold marker rides the hot line
+    if (i === hotLine) {
+      ctx.fillStyle = rgba(PALETTE.gold, 0.9);
+      ctx.fillRect(x + 30, y + 160 + i * 64 - 20, 3.4, 26);
+    }
     // redaction bars over the bracketed bits
     ctx.fillStyle = rgba(PALETTE.inkGhost, 0.75);
     const segs = ln.split(/(\[[^\]]+\])/g);
@@ -376,26 +403,35 @@ export function characterMatrixScene(g: SceneCtx): void {
     const ent = clamp01((t - 300 - i * 330) / 600);
     if (ent <= 0) return;
     const hot = i === hotIdx;
+    // AUDIT R-03 — strip to the hot element: this grid was a reading wall
+    // (4 rows × label + chip + note at phone size). When a sentence owns a
+    // row, the others collapse to their quiet label; the hot row carries
+    // the full detail the narration is speaking.
+    const stripped = hotIdx >= 0 && !hot;
     ctx.save();
     ctx.globalAlpha = ent;
     const y = 300 + i * 88, x = W * 0.10, w = W * 0.80;
     glassCard(ctx, x, y, w, 72, {
       r: 12,
       shadow: false,
+      alpha: stripped ? 0.4 : 1,
       fill: hot ? rgba(PALETTE.gold, 0.07 + 0.05 * fresh) : 'rgba(255,255,255,0.045)',
       border: hot ? rgba(PALETTE.gold, 0.35 + 0.35 * fresh) : undefined,
     });
     setFont(ctx, 29, 700, FONT_UI);
     ctx.fillStyle = hot ? PALETTE.ink : PALETTE.inkSoft;
+    ctx.globalAlpha = ent * (stripped ? 0.4 : 1);
     ctx.fillText(r.label, x + 36, y + 45);
-    chip(ctx, r.tag, x + 430, y + 18, { size: 28, gold: hot, dot: r.tone === 'down' ? PALETTE.down : PALETTE.up });
-    setFont(ctx, 28, 500, FONT_UI);
-    // AUDIT T-07 — the right notes are narration-critical; inkFaint
-    // (#5D6C85) disappeared on phones, inkMuted (#8494AE) holds the floor
-    ctx.fillStyle = hot ? PALETTE.inkSoft : PALETTE.inkMuted;
-    ctx.textAlign = 'right';
-    ctx.fillText(r.note, x + w - 36, y + 45);
-    ctx.textAlign = 'left';
+    if (!stripped) {
+      chip(ctx, r.tag, x + 430, y + 18, { size: 28, gold: hot, dot: r.tone === 'down' ? PALETTE.down : PALETTE.up });
+      setFont(ctx, 28, 500, FONT_UI);
+      // AUDIT T-07 — the right notes are narration-critical; inkFaint
+      // (#5D6C85) disappeared on phones, inkMuted (#8494AE) holds the floor
+      ctx.fillStyle = hot ? PALETTE.inkSoft : PALETTE.inkMuted;
+      ctx.textAlign = 'right';
+      ctx.fillText(r.note, x + w - 36, y + 45);
+      ctx.textAlign = 'left';
+    }
     ctx.restore();
   });
   // U3.3 — the eye lands on the row being narrated

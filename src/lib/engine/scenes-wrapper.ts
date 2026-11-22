@@ -5,7 +5,7 @@
  */
 
 import { SceneCtx } from './scene-context';
-import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, kicker, chip, hexLerp, fitText } from './theme';
+import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, kicker, chip, hexLerp, fitText, dimRect } from './theme';
 import { clamp01, easeOutCubic, easeInOutCubic, springTo, hash01 } from './easing';
 import { goldDust, impactRing, softBloom, glowLine, spinToken, floatY, microShake, focusPing } from './fx';
 import { panelTitle, barRow, statCard, lineChart } from './charts';
@@ -101,6 +101,28 @@ export function plumbingScene(g: SceneCtx): void {
     });
   }
   ctx.restore();
+  // AUDIT R-06 — the mid-roll promise: the intro's "stay to the end" gets a
+  // re-hook at the Lever-3 boundary. A gold ribbon rides the re-hook
+  // sentence ("keep watching — the five questions…"), top-right, clear of
+  // the diagram, the title block and the caption band.
+  const rehook = g.sentenceIdx != null && g.sentenceCount != null && g.sentenceCount > 1 && g.sentenceIdx === g.sentenceCount - 1
+    ? clamp01((g.sentenceT ?? 0) / 400)
+    : 0;
+  if (rehook > 0) {
+    ctx.save();
+    ctx.globalAlpha = rehook;
+    const rx = W * 0.70, ry = 108, rw = 460, rh = 96;
+    glassCard(ctx, rx, ry, rw, rh, { r: 14, goldEdge: true });
+    setFont(ctx, 24, 800, FONT_UI);
+    try { (ctx as any).letterSpacing = '4px'; } catch { /* noop */ }
+    ctx.fillStyle = PALETTE.goldBright;
+    ctx.fillText('LATER IN THIS VIDEO', rx + 32, ry + 38);
+    try { (ctx as any).letterSpacing = '0px'; } catch { /* noop */ }
+    setFont(ctx, 28, 600, FONT_UI);
+    ctx.fillStyle = PALETTE.ink;
+    ctx.fillText('The five questions — ready to send.', rx + 32, ry + 70);
+    ctx.restore();
+  }
 }
 
 // ── heartbeat + $48B token ───────────────────────────────────────────────────
@@ -109,23 +131,27 @@ export function heartbeatScene(g: SceneCtx): void {
   paintStage(ctx, W, H, t, { tone: 'gold' });
   goldDust(ctx, W, H, t, 41, 1);
   panelTitle(ctx, 'Heartbeat trades: the quiet machinery', W * 0.10, 210, W * 0.8, t / 2400, { kickerText: 'Lever 3 · In-kind' });
+  // AUDIT R-02 — D17 sentence-cadence wiring: the narration walks the
+  // pulse/token → the $48B card → the file-it-away line; the active zone
+  // lifts, the others recede, so the 42s hold changes with the sentences.
+  const hi = g.sentenceIdx != null && g.sentenceIdx >= 0 ? (g.sentenceIdx <= 2 ? 0 : g.sentenceIdx <= 4 ? 1 : 2) : -1;
   // pulse ring (the "heartbeat")
   const pulse = (t / 1100) % 1;
   ctx.save();
-  ctx.globalAlpha = 0.5 * (1 - pulse);
+  ctx.globalAlpha = 0.5 * (1 - pulse) * (hi === 0 || hi < 0 ? 1 : 0.55);
   ctx.beginPath();
   ctx.arc(W * 0.30, H * 0.52, 90 + pulse * 160, 0, Math.PI * 2);
   ctx.strokeStyle = rgba(PALETTE.gold, 0.5);
   ctx.lineWidth = 3;
   ctx.stroke();
   ctx.restore();
-  spinToken(ctx, W * 0.30, H * 0.52, 64, t, PALETTE.goldBright, PALETTE.gold, 'ETF', 1500);
+  if (hi === 0 || hi < 0) spinToken(ctx, W * 0.30, H * 0.52, 64, t, PALETTE.goldBright, PALETTE.gold, 'ETF', 1500);
   // the $48B counter
   const ca = clamp01((t - 1600) / 700);
   if (ca > 0) {
     ctx.save();
-    ctx.globalAlpha = ca;
-    glassCard(ctx, W * 0.55, 310, 640, 260, { r: 18, goldEdge: true });
+    ctx.globalAlpha = ca * (hi === 1 || hi < 0 ? 1 : 0.55);
+    glassCard(ctx, W * 0.55, 310, 640, 260, { r: 18, alpha: hi === 1 || hi < 0 ? 1 : 0.55, goldEdge: true });
     // AUDIT T-02 — the provenance label measured ~836px and ran past both the
     // card and the frame edge; fitText keeps it inside the card interior
     // (560px) instead.
@@ -135,6 +161,7 @@ export function heartbeatScene(g: SceneCtx): void {
     ctx.fillStyle = PALETTE.inkSoft;
     ctx.fillText('the top 1% collect most of the benefit', W * 0.55 + 40, 525);
     ctx.restore();
+    if (hi === 1) focusPing(ctx, W * 0.55 + 320, 470, g.sentenceT, 110);
     impactRing(ctx, W * 0.55 + 320, 490, t, 1600, 180, 1, PALETTE.gold);
   }
   // L-02 — "File that away…" renders INSIDE the $48B card (was baseline
@@ -142,7 +169,7 @@ export function heartbeatScene(g: SceneCtx): void {
   const fa = clamp01((t - 3400) / 500);
   if (fa > 0) {
     ctx.save();
-    ctx.globalAlpha = fa;
+    ctx.globalAlpha = fa * (hi === 2 || hi < 0 ? 1 : 0.55);
     setFont(ctx, 28, 600, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.goldBright;
     ctx.textAlign = 'center';
@@ -187,16 +214,26 @@ export function taxManagedScene(g: SceneCtx): void {
   paintStage(ctx, W, g.H, t, {});
   panelTitle(ctx, 'The label matters less than the turnover', W * 0.10, 220, W * 0.8, t / 2400, { kickerText: 'Lever 3 · Tax-managed funds' });
   const x = W * 0.10, w = W * 0.55;
+  // AUDIT R-02 — D17 sentence-cadence wiring: sentences 0-1 walk the two
+  // bars, 2+ the verdict card — the active zone lifts, the other recedes.
+  const mi = g.sentenceIdx != null && g.sentenceIdx >= 0 ? (g.sentenceIdx <= 1 ? 0 : 1) : -1;
   // AUDIT K-04 — bars h 120→150 and the verdict card h 310→380: content used
   // to end at y≈650 leaving a ~300px dead band; now it carries to 730 with
   // the scene's punchline (7.16 − 6.76 = 0.40%/yr) inside the card.
+  ctx.save();
+  ctx.globalAlpha = mi === 1 ? 0.5 : 1;
   barRow(ctx, { x, y: 345, w, h: 150, label: 'Tax-managed small-cap', value: 7.16, maxV: 8, p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'gold', valueText: '7.16%', sub: '10-yr after-tax return' });
   barRow(ctx, { x, y: 555, w, h: 150, label: 'Plain small-cap index', value: 6.76, maxV: 8, p: clamp01((t - 1300) / 900), t, landT: 2250, tone: 'platinum', valueText: '6.76%', sub: '10-yr after-tax return' });
+  ctx.restore();
+  // AUDIT R-02 — the two bars recede together when the verdict is narrated
+  // (barRow manages its own alpha — the dim is an overlay).
+  if (mi === 1) dimRect(ctx, x, 300, w, 445);
+  if (mi === 0) focusPing(ctx, x + w * 0.5, 420, g.sentenceT, 100);
   const la = clamp01((t - 2200) / 600);
   if (la > 0) {
     ctx.save();
-    ctx.globalAlpha = la;
-    glassCard(ctx, x + w + 90, 350, 480, 380, { r: 16 });
+    ctx.globalAlpha = la * (mi === 0 ? 0.55 : 1);
+    glassCard(ctx, x + w + 90, 350, 480, 380, { r: 16, alpha: mi === 0 ? 0.55 : 1 });
     setFont(ctx, 30, 700, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.ink;
     wrapText(ctx, 'A low-turnover index fund is already a tax-managed fund.', 400, 30, 700, FONT_DISPLAY).forEach((ln, i) => {
@@ -506,12 +543,17 @@ export function longShortScene(g: SceneCtx): void {
   paintStage(ctx, W, g.H, t, {});
   panelTitle(ctx, 'Tax-aware long-short: harvest from both sides', W * 0.10, 220, W * 0.8, t / 2400, { kickerText: 'Lever 4 · The exotic one' });
   const x = W * 0.10, w = W * 0.52;
+  // AUDIT R-02 — D17 sentence-cadence wiring: sentences 0-1 walk the baskets
+  // chart, 2+ the FAJ verdict card — the zones trade the spotlight.
+  const li = g.sentenceIdx != null && g.sentenceIdx >= 0 ? (g.sentenceIdx <= 1 ? 0 : 1) : -1;
   // long basket rises, short basket falls — both harvestable
   const ptsL: [number, number][] = [], ptsS: [number, number][] = [];
   for (let i = 0; i <= 12; i++) {
     ptsL.push([i, 100 + i * 2.2 + Math.sin(i) * 4]);
     ptsS.push([i, 100 - i * 1.8 - Math.sin(i * 1.3) * 4]);
   }
+  ctx.save();
+  ctx.globalAlpha = li === 1 ? 0.55 : 1;
   lineChart(ctx, {
     x, y: 360, w, h: 360,
     series: [
@@ -523,17 +565,19 @@ export function longShortScene(g: SceneCtx): void {
     xLabels: ['', '', '', ''],
     gridLines: 4, showAxis: true,
   });
+  ctx.restore();
   setFont(ctx, 28, 700, FONT_UI);
   ctx.fillStyle = PALETTE.up;
   ctx.fillText('LONG basket — losses to harvest', x + 20, 350);
   ctx.fillStyle = '#F08A8D';
   ctx.fillText('SHORT basket — losses to harvest', x + 20, 748);
+  if (li === 0) focusPing(ctx, x + w * 0.5, 400, g.sentenceT, 100);
   // FAJ verdict
   const va = clamp01((t - 1600) / 600);
   if (va > 0) {
     ctx.save();
-    ctx.globalAlpha = va;
-    glassCard(ctx, x + w + 50, 380, 560, 320, { r: 16, goldEdge: true });
+    ctx.globalAlpha = va * (li === 0 ? 0.55 : 1);
+    glassCard(ctx, x + w + 50, 380, 560, 320, { r: 16, alpha: li === 0 ? 0.55 : 1, goldEdge: true });
     setFont(ctx, 30, 700, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.ink;
     wrapText(ctx, 'The engineering is real — peer-reviewed, 2020.', 480, 30, 700, FONT_DISPLAY).forEach((ln, i) => ctx.fillText(ln, x + w + 90, 440 + i * 46));

@@ -10,7 +10,7 @@ import { CaptionLine, drawCaptions, drawSourceChip, drawWatermark, drawProgressB
 import { PALETTE, rgba, setFont } from './theme';
 import { clamp01, easeOutCubic, easeInOutSine, drift } from './easing';
 import { paintStage, toneOf } from './stage';
-import { setCamState, goldDust, bokehField, drawGrain, vignette, dofPass, lightBlade, scalePunch, softBloom } from './fx';
+import { setCamState, goldDust, bokehField, drawGrain, vignette, dofPass, lightBlade, scalePunch, softBloom, godRays } from './fx';
 import { SceneCtx, SceneDrawer } from './scene-context';
 import { splitSentences } from './easing';
 import { SCRIPT } from './script-data';
@@ -272,6 +272,9 @@ export function drawFrame(
       sentenceT,
       sentenceIdx,
       sentenceCount,
+      // AUDIT R-04 — the script's gesture for this sentence (may be undefined;
+      // poseAt then falls back to its sentenceHash pick)
+      gesture: gBeat.gestures?.[sentenceIdx],
       channelName: opts.channelName,
       nextVideoTitle: opts.nextVideoTitle,
       chapterIdx,
@@ -304,8 +307,12 @@ export function drawFrame(
   ctx.scale(W / 1920, H / 1080);
 
   // part cards — U3.2: the walk-on wrapper (card + The Principal's entrance)
+  // AUDIT I-03 — the signature light is no longer reserved to host/stepUp/
+  // endScreen (<15% of runtime): every chapter-open beat now carries godRays,
+  // so the volumetric look lands at each act boundary.
   for (const c of tl.chapterCards) {
     if (t >= c.startMs && t < c.endMs) {
+      godRays(ctx, W, H, t, { alpha: 0.34, x: W * 0.72 });
       drawChapterWalkOn(ctx, W, H, t - c.startMs, c.endMs - c.startMs, c.index, c.title, tl.chapters.length);
       // light blade accompanies the card (he exits through it)
       const bp = clamp01((t - c.startMs) / (c.endMs - c.startMs));
@@ -336,7 +343,10 @@ export function drawFrame(
   }
 
   // ── finishing passes ──
-  vignette(ctx, W, H, 0.9);
+  // AUDIT I-04 — corner crush: vignette strength 0.9 → 0.75 so the bottom
+  // corners of dark scenes (secCase, finalLines) stop crushing to black on
+  // OLED phones and the floor detail survives.
+  vignette(ctx, W, H, 0.75);
   drawGrain(ctx, W, H, t, isStatement ? 0.06 : 0.10);
 
   // global fades: fade-in from dark (navy, not white) + fade-out

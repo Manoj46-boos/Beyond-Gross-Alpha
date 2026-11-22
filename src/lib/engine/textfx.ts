@@ -387,17 +387,18 @@ export function statementAnchor(
     ctx.stroke();
   }
   ctx.restore();
-  // ghost chapter numeral — huge, quiet, top-right. L-04 — presence raised
-  // from a flat 13% to a vertical gradient wash (top 0.22 → base 0.09): it
-  // finally registers as an object, not sensor noise.
+  // ghost chapter numeral — huge, quiet, top-right. AUDIT I-02 — commit to
+  // the anchor: the 9-22% wash read as sensor noise at pause-zoom; raised
+  // into the 28-34% band (gradient 0.34 top → 0.28 base) so the numeral is
+  // unambiguously present, still behind the text.
   ctx.save();
   ctx.globalAlpha = a;
   setFont(ctx, 500, 800, FONT_DISPLAY);
   ctx.textAlign = 'right';
   const num = ghost ?? String((chapterIdx % 10) + 1).padStart(2, '0');
   const numG = ctx.createLinearGradient(0, H * 0.18, 0, H * 0.6);
-  numG.addColorStop(0, rgba(PALETTE.inkGhost, 0.22));
-  numG.addColorStop(1, rgba(PALETTE.inkGhost, 0.09));
+  numG.addColorStop(0, rgba(PALETTE.inkGhost, 0.34));
+  numG.addColorStop(1, rgba(PALETTE.inkGhost, 0.28));
   ctx.fillStyle = numG;
   ctx.fillText(num, W - m - 24, H * 0.58);
   ctx.textAlign = 'left';

@@ -5,7 +5,7 @@
  */
 
 import { CAPTION_SAFE_TOP, SceneCtx } from './scene-context';
-import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, kicker, chip, hexLerp } from './theme';
+import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, kicker, chip, hexLerp, dimRect } from './theme';
 import { clamp01, easeOutCubic, easeInOutCubic, springTo, hash01, fmtComma } from './easing';
 import { goldDust, impactRing, softBloom, glowLine, spinToken, floatY, microShake, focusPing } from './fx';
 import { panelTitle, waterfall, donut, column, dotGrid, barRow, statCard, lineChart } from './charts';
@@ -24,14 +24,19 @@ export function locationMapScene(g: SceneCtx): void {
   panelTitle(ctx, 'Asset location. Not allocation — location.', W * 0.10, 210, W * 0.8, t / 2400, { kickerText: 'Lever 1' });
   const colW = 520, gap = 60;
   const x0 = (W - colW * 3 - gap * 2) / 2;
+  // AUDIT R-02 — D17 sentence-cadence wiring: the narration walks the three
+  // account columns, so the hot column lifts (gold edge + ping) and the
+  // others recede — the 38s build changes its emphasis with the sentences.
+  const hotIdx = g.sentenceIdx != null && g.sentenceIdx >= 0 ? g.sentenceIdx % LOC_COLUMNS.length : -1;
   LOC_COLUMNS.forEach((c, i) => {
     const ent = clamp01((t - 300 - i * 500) / 700);
     if (ent <= 0) return;
+    const dim = hotIdx >= 0 && i !== hotIdx;
     ctx.save();
     ctx.globalAlpha = ent;
     const x = x0 + i * (colW + gap);
     const y = 350, h = 420;
-    glassCard(ctx, x, y, colW, h, { r: 18, goldEdge: c.tone === 'gold', border: c.tone === 'down' ? rgba(PALETTE.down, 0.35) : c.tone === 'up' ? rgba(PALETTE.up, 0.35) : undefined });
+    glassCard(ctx, x, y, colW, h, { r: 18, alpha: dim ? 0.5 : 1, goldEdge: c.tone === 'gold' || i === hotIdx, border: c.tone === 'down' ? rgba(PALETTE.down, 0.35) : c.tone === 'up' ? rgba(PALETTE.up, 0.35) : i === hotIdx ? rgba(PALETTE.gold, 0.45) : undefined });
     // header
     setFont(ctx, 28, 800, FONT_UI);
     try { (ctx as any).letterSpacing = '3px'; } catch { /* noop */ }
@@ -55,9 +60,10 @@ export function locationMapScene(g: SceneCtx): void {
       ctx.restore();
     });
     setFont(ctx, 28, 500, FONT_UI);
-    ctx.fillStyle = PALETTE.inkFaint;
+    ctx.fillStyle = dim ? PALETTE.inkFaint : PALETTE.inkSoft;
     ctx.fillText(c.note, x + 36, y + h - 32);
     ctx.restore();
+    if (i === hotIdx) focusPing(ctx, x + colW / 2, y - 16, g.sentenceT, 92);
   });
 }
 
@@ -307,11 +313,15 @@ export function washSaleScene(g: SceneCtx): void {
   const days = 61;
   const cellW = w / days;
   const saleIdx = 30;
+  // AUDIT R-02 — D17 sentence-cadence wiring: sentences 0-1 walk the 61-day
+  // calendar, sentences 2+ walk the destroyed-loss card — the zone in play
+  // lifts, the other recedes, so the 42.9s hold changes emphasis per sentence.
+  const hotZone = g.sentenceIdx != null && g.sentenceIdx >= 0 ? (g.sentenceIdx <= 1 ? 0 : 1) : -1;
   for (let i = 0; i < days; i++) {
     const ca = clamp01((t - 300 - i * 14) / 200);
     if (ca <= 0) continue;
     ctx.save();
-    ctx.globalAlpha = ca;
+    ctx.globalAlpha = ca * (hotZone === 1 ? 0.45 : 1);
     const isSale = i === saleIdx;
     ctx.fillStyle = isSale ? PALETTE.goldBright : rgba(PALETTE.inkSoft, 0.18);
     roundRect(ctx, x + i * cellW + 1, y, cellW - 2, 44, 3);
@@ -322,7 +332,7 @@ export function washSaleScene(g: SceneCtx): void {
   const ba = clamp01((t - 1300) / 500);
   if (ba > 0) {
     ctx.save();
-    ctx.globalAlpha = ba;
+    ctx.globalAlpha = ba * (hotZone === 1 ? 0.5 : 1);
     setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     ctx.fillText('30 days before', x, y + 78);
@@ -340,8 +350,8 @@ export function washSaleScene(g: SceneCtx): void {
   const da = clamp01((t - 2600) / 500);
   if (da > 0) {
     ctx.save();
-    ctx.globalAlpha = da;
-    glassCard(ctx, W * 0.16, 560, W * 0.68, 200, { r: 16, border: rgba(PALETTE.down, 0.5) });
+    ctx.globalAlpha = da * (hotZone === 0 ? 0.55 : 1);
+    glassCard(ctx, W * 0.16, 560, W * 0.68, 200, { r: 16, alpha: hotZone === 0 ? 0.55 : 1, border: rgba(PALETTE.down, 0.5) });
     setFont(ctx, 30, 700, FONT_UI);
     ctx.fillStyle = '#F08A8D';
     ctx.fillText('Repurchase inside an IRA — or your spouse’s:', W * 0.16 + 40, 630);
@@ -360,18 +370,27 @@ export function waterfallScene(g: SceneCtx): void {
   const { ctx, W, H, t } = g;
   paintStage(ctx, W, H, t, {});
   panelTitle(ctx, 'The independent benchmark: 1.08% → what actually survives', W * 0.10, 210, W * 0.8, t / 2400, { kickerText: 'Lever 2 · FAJ 76(3), 2020' });
+  // AUDIT R-02 — D17 sentence-cadence wiring: sentences 0-1 set up the study
+  // (side note leads), sentences 2-4 walk the columns (chart leads). The
+  // listening zone lifts, the other recedes.
+  const wi = g.sentenceIdx != null && g.sentenceIdx >= 0 ? g.sentenceIdx : -1;
+  const chartHot = wi < 0 || wi >= 2;
+  ctx.save();
+  ctx.globalAlpha = chartHot ? 1 : 0.55;
   // S-05 — chart zone shifts right of the figure margin (figure spans x≈90..330)
   waterfall(ctx, W * 0.34, 300, W * 0.40, 390, [
     { label: 'Gross alpha', value: 1.08, tone: 'gold', valueText: '1.08%' },
     { label: 'Wash-sale rule', value: 0.82, tone: 'down', valueText: '0.82%' },
     { label: 'After 13 bps costs', value: 0.95, tone: 'up', valueText: '0.95%' },
   ], clamp01(t / 2400), t);
+  ctx.restore();
+  if (wi >= 4) focusPing(ctx, W * 0.34 + W * 0.40 * (5 / 6), 340, g.sentenceT, 84);
   // side note
   const na = clamp01((t - 2200) / 500);
   if (na > 0) {
     ctx.save();
-    ctx.globalAlpha = na;
-    glassCard(ctx, W * 0.82, 400, 300, 220, { r: 14 });
+    ctx.globalAlpha = na * (wi >= 2 ? 0.55 : 1);
+    glassCard(ctx, W * 0.82, 400, 300, 220, { r: 14, alpha: wi >= 2 ? 0.55 : 1 });
     setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkSoft;
     wrapText(ctx, 'Monthly harvesting · 500 largest US stocks · 1926–2018', 250, 22, 600, FONT_UI).forEach((ln, i) => {
@@ -469,16 +488,24 @@ export function vendorCompareScene(g: SceneCtx): void {
     { x: W * 0.10, big: '0.8–1.0%', label: 'independent research', sub: 'FAJ — wash-sale compliant, after costs', tone: 'gold' },
     { x: W * 0.54, big: '2.3%', label: 'vendor research', sub: 'Aperio — sells direct indexing; needs short-term gains to offset', tone: 'platinum' },
   ];
+  // AUDIT R-02 — D17 sentence-cadence wiring: sentences 0/3 light the vendor
+  // plate, 2/5 the independent plate, 4 holds both — the plates trade the
+  // spotlight instead of holding one layout for 31s.
+  const vi = g.sentenceIdx != null && g.sentenceIdx >= 0 ? g.sentenceIdx : -1;
+  const hotCard = vi < 0 ? -1 : vi === 0 || vi === 3 ? 1 : vi === 2 || vi === 5 ? 0 : -1;
   cards.forEach((c, i) => {
     const ent = clamp01((t - 300 - i * 500) / 700);
     if (ent <= 0) return;
+    const dim = hotCard >= 0 && i !== hotCard;
     ctx.save();
     ctx.globalAlpha = ent;
     // AUDIT K-04 — the cards used to end at y≈650, leaving a ~300px dead band
     // above the caption zone. Enlarged + dropped: they now carry down to 740,
     // inside the caption guard, so the composition fills the lower half.
-    statCard(ctx, { x: c.x, y: 350, w: W * 0.36, h: 390, big: c.big, label: c.label, sub: c.sub, p: ent, tone: c.tone as any, bigSize: i === 0 ? 84 : 100, goldEdge: i === 0 });
+    statCard(ctx, { x: c.x, y: 350, w: W * 0.36, h: 390, big: c.big, label: c.label, sub: c.sub, p: ent, tone: c.tone as any, bigSize: i === 0 ? 84 : 100, goldEdge: i === 0 || i === hotCard });
+    if (dim) dimRect(ctx, c.x, 350, W * 0.36, 390);
     ctx.restore();
+    if (i === hotCard) focusPing(ctx, c.x + W * 0.18, 545, g.sentenceT, 100);
   });
 }
 
@@ -490,12 +517,14 @@ export function wealthfrontCaseScene(g: SceneCtx): void {
   panelTitle(ctx, 'In production: the frequency argument in one number', W * 0.10, 210, W * 0.8, t / 2400, { kickerText: 'Lever 2 · Wealthfront, 2025' });
   // two stat plates (chart lives INSIDE the second card, below its label)
   statCard(ctx, { x: W * 0.10, y: 330, w: 520, h: 300, big: '$161M', label: 'client tax savings, 2025', p: clamp01((t - 300) / 800), tone: 'gold', bigSize: 92 });
+  // AUDIT R-02 — the $161M plate recedes when the tariff card is narrated
+  if (g.sentenceIdx != null && g.sentenceIdx >= 3) dimRect(ctx, W * 0.10, 330, 520, 300);
   const ent2 = clamp01((t - 1400) / 700);
   if (ent2 > 0) {
     ctx.save();
     ctx.globalAlpha = ent2;
     const cardX = W * 0.54, cardY = 330, cardW = 560, cardH = 300;
-    glassCard(ctx, cardX, cardY, cardW, cardH, { r: 22, border: rgba(PALETTE.up, 0.4) });
+    glassCard(ctx, cardX, cardY, cardW, cardH, { r: 22, alpha: g.sentenceIdx != null && g.sentenceIdx === 2 ? 0.55 : 1, border: rgba(PALETTE.up, 0.4) });
     setFont(ctx, 28, 700, FONT_UI);
     try { (ctx as any).letterSpacing = '4px'; } catch { /* noop */ }
     ctx.fillStyle = PALETTE.inkFaint;
@@ -536,6 +565,12 @@ export function decayCurveScene(g: SceneCtx): void {
   const { ctx, W, t } = g;
   paintStage(ctx, W, g.H, t, {});
   panelTitle(ctx, 'Tax alpha decays — deferral, not forgiveness', W * 0.10, 220, W * 0.8, t / 2400, { kickerText: 'Lever 2 · The catch' });
+  // AUDIT R-02 — D17 sentence-cadence wiring: sentences 0-4 walk the decay
+  // curve, 5+ the deferral truth card — the active zone lifts, the other
+  // recedes, and the 38s hold breathes with the sentences.
+  const di = g.sentenceIdx != null && g.sentenceIdx >= 0 ? (g.sentenceIdx <= 4 ? 0 : 1) : -1;
+  ctx.save();
+  ctx.globalAlpha = di === 1 ? 0.55 : 1;
   const pts: [number, number][] = [];
   for (let i = 0; i <= 30; i++) pts.push([i, 8 * Math.exp(-i / 6)]);
   lineChart(ctx, {
@@ -547,12 +582,13 @@ export function decayCurveScene(g: SceneCtx): void {
     gridLines: 3, fill: true,
     annotations: [{ at: 0.03, label: 'new accounts: ~8%', tone: 'gold' }],
   });
+  ctx.restore();
   // the deeper truth card
   const ta = clamp01((t - 1800) / 600);
   if (ta > 0) {
     ctx.save();
-    ctx.globalAlpha = ta;
-    glassCard(ctx, W * 0.68, 340, 460, 400, { r: 16, goldEdge: true });
+    ctx.globalAlpha = ta * (di === 0 ? 0.55 : 1);
+    glassCard(ctx, W * 0.68, 340, 460, 400, { r: 16, alpha: di === 0 ? 0.55 : 1, goldEdge: true });
     setFont(ctx, 34, 700, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.ink;
     wrapText(ctx, 'Every harvested loss lowers your basis — a bigger gain waiting later.', 360, 34, 700, FONT_DISPLAY).forEach((ln, i) => {
@@ -577,12 +613,16 @@ export function secCaseScene(g: SceneCtx): void {
   // S-05 — the press-release card shifts right of the figure margin
   const x = W * 0.20, y = 220, w = W * 0.5, h = 560;
   const ent = springTo(0.92, 1, Math.min(800, t), 150, 15);
+  // AUDIT R-02 — D17 sentence-cadence wiring: sentence 1 walks the $9M press
+  // lines, 2-3 the stamp, 4 the verdict — the zones trade the spotlight so
+  // the case file changes emphasis with the narration.
+  const zi = g.sentenceIdx != null && g.sentenceIdx >= 0 ? (g.sentenceIdx <= 1 ? 0 : g.sentenceIdx <= 3 ? 1 : 2) : -1;
   ctx.save();
-  ctx.globalAlpha = clamp01(t / 300);
+  ctx.globalAlpha = clamp01(t / 300) * (zi >= 1 ? 0.72 : 1);
   ctx.translate(x + w / 2, y + h / 2);
   ctx.scale(ent, ent);
   ctx.translate(-w / 2, -h / 2);
-  glassCard(ctx, 0, 0, w, h, { r: 8, fill: 'rgba(232,226,210,0.10)', border: rgba(PALETTE.inkSoft, 0.3) });
+  glassCard(ctx, 0, 0, w, h, { r: 8, alpha: zi >= 1 ? 0.72 : 1, fill: 'rgba(232,226,210,0.10)', border: rgba(PALETTE.inkSoft, 0.3) });
   setFont(ctx, 28, 800, FONT_UI);
   try { (ctx as any).letterSpacing = '4px'; } catch { /* noop */ }
   ctx.fillStyle = PALETTE.inkFaint;

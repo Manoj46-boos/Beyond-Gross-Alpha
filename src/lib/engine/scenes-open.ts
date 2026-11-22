@@ -206,7 +206,25 @@ export function coldOpenScene(g: SceneCtx): void {
     // the two numbers, fading in from the dark on their own cut
     const a1 = clamp01((beatT - 200) / 900);
     const a2 = clamp01((beatT - 2100) / 900);
+    // AUDIT R-01 — the numbers beat held ONE layout for ~16s. Phase 3.1
+    // completes the choreography: at the "It left through the tax line"
+    // sentences (index ≥3, beat-clock fallback for QA timing), the room
+    // dims, the two numbers compress upward, and a gold tax-line band seals
+    // the payoff across the hairline — the beat's second composition.
+    const tb2 = g.beat as unknown as { startMs?: number; endMs?: number };
+    const bd2 = Math.max(9000, (tb2.endMs ?? 16000) - (tb2.startMs ?? 0));
+    const restage = g.sentenceIdx != null && g.sentenceIdx >= 3
+      ? clamp01((g.sentenceT ?? 0) / 600)
+      : clamp01((beatT - bd2 * 0.62) / 600);
     ctx.save();
+    if (restage > 0) {
+      ctx.fillStyle = `rgba(5,8,15,${0.42 * restage})`;
+      ctx.fillRect(0, 0, W, H);
+      ctx.translate(W / 2, H * 0.52);
+      const sc = 1 - 0.10 * restage;
+      ctx.scale(sc, sc);
+      ctx.translate(-W / 2, -H * 0.52);
+    }
     ctx.textAlign = 'center';
     // $13.7M
     if (a1 > 0) {
@@ -235,6 +253,28 @@ export function coldOpenScene(g: SceneCtx): void {
       ctx.stroke();
     }
     ctx.restore();
+    // AUDIT R-01 — the tax-line seal (full-size, over the dim): the gold
+    // band lands where the narration says the money left.
+    if (restage > 0) {
+      const bandY = H * 0.475;
+      const bw = W * 0.42 * easeOutCubic(restage);
+      ctx.save();
+      ctx.globalAlpha = restage;
+      ctx.fillStyle = rgba(PALETTE.gold, 0.14);
+      ctx.fillRect(W / 2 - bw / 2, bandY - 34, bw, 68);
+      ctx.strokeStyle = rgba(PALETTE.goldBright, 0.75);
+      ctx.lineWidth = 1.6;
+      ctx.strokeRect(W / 2 - bw / 2, bandY - 34, bw, 68);
+      setFont(ctx, 30, 800, FONT_UI);
+      try { (ctx as any).letterSpacing = '6px'; } catch { /* noop */ }
+      ctx.fillStyle = PALETTE.goldBright;
+      ctx.textAlign = 'center';
+      ctx.fillText('IT LEFT THROUGH THE TAX LINE', W / 2, bandY + 10);
+      try { (ctx as any).letterSpacing = '0px'; } catch { /* noop */ }
+      ctx.textAlign = 'left';
+      ctx.restore();
+      impactRing(ctx, W / 2, bandY, t, 3000, 150, 0.7 * restage, PALETTE.gold);
+    }
     void mode; void t;
   } else {
     // the paradox arrives visually in ~3 seconds, on a light-blade arrival

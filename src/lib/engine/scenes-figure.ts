@@ -28,6 +28,9 @@ export interface FigureOpts {
   impactT?: number;
   mood?: string;
   seed?: number;
+  /** AUDIT R-04 — hard gesture override (a pool name); defaults to the
+   *  script's beat.gestures[sentenceIdx] when the scene doesn't set one. */
+  gesture?: string;
 }
 
 export function dataSceneFigure(g: SceneCtx, rigScale: number, opts: FigureOpts): void {
@@ -35,7 +38,11 @@ export function dataSceneFigure(g: SceneCtx, rigScale: number, opts: FigureOpts)
   const groundY = H * 0.885;
   const px = g.W * 0.108;
   const sid = sentenceId ?? `data-${g.chapterIdx}`;
-  const pose = poseAt(sid, sentenceT ?? t, t, speaking ? wordTimes : [], speaking ? wordTexts : [], prevSentenceId);
+  // AUDIT R-04 — script-level gestures: beat.gestures[sentenceIdx] (script-data)
+  // overrides the sentenceHash pick inside poseAt, so the body tracks MEANING
+  // on the key sentences instead of decorating them at random.
+  const scripted = opts.gesture ?? g.beat.gestures?.[sentenceIdx ?? -1];
+  const pose = poseAt(sid, sentenceT ?? t, t, speaking ? wordTimes : [], speaking ? wordTexts : [], prevSentenceId, scripted);
   applyMood(pose, opts.mood ?? 'calm', t, g.chapterIdx);
 
   const si = sentenceIdx ?? 0;

@@ -373,13 +373,14 @@ export function glowLine(
   ctx.save();
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  // Phase 1 — ONE ink system: every chart line carries the same #0E1426
-  // contour the figure and props wear, so the whole frame shares one line
-  // language (a 2.2px casing under the colour).
+  // AUDIT I-01 — one ink system: the casing that made every curve read as
+  // "outlined" next to the bars' flat gradient fills is reduced to a 1px
+  // hairline at 60% — it still seats the glow, but the two line languages
+  // no longer fight.
   ctx.beginPath();
   path(ctx);
-  ctx.strokeStyle = 'rgba(14,20,38,0.85)';
-  ctx.lineWidth = width + 2.2;
+  ctx.strokeStyle = 'rgba(14,20,38,0.6)';
+  ctx.lineWidth = width + 1;
   ctx.stroke();
   if (glow > 0) {
     ctx.shadowColor = rgba(col, 0.85);
