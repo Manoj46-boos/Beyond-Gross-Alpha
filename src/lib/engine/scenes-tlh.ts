@@ -10,6 +10,7 @@ import { clamp01, easeOutCubic, easeInOutCubic, springTo, hash01, fmtComma } fro
 import { goldDust, impactRing, softBloom, glowLine, spinToken, floatY, microShake, focusPing } from './fx';
 import { panelTitle, waterfall, donut, column, dotGrid, barRow, statCard, lineChart } from './charts';
 import { paintStage } from './stage';
+import { dataSceneFigure } from './scenes-figure';
 
 // ── G5 — the location map (three columns) ────────────────────────────────────
 const LOC_COLUMNS = [
@@ -119,7 +120,8 @@ export function iraSplitScene(g: SceneCtx): void {
   const { ctx, W, H, t } = g;
   paintStage(ctx, W, H, t, {});
   panelTitle(ctx, 'A million in a traditional IRA is not a million', W * 0.10, 240, W * 0.8, t / 2400, { kickerText: 'Lever 1 · Trap two' });
-  const cx = W * 0.30, cy = H * 0.55;
+  // S-05 — the donut shifts right of the figure margin
+  const cx = W * 0.42, cy = H * 0.55;
   donut(ctx, cx, cy, 170, [
     { value: 70, tone: 'gold', label: 'yours' },
     { value: 30, tone: 'down', label: "government's" },
@@ -150,6 +152,12 @@ export function iraSplitScene(g: SceneCtx): void {
     });
     ctx.restore();
   }
+  // S-05 — the Principal presents the split: palm open at the gold segment
+  dataSceneFigure(g, 1.42, {
+    seed: 33,
+    mode: 'present',
+    focal: (si) => (si >= 1 ? { x: cx + 150, y: cy - 110 } : { x: cx - 60, y: cy - 170 }),
+  });
 }
 
 // ── location value (30 vs 45+ bps) ───────────────────────────────────────────
@@ -348,7 +356,8 @@ export function waterfallScene(g: SceneCtx): void {
   const { ctx, W, H, t } = g;
   paintStage(ctx, W, H, t, {});
   panelTitle(ctx, 'The independent benchmark: 1.08% → what actually survives', W * 0.10, 240, W * 0.8, t / 2400, { kickerText: 'Lever 2 · FAJ 76(3), 2020' });
-  waterfall(ctx, W * 0.12, 340, W * 0.66, 380, [
+  // S-05 — chart zone shifts right of the figure margin (figure spans x≈90..330)
+  waterfall(ctx, W * 0.34, 340, W * 0.40, 380, [
     { label: 'Gross alpha', value: 1.08, tone: 'gold', valueText: '1.08%' },
     { label: 'Wash-sale rule', value: 0.82, tone: 'down', valueText: '0.82%' },
     { label: 'After 13 bps costs', value: 0.95, tone: 'up', valueText: '0.95%' },
@@ -366,6 +375,13 @@ export function waterfallScene(g: SceneCtx): void {
     });
     ctx.restore();
   }
+  // S-05 — the Principal catches the waterfall's last column: open palm
+  // presented under the surviving alpha
+  dataSceneFigure(g, 1.42, {
+    seed: 31,
+    mode: 'present',
+    focal: () => ({ x: W * 0.34 + W * 0.40 * (5 / 6), y: 545 }),
+  });
 }
 
 // ── era bars (volatility feeds it) ───────────────────────────────────────────
@@ -381,7 +397,8 @@ export function eraBarsScene(g: SceneCtx): void {
   ];
   const maxH = 380, baseY = 700;
   const colW = 150, gap = 90;
-  const x0 = (W - (colW * 4 + gap * 3)) / 2;
+  // S-05 — column group shifts right of the figure margin
+  const x0 = W * 0.63 - (colW * 4 + gap * 3) / 2;
   // U4.1 — the narration walks the eras: each sentence discusses one era, the
   // others dim to 42% so a visible change lands with the words. Sentence map:
   // 1 → Depression, 2 → postwar boom, 3-4 → 1972-95 volatility, 5 → bull market.
@@ -422,6 +439,19 @@ export function eraBarsScene(g: SceneCtx): void {
     ctx.textAlign = 'left';
     ctx.restore();
   }
+  // S-05 — the Principal WEIGHS two eras against each other (report §6.4):
+  // both palms present under the narrated era and its neighbour, hands
+  // tracking the D17 sentence walk
+  dataSceneFigure(g, 1.42, {
+    seed: 32,
+    weigh: true,
+    mode: 'present',
+    focal: (si) => {
+      const he = si < 0 ? 0 : si <= 1 ? 0 : si === 2 ? 1 : si <= 4 ? 2 : 3;
+      const cx2 = x0 + he * (colW + gap) + colW / 2;
+      return { x: cx2, y: baseY - maxH * (cols[he].value / 2.2) - 20 };
+    },
+  });
 }
 
 // ── vendor vs independent ────────────────────────────────────────────────────
@@ -531,7 +561,8 @@ export function secCaseScene(g: SceneCtx): void {
   paintStage(ctx, W, H, t, { tone: 'down', grid: 0.4, sheen: 0.2 });
   ctx.fillStyle = rgba('#05080F', 0.35);
   ctx.fillRect(0, 0, W, H);
-  const x = W * 0.14, y = 220, w = W * 0.5, h = 560;
+  // S-05 — the press-release card shifts right of the figure margin
+  const x = W * 0.20, y = 220, w = W * 0.5, h = 560;
   const ent = springTo(0.92, 1, Math.min(800, t), 150, 15);
   ctx.save();
   ctx.globalAlpha = clamp01(t / 300);
@@ -608,8 +639,17 @@ export function secCaseScene(g: SceneCtx): void {
     setFont(ctx, 38, 600, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.ink;
     wrapText(ctx, 'Tax alpha you can’t verify is just a brochure.', 560, 38, 600, FONT_DISPLAY).forEach((ln, i) => {
-      ctx.fillText(ln, W * 0.68, 560 + i * 54);
+      ctx.fillText(ln, W * 0.70, 560 + i * 54);
     });
     ctx.restore();
   }
+  // S-05 — the Principal stands in the case's left margin and DUCKS out of
+  // the way when the SEC stamp slams in (report §6.4); before that he points
+  // at the document's $4M hot line
+  dataSceneFigure(g, 1.42, {
+    seed: 34,
+    mood: 'urgent',
+    avoid: t > 3200,
+    focal: (si) => (si <= 3 ? { x: W * 0.20 + W * 0.5 - 110, y: 194 + 3 * 74 + 20 } : null),
+  });
 }

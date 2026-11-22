@@ -9,6 +9,7 @@ import { clamp01, easeOutCubic, springTo, hash01 } from './easing';
 import { goldDust, impactRing, softBloom, godRays, bokehField, floatY, focusPing } from './fx';
 import { panelTitle } from './charts';
 import { paintStage } from './stage';
+import { dataSceneFigure } from './scenes-figure';
 
 // ── the quietest fact: stepped-up basis ──────────────────────────────────────
 export function stepUpScene(g: SceneCtx): void {
@@ -25,32 +26,39 @@ export function stepUpScene(g: SceneCtx): void {
   ctx.fillText('The best tax strategy in America', W * 0.10, 320);
   goldFillText(ctx, 'is often patience.', W * 0.10, 412, 76, 700, FONT_DISPLAY);
   ctx.restore();
-  // stepped-up basis visual: gains wiped
+  // stepped-up basis visual: gains wiped (S-05 — card shifts right of the
+  // figure margin; the headline above stays clear of his head)
   const wa = clamp01((t - 1200) / 700);
   if (wa > 0) {
     ctx.save();
     ctx.globalAlpha = wa;
-    glassCard(ctx, W * 0.10, 480, 780, 300, { r: 18, goldEdge: true });
+    glassCard(ctx, W * 0.24, 480, 780, 300, { r: 18, goldEdge: true });
     setFont(ctx, 24, 700, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
-    ctx.fillText('HELD UNTIL DEATH (TAXABLE ACCOUNT)', W * 0.10 + 40, 540);
+    ctx.fillText('HELD UNTIL DEATH (TAXABLE ACCOUNT)', W * 0.24 + 40, 540);
     // embedded gains row → struck through
     setFont(ctx, 40, 700, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.inkSoft;
-    ctx.fillText('every embedded gain — wiped', W * 0.10 + 40, 620);
+    ctx.fillText('every embedded gain — wiped', W * 0.24 + 40, 620);
     ctx.strokeStyle = rgba(PALETTE.up, 0.9);
     ctx.lineWidth = 4;
     ctx.beginPath();
-    ctx.moveTo(W * 0.10 + 36, 606);
-    ctx.lineTo(W * 0.10 + 660, 612);
+    ctx.moveTo(W * 0.24 + 36, 606);
+    ctx.lineTo(W * 0.24 + 660, 612);
     ctx.stroke();
     setFont(ctx, 26, 600, FONT_UI);
     ctx.fillStyle = PALETTE.up;
-    ctx.fillText('stepped-up basis · 2025 law: $15M/person estate exemption', W * 0.10 + 40, 680);
+    ctx.fillText('stepped-up basis · 2025 law: $15M/person estate exemption', W * 0.24 + 40, 680);
     ctx.fillStyle = PALETTE.inkSoft;
-    ctx.fillText('donate appreciated shares: the gain disappears + deduction on top', W * 0.10 + 40, 730);
+    ctx.fillText('donate appreciated shares: the gain disappears + deduction on top', W * 0.24 + 40, 730);
     ctx.restore();
   }
+  // S-05 — the Principal presents the quietest fact (report §6.4)
+  dataSceneFigure(g, 1.42, {
+    seed: 51,
+    mode: 'present',
+    focal: () => ({ x: W * 0.24 + 390, y: 620 }),
+  });
 }
 
 // ── G8 — THE HIERARCHY (save asset, hold) ────────────────────────────────────
@@ -155,7 +163,8 @@ export function fiveQuestionsScene(g: SceneCtx): void {
     const hot = asksNow;
     ctx.save();
     ctx.globalAlpha = ent;
-    const x = W * 0.10, y = 320 + i * 110, w = W * 0.80, h = 92;
+    // S-05 — question cards shift right of the figure margin (461..1727)
+    const x = W * 0.24, y = 320 + i * 110, w = W * 0.66, h = 92;
     glassCard(ctx, x, y, w, h, {
       r: 14,
       shadow: false,
@@ -179,6 +188,17 @@ export function fiveQuestionsScene(g: SceneCtx): void {
     if (asksNow && (g.sentenceT ?? 9999) < 340) {
       focusPing(ctx, x + w * 0.5, y + h / 2, g.sentenceT, 130);
     }
+  });
+  // S-05 — the Principal presents each question as it is asked (report §6.4):
+  // palm open at the hot card, idle stance during the two intro sentences
+  dataSceneFigure(g, 1.42, {
+    seed: 52,
+    mode: 'present',
+    focal: (si) => {
+      const q = si - 2;
+      if (q < 0 || q > 4) return null;
+      return { x: W * 0.24 + 70, y: 320 + q * 110 + 46 };
+    },
   });
   // footer (top-right, never behind the caption pill) — arrives after Q5
   const fa = g.sentenceIdx != null

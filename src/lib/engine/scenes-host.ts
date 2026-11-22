@@ -16,7 +16,7 @@ import { SceneCtx } from './scene-context';
 import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, drawAlphaGlyph, chip, FONT_DISPLAY, FONT_UI, kicker, headline } from './theme';
 import { clamp, clamp01, easeOutCubic } from './easing';
 import { goldDust, godRays, bokehField, floatY, impactRing } from './fx';
-import { poseAt, drawStickman, walkIn, applyMood, companionArm, companionArmL, type Pose } from './stickman';
+import { poseAt, drawStickman, walkIn, applyMood, companionArm, companionArmL, palmPosition, type Pose } from './stickman';
 import { statCard } from './charts';
 import { drawChapterCard } from './textfx';
 import { paintStage } from './stage';
@@ -72,7 +72,9 @@ export function hostScene(g: SceneCtx): void {
   // clears the caption zone with margin
   const plateX = px + 160;
   const plateY = 508;
-  const palmR = { x: plateX + 14, y: plateY + 95 };  // right palm, present height
+  // S-06 — the palm aims just OUTSIDE the plate's left edge (was 14px INSIDE
+  // the box): the hand presents the plate without ever entering it
+  const palmR = { x: plateX - 42, y: plateY + 95 };  // right palm, present height
   const palmL = { x: px - 140, y: plateY + 95 };     // left palm (the weigh pair)
   const pointTip = { x: headX + 60, y: 382 };        // pointing fingertip
   const companionOn = !walking && s.gesture !== 'leanIn' && s.gesture !== 'count';
@@ -87,7 +89,10 @@ export function hostScene(g: SceneCtx): void {
     } else if (comp?.kind === 'gapbar') {
       // catch: right palm up, square under the drop zone
       companionArm(pose, px, groundY, rigScale, { x: palmR.x + 55, y: palmR.y - 6 }, 'present');
-    } else if (comp?.kind === 'coin' || comp?.kind === 'statement') {
+    } else if (comp?.kind === 'coin') {
+      companionArm(pose, px, groundY, rigScale, palmR, 'present');
+      pose.hand = 'cup'; // S-04 — the fingers close under the token
+    } else if (comp?.kind === 'statement') {
       companionArm(pose, px, groundY, rigScale, palmR, 'present');
     } else {
       companionArm(pose, px, groundY, rigScale, pointTip, 'point');
@@ -167,19 +172,29 @@ export function hostScene(g: SceneCtx): void {
     }
   }
 
-  // ── companion props (U3.1) — drawn into the gesture space, under the hand ──
+  // ── companion props (U3.1) — S-01: the prop painting is wrapped in a
+  // closure and invoked AFTER drawStickman, so the coin, statement card, gap
+  // bar and weigh plates paint OVER the figure — contact reads as contact,
+  // not as a layering bug.
+  const drawCompanions = () => {
   const compEnt = clamp01((t - 1300) / 600);
   if (companionOn && comp && compEnt > 0 && !s.stat) {
     ctx.save();
     ctx.globalAlpha = compEnt;
     if (comp.kind === 'coin') {
-      // the gold coin token — floats above the right palm, engraved with the
-      // brand α, slow shimmer spin and bob
-      const ccx = palmR.x + 34, ccy = palmR.y - 108 + floatY(t, 3, 6, 3600);
+      // S-04 — the coin RESTS on the palm: anchored to the FK palm position,
+      // bottom edge just above the palm centre, ±2px breathing bob, contact
+      // shadow on the hand and the fingers cupped under it (hand mode 'cup')
+      const ccx = palmRS.x + 2, ccy = palmRS.y - 44 + floatY(t, 3, 2, 3600);
       const spin = 0.82 + 0.18 * Math.sin(t / 1100);
       ctx.save();
       ctx.translate(ccx, ccy);
       ctx.scale(spin, 1);
+      // contact shadow on the palm, under the coin
+      ctx.fillStyle = 'rgba(2,4,9,0.30)';
+      ctx.beginPath();
+      ctx.ellipse(0, palmRS.y - ccy + 2, 27, 4.5, 0, 0, Math.PI * 2);
+      ctx.fill();
       const cg = ctx.createRadialGradient(-10, -12, 6, 0, 0, 38);
       cg.addColorStop(0, PALETTE.goldPale);
       cg.addColorStop(0.55, PALETTE.gold);
@@ -197,7 +212,7 @@ export function hostScene(g: SceneCtx): void {
       // mini statement card — the answers, held above the palm
       const lines: string[] = comp.lines ?? ['answered'];
       const cw = 320, chh = 96 + lines.length * 34;
-      const cx = palmR.x + 90, cy = palmR.y - 130 - chh / 2 + floatY(t, 5, 5, 4200);
+      const cx = palmRS.x + 90, cy = palmRS.y - 130 - chh / 2 + floatY(t, 5, 5, 4200);
       glassCard(ctx, cx - cw / 2, cy, cw, chh, { r: 14, goldEdge: true });
       setFont(ctx, 20, 700, FONT_UI);
       try { (ctx as any).letterSpacing = '3px'; } catch { /* noop */ }
@@ -210,24 +225,28 @@ export function hostScene(g: SceneCtx): void {
       lines.forEach((ln, i) => ctx.fillText(ln, cx, cy + 74 + i * 34));
       ctx.textAlign = 'left';
     } else if (comp.kind === 'gapbar') {
-      // the falling gap bar — drops onto his palm at each sentence boundary
+      // S-02 — the falling gap bar drops onto HIS PALM: anchored to the FK
+      // palm position, centred over it, bottom edge ON the palm centreline
       const bw = 260, bh = 48;
-      const restY = palmR.y - 30 - bh / 2;
+      const restY = palmRS.y - 4 - bh / 2;
       const dropT = g.sentenceT ?? t;
       const fall = dropT < 650 ? Math.pow(clamp01(dropT / 650), 2.2) : 1;
       const settle = dropT >= 650 && dropT < 1050 ? Math.sin(clamp01((dropT - 650) / 400) * Math.PI) * 6 : 0;
-      const bx = palmR.x + 115 - bw / 2;
+      const bx = palmRS.x - bw / 2;
       const by = restY - (1 - fall) * 250 - settle;
       // cast shadow gathering on the palm while the bar falls
       ctx.globalAlpha = compEnt * (0.12 + 0.2 * fall);
       ctx.beginPath();
-      ctx.ellipse(bx + bw / 2, palmR.y + 6, bw * 0.32 * (0.5 + 0.5 * fall), 7, 0, 0, Math.PI * 2);
+      ctx.ellipse(bx + bw / 2, palmRS.y + 2, bw * 0.32 * (0.5 + 0.5 * fall), 7, 0, 0, Math.PI * 2);
       ctx.fillStyle = '#04070D';
       ctx.fill();
       ctx.globalAlpha = compEnt;
+      // S-02 — the empty track is a slim outline frame now (the old 5% white
+      // slab extended past the hand as an unexplained gray block)
       roundRect(ctx, bx, by, bw, bh, 10);
-      ctx.fillStyle = 'rgba(255,255,255,0.05)';
-      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
       const fw = bw * 0.75 * fall;
       if (fw > 8) {
         const bg = ctx.createLinearGradient(bx, 0, bx + fw, 0);
@@ -250,14 +269,21 @@ export function hostScene(g: SceneCtx): void {
         ctx.fillText(comp.value ?? '$5.1M', bx + fw - 14, by + bh / 2 + 9);
         ctx.textAlign = 'left';
       }
-      if (dropT >= 640 && dropT < 900) impactRing(ctx, bx + bw * 0.75, palmR.y, dropT - 640, 40, 60, 0.5, PALETTE.gold);
+      if (dropT >= 640 && dropT < 900) impactRing(ctx, bx + bw * 0.75, palmRS.y, dropT - 640, 40, 60, 0.5, PALETTE.gold);
     } else if (comp.kind === 'weigh') {
-      // two plates on both palms — the seesaw tilt
-      const tilt = Math.sin(t / 1400) * 0.045;
+      // S-03 — two plates REST on the palms (bottom edge on the palm
+      // centreline, centred over the FK palm position) and the seesaw tilt is
+      // raised to a visible ±0.10 rad (≈21px of edge travel at 1080p)
+      const tilt = Math.sin(t / 1400) * 0.10;
       const plate = (p: { x: number; y: number }, label: string, rot: number, seed: number) => {
         ctx.save();
-        ctx.translate(p.x + 30, p.y - 70 + floatY(t, seed, 4, 3000));
+        ctx.translate(p.x, p.y - 58 + floatY(t, seed, 2, 3000));
         ctx.rotate(rot);
+        // contact shadow on the palm under the plate
+        ctx.fillStyle = 'rgba(2,4,9,0.24)';
+        ctx.beginPath();
+        ctx.ellipse(0, 56, 62, 6.5, 0, 0, Math.PI * 2);
+        ctx.fill();
         glassCard(ctx, -105, -52, 210, 104, { r: 12, goldEdge: true });
         setFont(ctx, 21, 800, FONT_UI);
         try { (ctx as any).letterSpacing = '2px'; } catch { /* noop */ }
@@ -270,11 +296,17 @@ export function hostScene(g: SceneCtx): void {
         ctx.textAlign = 'left';
         ctx.restore();
       };
-      plate(palmR, comp.right ?? 'EVIDENCE AGAINST', tilt, 7);
-      plate(palmL, comp.left ?? 'EVIDENCE FOR', -tilt, 2);
+      plate(palmRS, comp.right ?? 'EVIDENCE AGAINST', tilt, 7);
+      plate(palmLS, comp.left ?? 'EVIDENCE FOR', -tilt, 2);
     }
     ctx.restore();
   }
+  }; // end drawCompanions
+
+  // S-01..S-04 — the props anchor to the hands' REAL rendered positions
+  // (forward kinematics), so "resting on the palm" is exact
+  const palmRS = palmPosition(pose, 1, px, groundY, rigScale);
+  const palmLS = palmPosition(pose, -1, px, groundY, rigScale);
 
   // ── The Principal — grounded (D2): no decorative bob, tight contact
   // shadow, true-mirror reflection
@@ -288,6 +320,9 @@ export function hostScene(g: SceneCtx): void {
     rimBoost: 0.06,
     vel,
   }, 3);
+
+  // S-01 — companion props paint AFTER the figure: contact reads as contact
+  drawCompanions();
 
   void beat; void d;
   void easeOutCubic;

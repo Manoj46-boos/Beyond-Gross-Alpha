@@ -43,7 +43,7 @@ export interface Pose {
   surprise: number;
   blink: number;       // external 0..1 override
   mouth: number;       // computed talk envelope 0..1
-  hand: 'open' | 'point'; // near-hand shape — point is the data-contact hand
+  hand: 'open' | 'point' | 'cup'; // near-hand shape — point = data contact, cup = cradling palm (S-04)
   walkPhase: number;   // <0 = standing
   walkSpeed: number;
   look: number;        // -1..1 gaze
@@ -1134,7 +1134,7 @@ export function drawStickman(
  *  figure can actually touch what it narrates. */
 function drawHand(
   ctx: CanvasRenderingContext2D, x: number, y: number, angDeg: number,
-  size: number, near: boolean, mode: 'open' | 'point' = 'open', sleeveW = 12
+  size: number, near: boolean, mode: 'open' | 'point' | 'cup' = 'open', sleeveW = 12
 ): void {
   ctx.save();
   ctx.translate(x, y);
@@ -1164,7 +1164,26 @@ function drawHand(
   const fk = hexLerp(SKIN.lit, SKIN.dark, near ? 0.3 : 0.55);
   ctx.strokeStyle = fk;
   ctx.lineCap = 'round';
-  if (mode === 'point') {
+  if (mode === 'cup') {
+    // S-04 — fingers curled UP under the object: the cradling palm. Tips pull
+    // back toward the palm line so a resting prop reads as held, not hovered.
+    const fingersC: Array<[number, number]> = [
+      [-0.34, 0.62], [-0.1, 0.72], [0.14, 0.76], [0.38, 0.64],
+    ];
+    for (const [fy, fl] of fingersC) {
+      ctx.lineWidth = size * (0.26 + fl * 0.06);
+      ctx.beginPath();
+      ctx.moveTo(size * 0.5, fy * size * 0.9);
+      ctx.quadraticCurveTo(size * (0.5 + fl * 0.9), fy * size * 1.02, size * (0.5 + fl * 0.5), fy * size * 0.22);
+      ctx.stroke();
+    }
+    // thumb wraps across the near edge
+    ctx.lineWidth = size * 0.36;
+    ctx.beginPath();
+    ctx.moveTo(-size * 0.22, -size * 0.44);
+    ctx.quadraticCurveTo(size * 0.2, -size * 0.8, size * 0.56, -size * 0.4);
+    ctx.stroke();
+  } else if (mode === 'point') {
     // index extended along the arm axis — the data-contact hand
     ctx.lineWidth = size * 0.32;
     ctx.beginPath();
@@ -1262,4 +1281,26 @@ export function companionArmL(
   pose.lAU = -ik.aU;
   pose.lAL = -ik.aL;
   if (mode !== 'point') pose.hand = 'open';
+}
+
+/** S-01..S-04 support — where a named hand ACTUALLY is on screen, using the
+ *  same forward kinematics as drawStickman's armDraw. Companion props anchor
+ *  to this so "resting on the palm" is geometrically true instead of
+ *  aspirational: the prop is placed on the rendered hand, whatever the IK
+ *  did with the arm. */
+export function palmPosition(
+  pose: Pose, side: 1 | -1, cx: number, groundY: number, scale: number
+): { x: number; y: number } {
+  const hipY = -(U_LEG + L_LEG) + pose.rootY;
+  const leanR = pose.lean * D2R, tiltR = pose.torsoTilt * D2R;
+  const shX = Math.sin(leanR + tiltR) * TORSO + side * SHOULDER_HW * 0.74;
+  const shY = hipY - Math.cos(leanR + tiltR) * TORSO + 2;
+  // armDraw uses the stored angles directly (left-side angles are sign-carried)
+  const aU = side === 1 ? pose.rAU : pose.lAU;
+  const aL = side === 1 ? pose.rAL : pose.lAL;
+  const elbow = pt(shX, shY, aU, U_ARM);
+  const wrist = pt(elbow.x, elbow.y, aU + aL, L_ARM);
+  // the palm centre rides ~5 local units past the wrist along the hand axis
+  const palm = pt(wrist.x, wrist.y, aU + aL, 5);
+  return { x: cx + palm.x * scale, y: groundY + palm.y * scale };
 }

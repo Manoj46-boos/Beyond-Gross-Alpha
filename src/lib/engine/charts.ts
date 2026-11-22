@@ -497,10 +497,12 @@ export function statCard(ctx: CanvasRenderingContext2D, o: StatCardOpts): void {
   ctx.save();
   ctx.globalAlpha = clamp01(o.p * 3);
   glassCard(ctx, o.x + (1 - ent) * 26, o.y, o.w, o.h, { r: 22, goldEdge: o.goldEdge ?? o.tone === 'gold', border: o.tone === 'down' ? rgba(PALETTE.down, 0.4) : o.tone === 'up' ? rgba(PALETTE.up, 0.4) : undefined });
-  const ix = o.x + 44, iy = o.y + 66;
-  // label — through the existing fitText() with maxW = card width − 88 (U1.3):
-  // type shrinks to fit, so the plate label can never run past the card edge.
-  fitText(ctx, o.label.toUpperCase(), ix, iy, o.w - 88, 24, 700, FONT_UI, PALETTE.inkFaint, 13, '4px');
+  // S-06 — the value no longer crowds the left border (padding 44 → 56) and
+  // the label's shrink floor rises 13 → 18 so it stays legible on phones
+  const ix = o.x + 56, iy = o.y + 66;
+  // label — through the existing fitText() with maxW matched to the new inset
+  // (U1.3): type shrinks to fit, so the plate label can never run past the edge
+  fitText(ctx, o.label.toUpperCase(), ix, iy, o.w - 104, 24, 700, FONT_UI, PALETTE.inkFaint, 18, '4px');
   const countP = clamp01((o.p - 0.18) / 0.5);
   const bigSize = o.bigSize ?? 120;
   // count-up for numeric-looking values
@@ -517,7 +519,7 @@ export function statCard(ctx: CanvasRenderingContext2D, o: StatCardOpts): void {
   if (o.sub) {
     setFont(ctx, 26, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkSoft;
-    wrapText(ctx, o.sub, o.w - 88, 26, 600, FONT_UI).forEach((ln, i) => {
+    wrapText(ctx, o.sub, o.w - 104, 26, 600, FONT_UI).forEach((ln, i) => {
       ctx.fillText(ln, ix, iy + bigSize * 1.12 + 14 + i * 34);
     });
   }

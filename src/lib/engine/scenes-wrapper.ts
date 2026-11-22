@@ -10,6 +10,7 @@ import { clamp01, easeOutCubic, easeInOutCubic, springTo, hash01 } from './easin
 import { goldDust, impactRing, softBloom, glowLine, spinToken, floatY, microShake, focusPing } from './fx';
 import { panelTitle, barRow, statCard, lineChart } from './charts';
 import { paintStage } from './stage';
+import { dataSceneFigure } from './scenes-figure';
 
 // ── plumbing: mutual fund redemption vs ETF in-kind ──────────────────────────
 export function plumbingScene(g: SceneCtx): void {
@@ -154,7 +155,8 @@ export function distribBarsScene(g: SceneCtx): void {
   const { ctx, W, t } = g;
   paintStage(ctx, W, g.H, t, {});
   panelTitle(ctx, 'The scoreboard: capital-gains distributions, 2025', W * 0.10, 250, W * 0.8, t / 2400, { kickerText: 'Lever 3 · State Street' });
-  const x = W * 0.10, w = W * 0.62;
+  // S-05 — bars shift right of the figure margin (figure spans x≈90..330)
+  const x = W * 0.30, w = W * 0.42;
   barRow(ctx, { x, y: 400, w, h: 120, label: 'Equity mutual funds', value: 57, maxV: 100, p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'down', valueText: '57%' });
   barRow(ctx, { x, y: 590, w, h: 120, label: 'Equity ETFs', value: 6, maxV: 100, p: clamp01((t - 1300) / 900), t, landT: 2250, tone: 'up', valueText: '6%' });
   const ma = clamp01((t - 2200) / 500);
@@ -166,6 +168,13 @@ export function distribBarsScene(g: SceneCtx): void {
     ctx.fillText('A structural moat.', x + w + 60, 660);
     ctx.restore();
   }
+  // S-05 — the Principal leans on the 57%/6% bars (report §6.4): open palm
+  // presented at the bar being narrated, per sentence
+  dataSceneFigure(g, 1.42, {
+    seed: 41,
+    mode: 'present',
+    focal: (si) => ({ x: x + w - 70, y: si === 0 ? 460 : 650 }),
+  });
 }
 
 // ── tax-managed funds (7.16 vs 6.76) ─────────────────────────────────────────
@@ -329,6 +338,12 @@ export function diMosaicScene(g: SceneCtx): void {
     chip(ctx, 'red = harvestable losses, harvested individually', W * 0.44, 742, { size: 24, dot: PALETTE.down });
     ctx.restore();
   }
+  // S-05 — the Principal points at the ONE ETF block, then at the harvest
+  // mosaic as it shatters (report §6.4), sentence-driven
+  dataSceneFigure(g, 1.42, {
+    seed: 42,
+    focal: (si) => (si === 0 ? { x: W * 0.22 + 120, y: 550 } : { x: W * 0.44 + 200, y: 520 }),
+  });
 }
 
 // ── direct indexing decay (69 → 9 bps) ───────────────────────────────────────
@@ -364,12 +379,12 @@ export function exchangeFundScene(g: SceneCtx): void {
   const { ctx, W, H, t } = g;
   paintStage(ctx, W, H, t, {});
   panelTitle(ctx, 'Deferral with handcuffs', W * 0.10, 240, W * 0.7, t / 2400, { kickerText: 'Lever 4 · Exchange funds' });
-  // $1T stat
+  // $1T stat (S-05 — shifted right of the figure margin)
   const sa = clamp01((t - 300) / 700);
   if (sa > 0) {
     ctx.save();
     ctx.globalAlpha = sa;
-    statCard(ctx, { x: W * 0.10, y: 340, w: 470, h: 250, big: '$1T+', label: 'US wealth in low-basis single stock (BlackRock)', p: sa, tone: 'gold', bigSize: 88 });
+    statCard(ctx, { x: W * 0.185, y: 340, w: 470, h: 250, big: '$1T+', label: 'US wealth in low-basis single stock (BlackRock)', p: sa, tone: 'gold', bigSize: 88 });
     ctx.restore();
   }
   // pool diagram: concentrated shares in → diversified basket out
@@ -377,7 +392,7 @@ export function exchangeFundScene(g: SceneCtx): void {
   if (pa > 0) {
     ctx.save();
     ctx.globalAlpha = pa;
-    const poolX = W * 0.42, poolY = 340, poolW = 560, poolH = 250;
+    const poolX = W * 0.435, poolY = 340, poolW = 560, poolH = 250;
     glassCard(ctx, poolX, poolY, poolW, poolH, { r: 20, goldEdge: true });
     setFont(ctx, 24, 700, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
@@ -448,6 +463,15 @@ export function exchangeFundScene(g: SceneCtx): void {
     ctx.restore();
     impactRing(ctx, W * 0.82, 460, t, 3600, 130, 0.9, PALETTE.gold);
   }
+  // S-05 — the Principal presents the $1T fact, the pool, then the padlock
+  // (report §6.4), sentence-driven
+  dataSceneFigure(g, 1.42, {
+    seed: 43,
+    mode: 'present',
+    focal: (si) => (si === 0
+      ? { x: W * 0.185 + 235, y: 465 }
+      : si <= 2 ? { x: W * 0.435 + 280, y: 465 } : { x: W * 0.82, y: 470 }),
+  });
 }
 
 // ── tax-aware long-short ─────────────────────────────────────────────────────

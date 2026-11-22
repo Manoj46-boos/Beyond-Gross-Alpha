@@ -10,6 +10,7 @@ import { clamp01, easeOutCubic, springTo, hash01, fmtComma, fmtMoney } from './e
 import { goldDust, impactRing, softBloom, glowLine, spinToken, floatY, focusPing } from './fx';
 import { panelTitle, lineChart, column, statCard, barRow } from './charts';
 import { paintStage } from './stage';
+import { dataSceneFigure } from './scenes-figure';
 
 // ── the brokerage statement (push-in on "Total Return", empty after-tax row) ─
 export function brokerageStatementScene(g: SceneCtx): void {
@@ -282,7 +283,8 @@ export function growthCurvesScene(g: SceneCtx): void {
     ptsA.push([i, 100 * Math.pow(1.06 - 0.0071, i)]);   // low turnover (net ~5.29%)
     ptsB.push([i, 100 * Math.pow(1.06 - 0.0194, i)]);   // high turnover (net ~4.06%)
   }
-  const chartX = W * 0.12, chartY = 330, chartW = W * 0.60, chartH = 420;
+  // S-05 — chart zone shifts right of the figure margin (figure spans x≈90..330)
+  const chartX = W * 0.30, chartY = 330, chartW = W * 0.44, chartH = 420;
   lineChart(ctx, {
     x: chartX, y: chartY, w: chartW, h: chartH,
     series: [
@@ -331,6 +333,14 @@ export function growthCurvesScene(g: SceneCtx): void {
     goldFillText(ctx, '−$139,780', chartX + chartW + 70, chartY + 290, 62, 800, FONT_DISPLAY);
     ctx.restore();
   }
+  // S-05 — the Principal walks to the growing gap and points at it: the hand
+  // rides the curve's leading edge while it grows, then presents the verdict
+  dataSceneFigure(g, 1.42, {
+    seed: 21,
+    focal: (si) => si >= 3
+      ? { x: chartX + chartW + 250, y: chartY + 250 }
+      : { x: chartX + chartW * Math.min(1, t / 2600), y: chartY + 150 },
+  });
 }
 
 // ── character of returns matrix ──────────────────────────────────────────────
@@ -395,7 +405,8 @@ export function signatureCurveScene(g: SceneCtx): void {
   goldDust(ctx, W, H, t, 21, 1.2);
   panelTitle(ctx, 'Same portfolio. Same market. Twenty-five years.', W * 0.12, 220, W * 0.76, t / 2400, { kickerText: 'The arithmetic' });
 
-  const chartX = W * 0.16, chartY = 320, chartW = W * 0.62, chartH = 460;
+  // S-05 — chart zone shifts right of the figure margin (figure spans x≈90..330)
+  const chartX = W * 0.335, chartY = 320, chartW = W * 0.445, chartH = 460;
   const ptsA: [number, number][] = [], ptsB: [number, number][] = [];
   for (let i = 0; i <= 25; i++) {
     ptsA.push([i, 2 * Math.pow(1.08, i)]);
@@ -501,12 +512,21 @@ export function signatureCurveScene(g: SceneCtx): void {
     setFont(ctx, 30, 600, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.inkSoft;
     ctx.textAlign = 'center';
-    wrapText(ctx, 'It isn’t a scare number. It’s arithmetic.', 480, 30, 600, FONT_DISPLAY).forEach((ln, i) => {
-      ctx.fillText(ln, bx + 165, 560 + i * 40);
+    wrapText(ctx, 'It isn’t a scare number. It’s arithmetic.', 340, 30, 600, FONT_DISPLAY).forEach((ln, i) => {
+      ctx.fillText(ln, bx + 170, 560 + i * 40);
     });
     ctx.textAlign = 'left';
     ctx.restore();
   }
+  // S-05 — the Principal walks to the signature curve and POINTS at the
+  // growing gap (report §6.4): hand rides the curve's leading edge per
+  // sentence, then presents the $5.1M tax-line badge
+  dataSceneFigure(g, 1.42, {
+    seed: 22,
+    focal: (si) => si >= 3
+      ? { x: chartX + chartW + 215, y: chartY + 115 }
+      : { x: px(Math.max(0, nShown - 1)), y: py(2 * Math.pow(1.08, Math.max(0, nShown - 1))) },
+  });
 }
 
 // ── the benchmark to beat (0.3%/yr) ──────────────────────────────────────────
