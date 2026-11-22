@@ -645,11 +645,13 @@ export function secCaseScene(g: SceneCtx): void {
   }
   // S-05 — the Principal stands in the case's left margin and DUCKS out of
   // the way when the SEC stamp slams in (report §6.4); before that he points
-  // at the document's $4M hot line
+  // at the document's $4M hot line. M-03 — the stamp also lands ON the body:
+  // a compress + spring recoil at t=3200.
   dataSceneFigure(g, 1.42, {
     seed: 34,
     mood: 'urgent',
     avoid: t > 3200,
+    impactT: 3200,
     focal: (si) => (si <= 3 ? { x: W * 0.20 + W * 0.5 - 110, y: 194 + 3 * 74 + 20 } : null),
   });
 }

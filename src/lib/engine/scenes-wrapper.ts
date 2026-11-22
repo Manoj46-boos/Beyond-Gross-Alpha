@@ -136,15 +136,16 @@ export function heartbeatScene(g: SceneCtx): void {
     ctx.restore();
     impactRing(ctx, W * 0.55 + 320, 490, t, 1600, 180, 1, PALETTE.gold);
   }
-  // "file that away" reminder
+  // L-02 — "File that away…" renders INSIDE the $48B card (was baseline
+  // y=800, half-hidden under the caption pill whose top sits at ≈796)
   const fa = clamp01((t - 3400) / 500);
   if (fa > 0) {
     ctx.save();
     ctx.globalAlpha = fa;
-    setFont(ctx, 32, 600, FONT_DISPLAY);
-    ctx.fillStyle = PALETTE.inkSoft;
+    setFont(ctx, 28, 600, FONT_DISPLAY);
+    ctx.fillStyle = PALETTE.goldBright;
     ctx.textAlign = 'center';
-    ctx.fillText('File that away. We\'ll come back to it.', W / 2, 800);
+    ctx.fillText('File that away. We\'ll come back to it.', W * 0.55 + 320, 604);
     ctx.textAlign = 'left';
     ctx.restore();
   }
@@ -169,10 +170,12 @@ export function distribBarsScene(g: SceneCtx): void {
     ctx.restore();
   }
   // S-05 — the Principal leans on the 57%/6% bars (report §6.4): open palm
-  // presented at the bar being narrated, per sentence
+  // presented at the bar being narrated, per sentence. M-03 — his body
+  // answers each bar landing (landT 1250 / 2250 in barRow).
   dataSceneFigure(g, 1.42, {
     seed: 41,
     mode: 'present',
+    impactT: t >= 2250 ? 2250 : t >= 1250 ? 1250 : undefined,
     focal: (si) => ({ x: x + w - 70, y: si === 0 ? 460 : 650 }),
   });
 }

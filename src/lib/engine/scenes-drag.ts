@@ -260,14 +260,15 @@ export function turnoverBarsScene(g: SceneCtx): void {
   const x = W * 0.10, w = W * 0.62;
   barRow(ctx, { x, y: 400, w, h: 120, label: '5% turnover', value: 0.71, maxV: 2.0, p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'up', valueText: '−0.71 pts/yr', sub: 'barely trading' });
   barRow(ctx, { x, y: 590, w, h: 120, label: '100% turnover', value: 1.94, maxV: 2.0, p: clamp01((t - 1300) / 900), t, landT: 2250, tone: 'down', valueText: '−1.94 pts/yr', sub: 'normal for many active funds' });
-  // multiplier callout (below the second bar, clear of right-aligned values)
+  // multiplier callout (below the second bar, clear of right-aligned values;
+  // L-02 — raised to 746 so it clears the caption pill's 30px risk band)
   const ma = clamp01((t - 2300) / 500);
   if (ma > 0) {
     ctx.save();
     ctx.globalAlpha = ma;
     setFont(ctx, 44, 800, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.goldBright;
-    ctx.fillText('≈ 3× the drag', x + 8, 768);
+    ctx.fillText('≈ 3× the drag', x + 8, 746);
     ctx.restore();
   }
 }
@@ -386,14 +387,15 @@ export function characterMatrixScene(g: SceneCtx): void {
   // U3.3 — the eye lands on the row being narrated
   if (hotIdx >= 0) focusPing(ctx, W * 0.16, 350 + hotIdx * 88 + 36, g.sentenceT, 76);
   // the blunt BlackRock verdict — enters once four sentences have played
+  // (L-02 — card raised: bottom 744, clear of the caption pill top ≈796)
   const va = g.sentenceIdx != null ? clamp01((g.sentenceIdx - 3.5) / 0.9) : clamp01((t - 4200) / 600);
   if (va > 0) {
     ctx.save();
     ctx.globalAlpha = va;
-    glassCard(ctx, W * 0.10, 700, W * 0.80, 104, { r: 14, goldEdge: true });
+    glassCard(ctx, W * 0.10, 640, W * 0.80, 104, { r: 14, goldEdge: true });
     setFont(ctx, 29, 600, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.ink;
-    ctx.fillText('“Taxes eat a far bigger share of a bond’s return than a stock’s.”', W * 0.10 + 40, 762);
+    ctx.fillText('“Taxes eat a far bigger share of a bond’s return than a stock’s.”', W * 0.10 + 40, 702);
     ctx.restore();
   }
 }

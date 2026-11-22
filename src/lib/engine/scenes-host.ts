@@ -308,6 +308,10 @@ export function hostScene(g: SceneCtx): void {
   const palmRS = palmPosition(pose, 1, px, groundY, rigScale);
   const palmLS = palmPosition(pose, -1, px, groundY, rigScale);
 
+  // M-03 — the body ANSWERS the $5.1M catch: the bar lands at sentenceT 650,
+  // so the impact envelope starts there (same time base as t = group time)
+  const barLandT = comp?.kind === 'gapbar' && !walking ? t - (g.sentenceT ?? 0) + 650 : undefined;
+
   // ── The Principal — grounded (D2): no decorative bob, tight contact
   // shadow, true-mirror reflection
   drawStickman(ctx, px, groundY, rigScale, t, {
@@ -319,6 +323,7 @@ export function hostScene(g: SceneCtx): void {
     reflection: true,
     rimBoost: 0.06,
     vel,
+    impactT: barLandT,
   }, 3);
 
   // S-01 — companion props paint AFTER the figure: contact reads as contact

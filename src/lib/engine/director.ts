@@ -154,11 +154,34 @@ export function drawFrame(
 
   // camera transform
   const cam = group ? cameraFor(group, gt, gdur, chapterIdx) : { dx: 0, dy: 0, scale: 1 };
+  // M-06 — no visual state holds longer than 8 seconds (§6.4): scene groups
+  // longer than 12s ALTERNATE two compositions of the same scene — wide panel
+  // ↔ close on the narrated element — on a deterministic 8s cadence. The cut
+  // re-uses the punch so it reads as an editorial cut, not a zoom. Layered
+  // scenes (host / cards / coldOpen) already carry live motion and keep their
+  // single composition.
+  let camEff = cam;
+  let cutPunch = 1;
+  if (group && beat && gdur > 12000) {
+    const sceneType = beat.beat.scene.type;
+    const live = ['host', 'coldOpen', 'titleCard', 'chapterCard', 'endScreen', 'quietBeat'].includes(sceneType);
+    if (!live) {
+      const k = Math.floor(gt / 8000);
+      if (k % 2 === 1) {
+        const statementFam = sceneType === 'statement' || sceneType === 'finalLines' || sceneType === 'turnCard' || sceneType === 'policyRisk';
+        const s = statementFam ? 1.22 : 1.30;
+        const cdx = statementFam ? -140 : 250;
+        const cdy = statementFam ? -70 : 30;
+        camEff = { dx: cdx + drift(gt, 3) * 12, dy: cdy + drift(gt, 9) * 7, scale: s };
+      }
+      if (k > 0) cutPunch = scalePunch(gt - k * 8000, 240, 0.03);
+    }
+  }
   const punchAge = group ? t - group.startMs : 9999;
-  const punch = scalePunch(punchAge, 240, 0.022);
-  setCamState(cam.dx, cam.dy, cam.scale * punch);
-  ctx.translate(W / 2 + cam.dx, H / 2 + cam.dy);
-  ctx.scale(cam.scale * punch, cam.scale * punch);
+  const punch = scalePunch(punchAge, 240, 0.022) * cutPunch;
+  setCamState(camEff.dx, camEff.dy, camEff.scale * punch);
+  ctx.translate(W / 2 + camEff.dx, H / 2 + camEff.dy);
+  ctx.scale(camEff.scale * punch, camEff.scale * punch);
   ctx.translate(-W / 2, -H / 2);
 
   // ── the stage room ──

@@ -22,6 +22,8 @@ export interface FigureOpts {
   weigh?: boolean;
   /** duck: arms pulled in, lean away (the SEC-stamp beat) */
   avoid?: boolean;
+  /** M-03 — impact time (group ms): the body compresses + recoils */
+  impactT?: number;
   mood?: string;
   seed?: number;
 }
@@ -62,5 +64,6 @@ export function dataSceneFigure(g: SceneCtx, rigScale: number, opts: FigureOpts)
     reflection: true,
     rimBoost: 0.05,
     vel,
+    impactT: opts.impactT,
   }, opts.seed ?? 11);
 }

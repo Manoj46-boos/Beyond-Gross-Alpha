@@ -295,12 +295,21 @@ function accentEnv(t: number, wordTimes: number[], words: string[]): number {
   return 0;
 }
 
-/** U2.4 — reusable anticipation: an 80–120 ms counter-move against the gesture
- *  change (30% of the angle, opposite direction) before the spring commits.
- *  `st` = ms since the sentence boundary. Deterministic. */
-function anticipation(from: number, to: number, st: number, mag = 6): number {
-  const bell = st < 120 ? Math.sin((st / 120) * Math.PI) : 0;
-  return -Math.sign(to - from) * Math.min(mag, Math.abs(to - from) * 0.30) * bell;
+/** U2.4 — reusable anticipation. M-02 (§6.3): the old 30%/120ms counter-move
+ *  lasted 3-4 frames and moved the limb 1-3° — under one pixel of wrist travel,
+ *  i.e. jitter, not wind-up. Now: a 45% counter-move over a 170ms window that
+ *  RISES, HOLDS its extreme for two frames (~66ms) and releases into the
+ *  spring commit. Magnitude cap 14°. `st` = ms since the sentence boundary. */
+function anticipation(from: number, to: number, st: number, mag = 14): number {
+  const WINDOW = 170, HOLD = 66;
+  const d = to - from;
+  const amp = Math.min(mag, Math.abs(d) * 0.45);
+  if (amp < 0.35 || st < 0) return 0;
+  let k: number;
+  if (st < WINDOW - HOLD) k = Math.sin((st / (WINDOW - HOLD)) * Math.PI * 0.5);
+  else if (st < WINDOW) k = 1;
+  else k = Math.max(0, 1 - (st - WINDOW) / 90); // release — recoil into the gesture
+  return -Math.sign(d) * amp * k;
 }
 
 /**
@@ -334,13 +343,14 @@ export function poseAt(
   p.brow = g.brow;
   p.smile = g.smile;
 
-  // anticipation — channels counter-move first, then commit (U2.4a)
+  // anticipation — channels counter-move first (with the two-frame hold),
+  // then commit (M-02: cap raised to 14° on every channel)
   p.rAU += anticipation(gPrev.rAU, g.rAU, st);
-  p.rAL += anticipation(gPrev.rAL, g.rAL, st, 9);
+  p.rAL += anticipation(gPrev.rAL, g.rAL, st);
   p.lAU += anticipation(gPrev.lAU, g.lAU, st);
-  p.lAL += anticipation(gPrev.lAL, g.lAL, st, 9);
-  p.lean += anticipation(gPrev.lean, g.lean, st, 3);
-  p.shoulderTilt += anticipation(gPrev.shoulderTilt, g.shoulderTilt, st, 4);
+  p.lAL += anticipation(gPrev.lAL, g.lAL, st);
+  p.lean += anticipation(gPrev.lean, g.lean, st);
+  p.shoulderTilt += anticipation(gPrev.shoulderTilt, g.shoulderTilt, st);
 
   // word accent strikes the right forearm (and counter-leans the torso)
   const acc = accentEnv(t, wordTimes, wordTexts);
@@ -368,10 +378,21 @@ export function poseAt(
   // shoulder counter-motion
   p.shoulderTilt -= p.lean * 0.5;
 
-  // blink cycle (via the shared envelope — U2.6 lets 'urgent' re-run it faster)
-  p.blink = Math.max(p.blink, blinkCycleAt(t, 4300, h));
-  // occasional glance
-  p.look = Math.sin(t / 7400 + h * 6.2) * 0.35;
+  // M-05 — dual blink cadences with a 10% double-blink (real eyes never march
+  // in step), and a gaze that SNAPS to a new hold every ~3.4s (80ms saccade)
+  // and only drifts after it settles — no more pendulum
+  const bl1 = blinkCycleAt(t, 4300, h);
+  const bl2 = blinkCycleAt(t, 6100, h + 1);
+  const blinkPhase = (t + (h * 700) % 900) % 4300;
+  const dbl = hash01(Math.floor((t + (h * 700) % 900) / 4300) + h) < 0.10
+    ? blinkCycleAt(t - 150, 4300, h)
+    : 0;
+  p.blink = Math.max(p.blink, bl1, bl2, dbl);
+  const gazeOff = h * 917;
+  const seg = Math.floor((t + gazeOff) / 3400);
+  const segAge = (t + gazeOff) % 3400;
+  const gazeTgt = (hash01(seg * 7.31 + h * 3.7) - 0.5) * 1.1;
+  p.look = gazeTgt * easeOutCubic(clamp01(segAge / 80)) + Math.sin(segAge / 900) * 0.05;
 
   p.mouth = talkAt(t, wordTimes);
   return p;
@@ -388,10 +409,12 @@ export function walkPose(phase: number, speed: number): Pose {
   const s = Math.sin(pp);
   const s2 = Math.sin(pp + Math.PI); // other leg
   // arm carriage: swing with the stride, elbows easing as the arm passes the body
-  p.rAU = 8 + s * 24 * speed;
-  p.rAL = 14 + Math.max(0, -s) * 16 * speed;
-  p.lAU = -8 + s2 * 24 * speed;
-  p.lAL = 14 + Math.max(0, -s2) * 16 * speed;
+  // M-01 — arm counter-swing ±30° with a REAL elbow flex of 8–26° across the
+  // cycle (speed-independent — the old 14..30·speed read as straight tubes)
+  p.rAU = 8 + s * 30 * speed;
+  p.rAL = 26 - 18 * (0.5 + 0.5 * s);
+  p.lAU = -8 + s2 * 30 * speed;
+  p.lAL = 26 - 18 * (0.5 + 0.5 * s2);
   // (legs are driven from walkPhase inside legDraw — same phase, same source of truth)
   // swing = fraction of the cycle this leg is OFF the ground (cos < 0); the
   // support leg stays straight, the swing leg flexes deeply (U2.5 fix — the
@@ -399,13 +422,15 @@ export function walkPose(phase: number, speed: number): Pose {
   p.rKnee = Math.max(0, -Math.cos(pp)) * 44 * speed + 5;
   p.lKnee = Math.max(0, Math.cos(pp)) * 44 * speed + 5;
   p.rAnkle = 0; p.lAnkle = 0;
-  // pelvis height: HIGH at mid-stance (ph 0/.5), LOW at double support
-  // (ph .25/.75) with a 4 px drop onto the support leg at contact (U2.5)
+  // pelvis height: HIGH at mid-stance (ph 0/.5), LOW at double support —
+  // M-01: the hip drop at contact is raised so it actually registers on film
   const contact = Math.max(0, -Math.cos(pp * 2));
-  p.rootY = (-6 * (0.5 + 0.5 * Math.cos(pp * 2)) + 4 * contact) * speed;
+  p.rootY = (-6 * (0.5 + 0.5 * Math.cos(pp * 2)) + 5 * contact) * speed;
   p.lean = 1.5 * speed;
   p.torsoTilt = 1.5 * speed;
-  p.shoulderTilt = -s * 4 * speed;
+  // M-01 — shoulder counter-rotation 4° (speed-independent, was buried by the
+  // speed factor)
+  p.shoulderTilt = -s * 4;
   p.pelvisTilt = s * 3 * speed;
   p.walkPhase = ph;
   p.walkSpeed = speed;
@@ -571,26 +596,31 @@ function drawFace(
   const smile = p.smile;
   ctx.save();
   if (talk > 0.14 && v !== 'X') {
-    let mw = R * 0.42, mh = R * 0.30 * talk, round = 1;
-    if (v === 'M') { mw = R * 0.24; mh = R * 0.05; }
-    else if (v === 'F') { mw = R * 0.34; mh = R * 0.09; round = 0.2; }
-    else if (v === 'E') { mw = R * 0.52; mh = R * 0.14 * talk + 1.5; }
-    else if (v === 'O') { mw = R * 0.30; mh = R * 0.36 * talk; }
-    else if (v === 'L') { mw = R * 0.36; mh = R * 0.20 * talk; }
-    else if (v === 'S') { mw = R * 0.44; mh = R * 0.16 * talk; }
+    // M-07 — lip-sync must READ at phone size: viseme widths spread to
+    // 0.16–0.72·R (was 0.24–0.52·R ≈ 2-4px differences) and the jaw DROPS
+    // with openness instead of the teeth bar just popping in and out
+    const jaw = Math.max(0, talk - 0.18) * R * 0.15;
+    const myJ = my + jaw;
+    let mw = R * 0.52, mh = R * 0.38 * talk, round = 1;
+    if (v === 'M') { mw = R * 0.16; mh = R * 0.05; }
+    else if (v === 'F') { mw = R * 0.30; mh = R * 0.10; round = 0.2; }
+    else if (v === 'E') { mw = R * 0.72; mh = R * 0.18 * talk + 1.5; }
+    else if (v === 'O') { mw = R * 0.34; mh = R * 0.52 * talk; }
+    else if (v === 'L') { mw = R * 0.42; mh = R * 0.30 * talk; }
+    else if (v === 'S') { mw = R * 0.56; mh = R * 0.20 * talk; }
     ctx.beginPath();
-    if (round > 0.5) ctx.ellipse(mx, my, mw, Math.max(1.2, mh), 0, 0, Math.PI * 2);
-    else ctx.ellipse(mx, my, mw, Math.max(1.2, mh), 0, 0, Math.PI * 2);
+    if (round > 0.5) ctx.ellipse(mx, myJ, mw, Math.max(1.2, mh), 0, 0, Math.PI * 2);
+    else ctx.ellipse(mx, myJ, mw, Math.max(1.2, mh), 0, 0, Math.PI * 2);
     ctx.fillStyle = '#4A2E28';
     ctx.fill();
     if (mh > R * 0.16) {
       // teeth bar + cavity depth
       ctx.save();
-      ctx.beginPath(); ctx.ellipse(mx, my, mw, mh, 0, 0, Math.PI * 2); ctx.clip();
+      ctx.beginPath(); ctx.ellipse(mx, myJ, mw, mh, 0, 0, Math.PI * 2); ctx.clip();
       ctx.fillStyle = 'rgba(240,232,220,0.85)';
-      ctx.fillRect(mx - mw, my - mh, mw * 2, mh * 0.7);
+      ctx.fillRect(mx - mw, myJ - mh, mw * 2, mh * 0.7);
       ctx.fillStyle = 'rgba(120,40,40,0.35)';
-      ctx.beginPath(); ctx.ellipse(mx, my + mh * 0.7, mw * 0.7, mh * 0.6, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(mx, myJ + mh * 0.7, mw * 0.7, mh * 0.6, 0, 0, Math.PI * 2); ctx.fill();
       ctx.restore();
     }
   } else {
@@ -764,6 +794,9 @@ export interface RenderOpts {
   /** finite-difference velocities (per ~90ms) — drive head lag, tie pendulum,
    *  wrist follow-through. Compute as pose(t) − pose(t−90) in the scene (D4). */
   vel?: { lean?: number; rootY?: number; rAL?: number; rAU?: number };
+  /** M-03 — absolute time (same base as `t`) of a prop IMPACT (gap-bar catch,
+   *  stamp slam, bar landing): the body compresses to sy≈0.94 and recoils. */
+  impactT?: number;
 }
 
 export function drawStickman(
@@ -791,14 +824,25 @@ export function drawStickman(
   //      scaleX = 1 − k·vy·0.6.
   let sy = 1;
   if (p.walkPhase >= 0) {
+    // M-01 — the two-frame contact squash no longer scales away with walkSpeed
+    const sqSpd = Math.max(0.62, p.walkSpeed);
     const contact = Math.max(0, -Math.cos(p.walkPhase * Math.PI * 4));
     const push = Math.max(0, Math.cos(p.walkPhase * Math.PI * 4));
-    sy += -contact * 0.05 * p.walkSpeed + push * 0.03 * p.walkSpeed;
+    sy += -contact * 0.05 * sqSpd + push * 0.03 * sqSpd;
   }
   // vel is pose(t) − pose(t−90ms); rootY up is negative, so upward motion
   // (push-off) is vy < 0 → stretch, downward motion (landing) → squash
   const vyPS = (r.vel?.rootY ?? 0) * (1000 / 90);
   sy += clamp(-0.0009 * vyPS, -0.05, 0.05);
+  // M-03 — impact squash: ANY prop landing (the gap bar, the SEC stamp, bar
+  // landings) answers with a compress to sy≈0.94 and a damped spring recoil
+  if (r.impactT != null) {
+    const age = t - r.impactT;
+    if (age >= 0 && age < 700) {
+      const ik = Math.exp(-age / 240) * Math.cos(age / 170);
+      sy -= ik * 0.06;
+    }
+  }
   sy = clamp(sy, 0.92, 1.08);
   const sx = 1 - (sy - 1) * 0.6;
   ctx.scale(sx, sy);
@@ -823,14 +867,14 @@ export function drawStickman(
       // stayed straight, the exact opposite of a walk)
       const swingFrac = Math.max(0, -Math.cos(wph));
       kneeBend = swingFrac * 44 * p.walkSpeed + (1 - swingFrac) * 5 * p.walkSpeed + 2;
-      // heel strike → foot-flat → toe-off foot pitch (U2.5: −12° at phase 0.05,
-      // +14° at phase 0.45)
+      // M-01 — ±22° heel-toe roll (was −12°..+14° ≈ 1–2px of toe travel at
+      // rig scale): heel strike → roll through foot-flat → toe-off → reach
       let footPitch: number;
-      if (sp < 0.05) footPitch = lerp(-6, -12, sp / 0.05);
-      else if (sp < 0.35) footPitch = lerp(-12, 0, (sp - 0.05) / 0.30);
-      else if (sp < 0.45) footPitch = lerp(0, 14, (sp - 0.35) / 0.10);
-      else if (sp < 0.65) footPitch = lerp(14, -6, (sp - 0.45) / 0.20);
-      else footPitch = lerp(-6, -5, (sp - 0.65) / 0.35);
+      if (sp < 0.06) footPitch = lerp(-14, -22, sp / 0.06);
+      else if (sp < 0.38) footPitch = lerp(-22, 0, (sp - 0.06) / 0.32);
+      else if (sp < 0.48) footPitch = lerp(0, 22, (sp - 0.38) / 0.10);
+      else if (sp < 0.62) footPitch = lerp(22, -10, (sp - 0.48) / 0.14);
+      else footPitch = lerp(-10, -14, (sp - 0.62) / 0.38);
       ankleAng = footPitch * p.walkSpeed;
     } else {
       thighAng = side * 2.2 + (near ? p.rKnee * 0.06 : -p.lKnee * 0.06);
@@ -962,10 +1006,12 @@ export function drawStickman(
   // tie — a 2-SEGMENT pendulum (U2.4c): the knot+upper blade swing with the
   // torso motion; the lower blade trails on a second, softer angle driven by
   // the same velocities — classic follow-through, fully deterministic
+  // M-04 — follow-through at PERCEPTUAL amplitude (3.5× raise, same damping):
+  // the tie and pocket square now visibly answer gesture velocity
   const velLean = r.vel?.lean ?? 0;
   const velBob = r.vel?.rootY ?? 0;
-  const tieSwayDeg = clamp(velLean * -0.9 + velBob * -0.5, -8, 8);
-  const bladeSwayDeg = clamp(tieSwayDeg * 0.55 + velBob * -0.85, -12, 12);
+  const tieSwayDeg = clamp(velLean * -3.2 + velBob * -1.8, -28, 28);
+  const bladeSwayDeg = clamp(tieSwayDeg * 0.55 + velBob * -3.0, -42, 42);
   const tieG = ctx.createLinearGradient(0, 0, 0, 42);
   tieG.addColorStop(0, PALETTE.goldBright);
   tieG.addColorStop(1, PALETTE.goldDeep);
@@ -1025,7 +1071,7 @@ export function drawStickman(
   // peeking from it (no more floating name-badge parallelogram)
   ctx.save();
   ctx.translate(shW * 0.38, shY + 18);
-  ctx.rotate(-0.06 + tieSwayDeg * 0.1 * D2R);
+  ctx.rotate(-0.06 + tieSwayDeg * 0.35 * D2R); // M-04 — pocket-square lag 3.5×
   // pocket slit
   ctx.strokeStyle = 'rgba(5,8,16,0.55)';
   ctx.lineWidth = 1.6;
@@ -1116,7 +1162,7 @@ export function drawStickman(
   const headY = neckY2 - NECK - HEAD_R * 0.92 + p.headNod * -3;
   // overlapping action (D4): the head trails the torso — it arrives ~80ms late,
   // which is the classic animator's tell that the body has weight
-  const lagLean = p.lean - (r.vel?.lean ?? 0) * 1.6;
+  const lagLean = p.lean - (r.vel?.lean ?? 0) * 5.6; // M-04 — head lag 3.5×
   const headX = neckX2 + Math.sin((p.headTilt + lagLean) * D2R) * 6;
 
   // (C-03 — the old floating shoulder spheres are gone; the deltoid sleeve

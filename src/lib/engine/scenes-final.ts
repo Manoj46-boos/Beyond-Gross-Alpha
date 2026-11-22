@@ -96,25 +96,29 @@ export function hierarchyScene(g: SceneCtx): void {
     const e = springTo(0.94, 1, Math.max(0, t - 700 - i * 900), 160, 15);
     ctx.translate(x + w / 2, y + h / 2);
     ctx.scale(e, e);
-    ctx.translate(-w / 2, -h / 2);
-    glassCard(ctx, x, y, w, h, {
+    // L-01 — the card is drawn AT THE ORIGIN of the scaled sandwich (as
+    // secCase/trapTile already do). The old un-translate by half the card SIZE
+    // re-added (x, y): every tier card rendered at exactly (2x, 2y) — Tier 2
+    // cut by the frame edge, Tier 3 never visible.
+    const lx = -w / 2, ly = -h / 2;
+    glassCard(ctx, lx, ly, w, h, {
       r: 16,
       goldEdge: tr.tone === 'gold',
       border: tr.tone === 'up' ? rgba(PALETTE.up, 0.4) : tr.tone === 'platinum' ? rgba(PALETTE.steel, 0.35) : undefined,
     });
     // tier diamond
-    diamond(ctx, x + 56, y + h / 2, 15, tr.tone === 'gold' ? PALETTE.goldBright : tr.tone === 'up' ? PALETTE.up : PALETTE.steel);
+    diamond(ctx, lx + 56, ly + h / 2, 15, tr.tone === 'gold' ? PALETTE.goldBright : tr.tone === 'up' ? PALETTE.up : PALETTE.steel);
     setFont(ctx, 22, 800, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
-    ctx.fillText(tr.tier, x + 92, y + 46);
+    ctx.fillText(tr.tier, lx + 92, ly + 46);
     setFont(ctx, 36, 700, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.ink;
-    ctx.fillText(tr.title, x + 92, y + 92);
+    ctx.fillText(tr.title, lx + 92, ly + 92);
     setFont(ctx, 22, 500, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
-    ctx.fillText(tr.sub, x + 92, y + 124);
+    ctx.fillText(tr.sub, lx + 92, ly + 124);
     // verdict chip (right)
-    chip(ctx, tr.verdict, x + w - 320, y + h / 2 - 26, { size: 26, gold: tr.tone === 'gold' });
+    chip(ctx, tr.verdict, lx + w - 320, ly + h / 2 - 26, { size: 26, gold: tr.tone === 'gold' });
     ctx.restore();
   });
   // footer benchmark (top-right, never behind the caption pill)
