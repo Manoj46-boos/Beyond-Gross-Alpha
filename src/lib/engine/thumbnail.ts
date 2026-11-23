@@ -112,12 +112,20 @@ export function drawThumbnail(ctx: CanvasRenderingContext2D, W: number, H: numbe
     ctx.fillText('THE $5.1M LINE', W * 0.46, H * 0.63);
     try { (ctx as any).letterSpacing = '0px'; } catch { /* noop */ }
     ctx.textAlign = 'left';
-    // the Principal — face at the upper-left third, pointing at the split
+    // the Principal — the film's only ownable asset, now at the dominant
+    // scale the face+number CTR pattern needs: face on the upper-left third,
+    // lit by a spotlight pool so he reads at feed size, pointing across the
+    // $5.1M gap between the two outcomes
+    const spot = ctx.createRadialGradient(W * 0.185, H * 0.42, 10, W * 0.185, H * 0.42, W * 0.30);
+    spot.addColorStop(0, rgba(PALETTE.gold, 0.20));
+    spot.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = spot;
+    ctx.fillRect(0, 0, W, H);
     const pose = poseAt('thumb-split', 620, 620, [], [], undefined, 'present');
     applyMood(pose, 'reveal', 620, 3);
-    const px = W * 0.24, groundY = H * 0.92, rigScale = 1.42;
-    companionArm(pose, px, groundY, rigScale, { x: W * 0.5, y: H * 0.3 }, 'point');
-    drawStickman(ctx, px, groundY, rigScale, 620, { pose, alpha: 1, faceScale: 1.5, rimBoost: 0.06 }, 7);
+    const px = W * 0.185, groundY = H * 0.94, rigScale = 2.35;
+    companionArm(pose, px, groundY, rigScale, { x: W * 0.47, y: H * 0.30 }, 'point');
+    drawStickman(ctx, px, groundY, rigScale, 620, { pose, alpha: 1, faceScale: 1.6, rimBoost: 0.08, reflection: true }, 7);
   } else {
     // T3 — 92% vs 17% THE GAP
     setFont(ctx, 140, 900, FONT_DISPLAY);

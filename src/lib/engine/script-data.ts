@@ -310,7 +310,13 @@ export const SCRIPT: ChapterSpec[] = [
     title: 'Lever 3 — The Wrapper',
     beats: [
       {
-        vo: 'Lever three: the wrapper. Same index, same stocks — different tax outcome, depending on the legal structure you hold them through. Here\'s the mechanism most investors never learn. When you redeem a mutual fund, the manager often has to sell holdings to pay you out — and those gains get distributed to everyone who stayed. You can buy a fund in December and owe taxes on gains it realized in March, before you owned a single share. And keep watching — at the end of this video I hand you the five questions that lock all four levers into one written plan.',
+        vo: 'Before the wrapper — a promise. The last five minutes of this video hand you the five questions that lock all four levers into one written plan. Stay for them.',
+        pauseAfter: 500,
+        voStyle: 'reveal',
+        scene: { type: 'rehook', sceneKey: 'c6-rehook', ghost: '5' },
+      },
+      {
+        vo: 'Lever three: the wrapper. Same index, same stocks — different tax outcome, depending on the legal structure you hold them through. Here\'s the mechanism most investors never learn. When you redeem a mutual fund, the manager often has to sell holdings to pay you out — and those gains get distributed to everyone who stayed. You can buy a fund in December and owe taxes on gains it realized in March, before you owned a single share.',
         pauseAfter: 420,
         voStyle: 'neutral',
         scene: { type: 'plumbing', sceneKey: 'c6-plumbing', mode: 'mutual' },
@@ -335,6 +341,7 @@ export const SCRIPT: ChapterSpec[] = [
         pauseAfter: 400,
         voStyle: 'calm',
         source: S15,
+        gestures: { 2: 'count', 3: 'weigh', 4: 'present', 5: 'chin' },
         scene: { type: 'taxManaged', sceneKey: 'c6-taxmanaged', closeup: { x: 150, y: 290, w: 1700, h: 480 } },
       },
       {
@@ -377,6 +384,7 @@ export const SCRIPT: ChapterSpec[] = [
         pauseAfter: 420,
         voStyle: 'calm',
         source: S17,
+        gestures: { 1: 'open', 3: 'present', 5: 'count', 6: 'chin' },
         scene: { type: 'exchangeFund', sceneKey: 'c7-xfund', closeup: { x: 320, y: 250, w: 1360, h: 480 } },
       },
       {
@@ -384,6 +392,7 @@ export const SCRIPT: ChapterSpec[] = [
         pauseAfter: 380,
         voStyle: 'calm',
         source: S21,
+        gestures: { 0: 'present', 1: 'sweep', 2: 'weigh' },
         scene: { type: 'longShort', sceneKey: 'c7-ls', closeup: { x: 1150, y: 330, w: 700, h: 420 } },
       },
       {
@@ -398,6 +407,7 @@ export const SCRIPT: ChapterSpec[] = [
         pauseAfter: 700,
         voStyle: 'reveal',
         dropOut: true,
+        gestures: { 2: 'explain', 4: 'open' },
         scene: { type: 'host', sceneKey: 'c7-bridge', headline: 'The quietest, most powerful fact', kicker: 'Before the synthesis', gesture: 'catch', companion: { kind: 'gapbar', value: '$5.1M' } },
       },
     ],
@@ -412,30 +422,35 @@ export const SCRIPT: ChapterSpec[] = [
         pauseAfter: 420,
         voStyle: 'calm',
         source: S20,
+        gestures: { 1: 'present', 2: 'count', 3: 'explain' },
         scene: { type: 'stepUp', sceneKey: 'c8-stepup' },
       },
       {
         vo: "Which means a plain, low-turnover index ETF — held for decades, donated or inherited — is already one of the most tax-efficient structures ever designed. Its drag is roughly the tax on its dividends: at today's yields, about a third of a point a year. Before you buy complexity, beat that benchmark. Most pitches can't.",
         pauseAfter: 400,
         voStyle: 'calm',
+        gestures: { 0: 'open', 2: 'present', 3: 'chin' },
         scene: { type: 'benchmarkBar', sceneKey: 'c8-benchmark', closeup: { x: 150, y: 280, w: 1560, h: 430 } },
       },
       {
         vo: 'So here\'s the hierarchy. Screenshot this. Tier one, do first: asset location, and systematic, wash-sale-aware loss harvesting across every account you own. Combined, the independent evidence supports something like a quarter to a full point a year — more in volatile markets, less in calm ones, decaying as portfolios age. Tier two: the wrapper. ETFs or low-turnover index funds in taxable; ordinary-income assets sheltered; tax-managed labels optional. Tier three, situational: direct indexing, exchange funds, long-short — only with a specific problem to solve. A concentration. A liquidity event. Gains that need offsetting. Complexity is a cost you pay every year for a benefit that may not show up every year.',
         pauseAfter: 900,
         voStyle: 'calm',
+        gestures: { 0: 'present', 1: 'open', 4: 'count', 7: 'count', 10: 'weigh' },
         scene: { type: 'hierarchy', sceneKey: 'c8-hierarchy', closeup: { x: 160, y: 150, w: 1680, h: 650 }, hold: 5200 },
       },
       {
         vo: "And the five questions. Send these to whoever manages your money. One: show me my after-tax return for the last three years. Two: what did distributions cost me last year, in dollars? Three: where is my asset location written down — and why? Four: how often do you scan for losses, across which accounts — including my spouse's and my IRAs — and who checks the wash sales? Five: if I liquidated today, what's the embedded tax bill, and what's the plan to shrink it?",
         pauseAfter: 500,
         voStyle: 'calm',
+        gestures: { 0: 'open', 2: 'open', 3: 'count', 4: 'explain', 5: 'count', 6: 'weigh' },
         scene: { type: 'fiveQuestions', sceneKey: 'c8-questions' },
       },
       {
         vo: "A good advisor answers all five without flinching. A great one already sent you the answers. If yours stalls on question one, you've learned something worth more than this video.",
         pauseAfter: 420,
         voStyle: 'calm',
+        gestures: { 0: 'present', 1: 'chin', 2: 'open' },
         scene: { type: 'host', sceneKey: 'c8-advisor', headline: 'A great advisor already sent the answers.', kicker: 'The test', gesture: 'present', companion: { kind: 'statement', lines: ['Q1–Q5 · answered', 'in writing, every year'] } },
       },
       {

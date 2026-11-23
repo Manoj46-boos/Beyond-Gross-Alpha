@@ -130,12 +130,20 @@ export function iraSplitScene(g: SceneCtx): void {
   const { ctx, W, H, t } = g;
   paintStage(ctx, W, H, t, {});
   panelTitle(ctx, 'A million in a traditional IRA is not a million', W * 0.10, 210, W * 0.8, t / 2400, { kickerText: 'Lever 1 · Trap two' });
+  // AUDIT R-02 — D17 sentence-cadence wiring: sentence 0 owns the donut
+  // split, sentence 1 the "$700,000 — yours" legend, sentence 2 the
+  // "$300,000 — the government's" line, 3+ the risk note card — the frame's
+  // emphasis moves with the narration instead of one frozen layout.
+  const siIS = g.sentenceIdx ?? -1;
+  const hotZone = siIS < 0 ? -1 : siIS === 0 ? 0 : siIS === 1 ? 1 : siIS === 2 ? 2 : 3;
+  const fresh = g.sentenceT != null ? clamp01(1 - g.sentenceT / 900) : 0;
   // S-05 — the donut shifts right of the figure margin
   const cx = W * 0.42, cy = H * 0.55;
   donut(ctx, cx, cy, 170, [
     { value: 70, tone: 'gold', label: 'yours' },
     { value: 30, tone: 'down', label: "government's" },
   ], clamp01((t - 300) / 1200), t, { thickness: 42, centerBig: '$1M', centerSub: 'pre-tax face value' });
+  if (hotZone === 0) focusPing(ctx, cx, cy - 176, g.sentenceT, 104);
   // legend — AUDIT T-03: the gold line measured ~854px from x=1066 and was
   // cut at the right frame edge (the scene's core money sentence, truncated).
   // Wrapped to two lines and the stack raised so the red line clears the
@@ -143,21 +151,26 @@ export function iraSplitScene(g: SceneCtx): void {
   const la = clamp01((t - 1400) / 500);
   if (la > 0) {
     ctx.save();
-    ctx.globalAlpha = la;
     const lx = cx + 260, ly = cy - 92;
     setFont(ctx, 30, 700, FONT_UI);
+    // the legend line a sentence owns runs at full ink; the other recedes
+    ctx.globalAlpha = la * (hotZone >= 0 && hotZone !== 1 ? 0.45 : 1);
     ctx.fillStyle = PALETTE.goldBright;
     ctx.fillText('$700,000 — yours', lx, ly);
     ctx.fillText('(at a 30% future rate)', lx, ly + 40);
+    ctx.globalAlpha = la * (hotZone >= 0 && hotZone !== 2 ? 0.45 : 1);
     ctx.fillStyle = '#F08A8D';
     ctx.fillText('$300,000 — the government’s', lx, ly + 92);
+    ctx.globalAlpha = 1;
     ctx.restore();
+    if (hotZone === 1) focusPing(ctx, lx + 140, ly, g.sentenceT, 92);
+    if (hotZone === 2) focusPing(ctx, lx + 190, ly + 92, g.sentenceT, 92);
   }
   // the risk note
   const na = clamp01((t - 2600) / 600);
   if (na > 0) {
     ctx.save();
-    ctx.globalAlpha = na;
+    ctx.globalAlpha = na * (hotZone >= 0 && hotZone !== 3 ? 0.55 : 1);
     glassCard(ctx, W * 0.58, 620, 560, 140, { r: 14 });
     setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkSoft;
@@ -165,12 +178,24 @@ export function iraSplitScene(g: SceneCtx): void {
       ctx.fillText(ln, W * 0.58 + 30, 620 + 46 + i * 36);
     });
     ctx.restore();
+    // R-02 — the risk note is the hot zone from sentence 3 on: fresh gold
+    // edge pulse on every sentence boundary
+    if (hotZone === 3) {
+      ctx.save();
+      ctx.globalAlpha = 0.22 + 0.5 * fresh;
+      ctx.strokeStyle = PALETTE.goldBright;
+      ctx.lineWidth = 2.2;
+      roundRect(ctx, W * 0.58 - 12, 608, 584, 164, 18);
+      ctx.stroke();
+      ctx.restore();
+      focusPing(ctx, W * 0.58 + 280, 690, g.sentenceT, 96);
+    }
   }
   // S-05 — the Principal presents the split: palm open at the gold segment
   dataSceneFigure(g, 1.42, {
     seed: 33,
     mode: 'present',
-    focal: (si) => (si >= 1 ? { x: cx + 150, y: cy - 110 } : { x: cx - 60, y: cy - 170 }),
+    focal: (si) => (si >= 3 ? { x: W * 0.58 + 280, y: 620 } : si >= 1 ? { x: cx + 150, y: cy - 110 } : { x: cx - 60, y: cy - 170 }),
   });
 }
 
@@ -583,12 +608,16 @@ export function decayCurveScene(g: SceneCtx): void {
   const { ctx, W, t } = g;
   paintStage(ctx, W, g.H, t, {});
   panelTitle(ctx, 'Tax alpha decays — deferral, not forgiveness', W * 0.10, 220, W * 0.8, t / 2400, { kickerText: 'Lever 2 · The catch' });
-  // AUDIT R-02 — D17 sentence-cadence wiring: sentences 0-4 walk the decay
-  // curve, 5+ the deferral truth card — the active zone lifts, the other
-  // recedes, and the 38s hold breathes with the sentences.
-  const di = g.sentenceIdx != null && g.sentenceIdx >= 0 ? (g.sentenceIdx <= 4 ? 0 : 1) : -1;
+  // AUDIT R-02 — D17 sentence-cadence wiring, full walk: sentence 0 owns the
+  // ~8% annotation, sentences 1-2 walk the decay curve itself (the ping
+  // slides along the curve — a moving hot spot on the data), 3+ the deferral
+  // truth card with headline ↔ gold-line alternating focus. The 38s hold
+  // breathes with the sentences instead of freezing after one reveal.
+  const siDC = g.sentenceIdx ?? -1;
+  const hotZone = siDC < 0 ? -1 : siDC === 0 ? 0 : siDC <= 2 ? 1 : 2;
+  const fresh = g.sentenceT != null ? clamp01(1 - g.sentenceT / 900) : 0;
   ctx.save();
-  ctx.globalAlpha = di === 1 ? 0.55 : 1;
+  ctx.globalAlpha = hotZone === 2 ? 0.5 : 1;
   const pts: [number, number][] = [];
   for (let i = 0; i <= 30; i++) pts.push([i, 8 * Math.exp(-i / 6)]);
   lineChart(ctx, {
@@ -601,12 +630,34 @@ export function decayCurveScene(g: SceneCtx): void {
     annotations: [{ at: 0.03, label: 'new accounts: ~8%', tone: 'gold' }],
   });
   ctx.restore();
+  // the walking ping: sentence 0 at the ~8% annotation, sentence 1 a quarter
+  // into the decay, sentence 2 at the tail the narration lands on
+  const chartX = W * 0.10, chartW = W * 0.52, chartY = 340, chartH = 400;
+  const decayY = (frac: number) => {
+    const v = 8 * Math.exp(-(30 * frac) / 6);
+    return chartY + chartH * (1 - v / 9);
+  };
+  if (hotZone === 0) focusPing(ctx, chartX + 0.03 * chartW, decayY(0.03), g.sentenceT, 104);
+  if (hotZone === 1) focusPing(ctx, chartX + (siDC === 1 ? 0.25 : 0.55) * chartW, decayY(siDC === 1 ? 0.25 : 0.55), g.sentenceT, 104);
+  if (hotZone >= 0) {
+    const hx = hotZone === 2 ? W * 0.68 - 12 : chartX - 12;
+    const hy = hotZone === 2 ? 340 - 12 : chartY - 12;
+    const hw = hotZone === 2 ? 484 : chartW + 24;
+    const hh = hotZone === 2 ? 424 : chartH + 24;
+    ctx.save();
+    ctx.globalAlpha = 0.22 + 0.5 * fresh;
+    ctx.strokeStyle = PALETTE.goldBright;
+    ctx.lineWidth = 2.2;
+    roundRect(ctx, hx, hy, hw, hh, 16);
+    ctx.stroke();
+    ctx.restore();
+  }
   // the deeper truth card
   const ta = clamp01((t - 1800) / 600);
   if (ta > 0) {
     ctx.save();
-    ctx.globalAlpha = ta * (di === 0 ? 0.55 : 1);
-    glassCard(ctx, W * 0.68, 340, 460, 400, { r: 16, alpha: di === 0 ? 0.55 : 1, goldEdge: true });
+    ctx.globalAlpha = ta * (hotZone < 2 ? 0.55 : 1);
+    glassCard(ctx, W * 0.68, 340, 460, 400, { r: 16, alpha: hotZone === 2 ? 1 : 0.55, goldEdge: true });
     setFont(ctx, 34, 700, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.ink;
     wrapText(ctx, 'Every harvested loss lowers your basis — a bigger gain waiting later.', 360, 34, 700, FONT_DISPLAY).forEach((ln, i) => {
@@ -618,6 +669,10 @@ export function decayCurveScene(g: SceneCtx): void {
       ctx.fillText(ln, W * 0.68 + 40, 620 + i * 32);
     });
     ctx.restore();
+    // R-02 — inside the card, the eye alternates headline ↔ gold line
+    if (hotZone === 2 && ta >= 1) {
+      focusPing(ctx, W * 0.68 + 220, siDC % 2 === 0 ? 470 : 628, g.sentenceT, 88);
+    }
   }
 }
 

@@ -359,6 +359,10 @@ export function drawChapterWalkOn(
   // left the frame before he reaches it. The ghost numeral and room stay.
   const EXIT_AT = Math.max(2350, durMs - 1950);
   const exitFade = tMs < EXIT_AT ? 1 : 1 - clamp01((tMs - EXIT_AT - 120) / 450);
+  // AUDIT I-03 — schedule the signature light on chapter-open beats: the
+  // volumetric pass sits BEHIND the card on every walk-on (8 cards ≈ 34s of
+  // runtime), so the cinematic look is no longer confined to host scenes.
+  godRays(ctx, W, H, tMs, { alpha: 0.30, x: W * 0.62 });
   drawChapterCard(ctx, W, H, tMs, durMs, index, title, 0, totalChapters, exitFade);
   const groundY = H * 0.88;
   const rigScale = 2.3;

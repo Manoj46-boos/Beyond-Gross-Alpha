@@ -15,7 +15,7 @@ import { SceneCtx, SceneDrawer } from './scene-context';
 import { splitSentences } from './easing';
 import { SCRIPT } from './script-data';
 
-import { coldOpenScene, gapBarsScene, titleCardScene, statementScene, turnCardScene, quietBeatScene, policyRiskScene, finalLinesScene, circleBackScene, stampCardScene } from './scenes-open';
+import { coldOpenScene, gapBarsScene, titleCardScene, rehookScene, statementScene, turnCardScene, quietBeatScene, policyRiskScene, finalLinesScene, circleBackScene, stampCardScene } from './scenes-open';
 import { hostScene, drawChapterWalkOn } from './scenes-host';
 import { brokerageStatementScene, feeChipsScene, memoCardScene, taxRatesScene, turnoverBarsScene, growthCurvesScene, characterMatrixScene, signatureCurveScene, benchmarkBarScene } from './scenes-drag';
 import { locationMapScene, trapTileScene, iraSplitScene, bpsCompareScene, tlhMechanicScene, washSaleScene, waterfallScene, eraBarsScene, vendorCompareScene, wealthfrontCaseScene, decayCurveScene, secCaseScene } from './scenes-tlh';
@@ -26,6 +26,7 @@ export const SCENES: Record<string, SceneDrawer> = {
   coldOpen: coldOpenScene,
   gapBars: gapBarsScene,
   titleCard: titleCardScene,
+  rehook: rehookScene,
   statement: statementScene,
   turnCard: turnCardScene,
   quietBeat: quietBeatScene,

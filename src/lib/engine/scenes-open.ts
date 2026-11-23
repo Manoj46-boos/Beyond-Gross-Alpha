@@ -5,9 +5,9 @@
  */
 
 import { SceneCtx } from './scene-context';
-import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, goldRule, chip, fitText } from './theme';
+import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, goldRule, chip, fitText, kicker } from './theme';
 import { clamp01, easeOutCubic, easeInOutCubic, springTo, hash01, fmtMoney } from './easing';
-import { goldDust, impactRing, softBloom, microShake, spinToken, floatY, focusPing, lightBlade } from './fx';
+import { goldDust, impactRing, softBloom, microShake, spinToken, floatY, focusPing, lightBlade, godRays } from './fx';
 import { drawStatement, statementAnchor } from './textfx';
 import { panelTitle, barRow } from './charts';
 import { paintStage } from './stage';
@@ -360,6 +360,10 @@ export function gapBarsScene(g: SceneCtx): void {
 export function titleCardScene(g: SceneCtx): void {
   const { ctx, W, H, t, s } = g;
   const a = clamp01(t / 500) * clamp01((g.d - t) / 400);
+  // AUDIT I-03 — the film's own chapter-open carries the signature light:
+  // the volumetric pass sits behind the title, on the same schedule as the
+  // walk-on cards, instead of reserving godRays for host scenes alone.
+  godRays(ctx, W, H, t, { alpha: 0.35, x: W * 0.5 });
   ctx.save();
   ctx.globalAlpha = a;
   ctx.textAlign = 'center';
@@ -372,6 +376,61 @@ export function titleCardScene(g: SceneCtx): void {
   try { (ctx as any).letterSpacing = '0px'; } catch { /* noop */ }
   ctx.textAlign = 'left';
   ctx.restore();
+}
+
+// ── R-06 — the mid-roll re-hook (the Lever-3 boundary promise) ───────────────
+// The script promised the five questions once, in the intro; session-time
+// optimisation lives and dies on a second engineered event near the middle.
+// This card + its VO line land at the Lever-3 boundary, restating the
+// promise as a visual event so viewers carry it past the advanced tier.
+export function rehookScene(g: SceneCtx): void {
+  const { ctx, W, H, t } = g;
+  // the same signature light the chapter opens carry — the promise reads as
+  // an authored beat, not a thrown-up card
+  godRays(ctx, W, H, t, { alpha: 0.32, x: W * 0.5 });
+  statementAnchor(ctx, W, H, g.chapterIdx, t, '5');
+  const a = clamp01(t / 600);
+  kicker(ctx, 'HALFWAY · A PROMISE', W * 0.10, 300, a);
+  ctx.save();
+  ctx.globalAlpha = a;
+  ctx.textAlign = 'center';
+  goldFillText(ctx, 'Stay for the last five minutes.', W / 2, H * 0.46, 84, 800, FONT_DISPLAY, 'center');
+  goldRule(ctx, W / 2, H * 0.46 + 46, 740, clamp01((t - 400) / 600));
+  setFont(ctx, 32, 600, FONT_UI);
+  try { (ctx as any).letterSpacing = '5px'; } catch { /* noop */ }
+  ctx.fillStyle = PALETTE.inkSoft;
+  ctx.fillText('THE FIVE QUESTIONS AT THE END GRADE YOUR ADVISOR', W / 2, H * 0.46 + 108);
+  try { (ctx as any).letterSpacing = '0px'; } catch { /* noop */ }
+  setFont(ctx, 28, 500, FONT_UI);
+  ctx.fillStyle = PALETTE.inkMuted;
+  ctx.fillText('— before your money is on the line —', W / 2, H * 0.46 + 156);
+  ctx.textAlign = 'left';
+  ctx.restore();
+  // a quiet question-mark diamond row: five ticks, the promise made visual
+  const ta = clamp01((t - 800) / 700);
+  if (ta > 0) {
+    ctx.save();
+    ctx.globalAlpha = ta;
+    for (let i = 0; i < 5; i++) {
+      const dx = W / 2 + (i - 2) * 74;
+      const ds = 12 + 2.2 * Math.sin(t / 2200 + i * 1.4);
+      ctx.save();
+      ctx.translate(dx, H * 0.70);
+      ctx.rotate(Math.PI / 4);
+      ctx.fillStyle = rgba(PALETTE.gold, 0.85);
+      ctx.fillRect(-ds / 2, -ds / 2, ds, ds);
+      ctx.strokeStyle = rgba(PALETTE.goldPale, 0.5);
+      ctx.lineWidth = 1;
+      ctx.strokeRect(-ds / 2, -ds / 2, ds, ds);
+      ctx.restore();
+      setFont(ctx, 26, 700, FONT_UI);
+      ctx.fillStyle = PALETTE.inkSoft;
+      ctx.textAlign = 'center';
+      ctx.fillText(String(i + 1), dx, H * 0.70 + 58);
+      ctx.textAlign = 'left';
+    }
+    ctx.restore();
+  }
 }
 
 // ── full-frame statement (serif) ─────────────────────────────────────────────

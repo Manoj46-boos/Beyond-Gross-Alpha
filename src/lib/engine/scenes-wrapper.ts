@@ -184,18 +184,39 @@ export function distribBarsScene(g: SceneCtx): void {
   const { ctx, W, t } = g;
   paintStage(ctx, W, g.H, t, {});
   panelTitle(ctx, 'The scoreboard: capital-gains distributions, 2025', W * 0.10, 220, W * 0.8, t / 2400, { kickerText: 'Lever 3 · State Street' });
+  // AUDIT R-02 — D17 sentence-cadence wiring: sentence 0 owns the 57%
+  // mutual-fund bar, sentence 1 the 6% ETF bar, 2 holds both in overview,
+  // 3+ the "structural moat" punchline with the bars receding — the frame's
+  // emphasis changes with every sentence of the 40s scoreboard.
+  const siDB = g.sentenceIdx ?? -1;
+  const hotZone = siDB < 0 ? -1 : siDB === 0 ? 0 : siDB === 1 ? 1 : siDB === 2 ? 3 : 2;
+  const fresh = g.sentenceT != null ? clamp01(1 - g.sentenceT / 900) : 0;
   // S-05 — bars shift right of the figure margin (figure spans x≈90..330)
   const x = W * 0.30, w = W * 0.42;
+  ctx.save();
+  ctx.globalAlpha = hotZone === 1 || hotZone === 2 ? 0.45 : 1;
   barRow(ctx, { x, y: 345, w, h: 120, label: 'Equity mutual funds', value: 57, maxV: 100, p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'down', valueText: '57%' });
+  ctx.restore();
+  ctx.save();
+  ctx.globalAlpha = hotZone === 0 || hotZone === 2 ? 0.45 : 1;
   barRow(ctx, { x, y: 535, w, h: 120, label: 'Equity ETFs', value: 6, maxV: 100, p: clamp01((t - 1300) / 900), t, landT: 2250, tone: 'up', valueText: '6%' });
+  ctx.restore();
+  if (hotZone === 0) dimRect(ctx, x, 535, w, 120);
+  if (hotZone === 1) dimRect(ctx, x, 345, w, 120);
+  if (hotZone === 2) dimRect(ctx, x, 345, w, 310);
+  if (hotZone === 0) focusPing(ctx, x + w * 0.5, 405, g.sentenceT, 100);
+  if (hotZone === 1) focusPing(ctx, x + w * 0.5, 595, g.sentenceT, 100);
   const ma = clamp01((t - 2200) / 500);
   if (ma > 0) {
     ctx.save();
-    ctx.globalAlpha = ma;
+    ctx.globalAlpha = ma * (hotZone === 0 || hotZone === 1 ? 0.45 : 1);
     setFont(ctx, 40, 800, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.goldBright;
     ctx.fillText('A structural moat.', x + w + 60, 660);
     ctx.restore();
+    if (hotZone === 2 && ma >= 1) {
+      focusPing(ctx, x + w + 200, 660, g.sentenceT, 96);
+    }
   }
   // S-05 — the Principal leans on the 57%/6% bars (report §6.4): open palm
   // presented at the bar being narrated, per sentence. M-03 — his body
@@ -204,7 +225,7 @@ export function distribBarsScene(g: SceneCtx): void {
     seed: 41,
     mode: 'present',
     impactT: t >= 2250 ? 2250 : t >= 1250 ? 1250 : undefined,
-    focal: (si) => ({ x: x + w - 70, y: si === 0 ? 460 : 650 }),
+    focal: (si) => (si <= 1 ? { x: x + w - 70, y: si === 0 ? 460 : 650 } : { x: x + w + 170, y: 640 }),
   });
 }
 
@@ -214,26 +235,50 @@ export function taxManagedScene(g: SceneCtx): void {
   paintStage(ctx, W, g.H, t, {});
   panelTitle(ctx, 'The label matters less than the turnover', W * 0.10, 220, W * 0.8, t / 2400, { kickerText: 'Lever 3 · Tax-managed funds' });
   const x = W * 0.10, w = W * 0.55;
-  // AUDIT R-02 — D17 sentence-cadence wiring: sentences 0-1 walk the two
-  // bars, 2+ the verdict card — the active zone lifts, the other recedes.
-  const mi = g.sentenceIdx != null && g.sentenceIdx >= 0 ? (g.sentenceIdx <= 1 ? 0 : 1) : -1;
+  // AUDIT R-02 — D17 sentence-cadence wiring, full rotation: sentence 0 owns
+  // the tax-managed bar, sentence 1 the plain index bar, 2+ the verdict card
+  // — and inside the verdict the focus ping alternates headline ↔ 0.40%/yr
+  // punchline per sentence, so the 47s hold changes emphasis with the
+  // narration instead of freezing after one reveal.
+  const siTM = g.sentenceIdx ?? -1;
+  const hotZone = siTM < 0 ? -1 : siTM === 0 ? 0 : siTM === 1 ? 1 : 2;
+  const fresh = g.sentenceT != null ? clamp01(1 - g.sentenceT / 900) : 0;
   // AUDIT K-04 — bars h 120→150 and the verdict card h 310→380: content used
   // to end at y≈650 leaving a ~300px dead band; now it carries to 730 with
   // the scene's punchline (7.16 − 6.76 = 0.40%/yr) inside the card.
   ctx.save();
-  ctx.globalAlpha = mi === 1 ? 0.5 : 1;
+  ctx.globalAlpha = hotZone === 1 ? 0.45 : 1;
   barRow(ctx, { x, y: 345, w, h: 150, label: 'Tax-managed small-cap', value: 7.16, maxV: 8, p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'gold', valueText: '7.16%', sub: '10-yr after-tax return' });
+  ctx.restore();
+  ctx.save();
+  ctx.globalAlpha = hotZone === 0 ? 0.45 : 1;
   barRow(ctx, { x, y: 555, w, h: 150, label: 'Plain small-cap index', value: 6.76, maxV: 8, p: clamp01((t - 1300) / 900), t, landT: 2250, tone: 'platinum', valueText: '6.76%', sub: '10-yr after-tax return' });
   ctx.restore();
-  // AUDIT R-02 — the two bars recede together when the verdict is narrated
-  // (barRow manages its own alpha — the dim is an overlay).
-  if (mi === 1) dimRect(ctx, x, 300, w, 445);
-  if (mi === 0) focusPing(ctx, x + w * 0.5, 420, g.sentenceT, 100);
+  // the zone a sentence does NOT own recedes; the hot zone gets a fresh gold
+  // edge pulse on every sentence boundary (barRow manages its own alpha)
+  if (hotZone === 0) dimRect(ctx, x, 555, w, 150);
+  if (hotZone === 1) dimRect(ctx, x, 345, w, 150);
+  if (hotZone === 2) dimRect(ctx, x, 300, w, 420);
+  if (hotZone === 0) focusPing(ctx, x + w * 0.5, 420, g.sentenceT, 100);
+  if (hotZone === 1) focusPing(ctx, x + w * 0.5, 630, g.sentenceT, 100);
+  if (hotZone >= 0) {
+    const hy = hotZone === 0 ? 345 : hotZone === 1 ? 555 : 350;
+    const hx = hotZone === 2 ? x + w + 78 : x - 12;
+    const hw = hotZone === 2 ? 504 : w + 24;
+    const hh = hotZone === 2 ? 404 : 174;
+    ctx.save();
+    ctx.globalAlpha = 0.22 + 0.5 * fresh;
+    ctx.strokeStyle = PALETTE.goldBright;
+    ctx.lineWidth = 2.2;
+    roundRect(ctx, hx, hy, hw, hh, 16);
+    ctx.stroke();
+    ctx.restore();
+  }
   const la = clamp01((t - 2200) / 600);
   if (la > 0) {
     ctx.save();
-    ctx.globalAlpha = la * (mi === 0 ? 0.55 : 1);
-    glassCard(ctx, x + w + 90, 350, 480, 380, { r: 16, alpha: mi === 0 ? 0.55 : 1 });
+    ctx.globalAlpha = la * (hotZone < 2 ? 0.55 : 1);
+    glassCard(ctx, x + w + 90, 350, 480, 380, { r: 16, alpha: hotZone === 2 ? 1 : 0.55 });
     setFont(ctx, 30, 700, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.ink;
     wrapText(ctx, 'A low-turnover index fund is already a tax-managed fund.', 400, 30, 700, FONT_DISPLAY).forEach((ln, i) => {
@@ -250,6 +295,10 @@ export function taxManagedScene(g: SceneCtx): void {
     ctx.fillStyle = PALETTE.goldBright;
     ctx.fillText('the entire after-tax edge', x + w + 128, 700);
     ctx.restore();
+    // R-02 — inside the verdict, the eye alternates headline ↔ punchline
+    if (hotZone === 2 && la >= 1) {
+      focusPing(ctx, x + w + 128 + 150, siTM % 2 === 0 ? 452 : 668, g.sentenceT, 88);
+    }
   }
 }
 
@@ -411,8 +460,26 @@ export function diDecayScene(g: SceneCtx): void {
   paintStage(ctx, W, g.H, t, {});
   panelTitle(ctx, 'Pay 40 bps forever for a benefit that decays', W * 0.10, 220, W * 0.8, t / 2400, { kickerText: 'Lever 4 · The trade' });
   const x = W * 0.10, w = W * 0.58;
+  // AUDIT R-02 — D17 sentence-cadence wiring, full walk: sentences 0-1 own
+  // the cost line (30-40 bps forever), 2-3 hold both bars in overview, 4 the
+  // 69 bps bar, 5 the 9 bps bar, 6+ back to the cost line — the frame's
+  // emphasis moves with the narration across the 40s hold.
+  const siDD = g.sentenceIdx ?? -1;
+  const hotZone = siDD < 0 ? -1 : siDD <= 1 ? 2 : siDD <= 3 ? 3 : siDD === 4 ? 0 : siDD === 5 ? 1 : 2;
+  const fresh = g.sentenceT != null ? clamp01(1 - g.sentenceT / 900) : 0;
+  ctx.save();
+  ctx.globalAlpha = hotZone === 1 ? 0.45 : hotZone === 2 ? 0.45 : 1;
   barRow(ctx, { x, y: 345, w, h: 120, label: 'Years 1–5', value: 69, maxV: 80, p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'up', valueText: '69 bps/yr', sub: 'average tax benefit' });
+  ctx.restore();
+  ctx.save();
+  ctx.globalAlpha = hotZone === 0 ? 0.45 : hotZone === 2 ? 0.45 : 1;
   barRow(ctx, { x, y: 590, w, h: 120, label: 'Years 6–10', value: 9, maxV: 80, p: clamp01((t - 1300) / 900), t, landT: 2250, tone: 'down', valueText: '9 bps/yr', sub: 'as the portfolio appreciates' });
+  ctx.restore();
+  if (hotZone === 0) dimRect(ctx, x, 590, w, 120);
+  if (hotZone === 1) dimRect(ctx, x, 345, w, 120);
+  if (hotZone === 2) dimRect(ctx, x, 345, w, 365);
+  if (hotZone === 0) focusPing(ctx, x + w * 0.5, 405, g.sentenceT, 100);
+  if (hotZone === 1) focusPing(ctx, x + w * 0.5, 650, g.sentenceT, 100);
   // cost line — AUDIT T-06: at y=400 the dashed "your cost" line cut straight
   // through the first bar (69 bps, y 345-465) and its value label — a
   // comparison device crossing the thing it compares. Re-routed ABOVE both
@@ -421,7 +488,7 @@ export function diDecayScene(g: SceneCtx): void {
   const ca = clamp01((t - 2200) / 500);
   if (ca > 0) {
     ctx.save();
-    ctx.globalAlpha = ca;
+    ctx.globalAlpha = ca * (hotZone === 0 || hotZone === 1 ? 0.4 : 1);
     ctx.beginPath();
     ctx.moveTo(x + 40, 320);
     ctx.lineTo(x + w, 320);
@@ -434,6 +501,21 @@ export function diDecayScene(g: SceneCtx): void {
     ctx.fillStyle = PALETTE.goldBright;
     ctx.fillText('your cost: 30–40 bps — forever', x + w - 380, 304);
     ctx.restore();
+    // R-02 — when a sentence owns the cost line it gets the fresh gold edge
+    // and the ping; the overview sentences alternate bars ↔ cost line
+    if (hotZone === 2) {
+      ctx.save();
+      ctx.globalAlpha = 0.22 + 0.5 * fresh;
+      ctx.strokeStyle = PALETTE.goldBright;
+      ctx.lineWidth = 2.2;
+      roundRect(ctx, x + 24, 278, w - 24, 58, 12);
+      ctx.stroke();
+      ctx.restore();
+      focusPing(ctx, x + w - 190, 304, g.sentenceT, 90);
+    }
+    if (hotZone === 3 && ca >= 1) {
+      focusPing(ctx, x + w * 0.5, siDD % 2 === 0 ? 320 : 470, g.sentenceT, 84);
+    }
   }
 }
 
@@ -543,41 +625,74 @@ export function longShortScene(g: SceneCtx): void {
   paintStage(ctx, W, g.H, t, {});
   panelTitle(ctx, 'Tax-aware long-short: harvest from both sides', W * 0.10, 220, W * 0.8, t / 2400, { kickerText: 'Lever 4 · The exotic one' });
   const x = W * 0.10, w = W * 0.52;
-  // AUDIT R-02 — D17 sentence-cadence wiring: sentences 0-1 walk the baskets
-  // chart, 2+ the FAJ verdict card — the zones trade the spotlight.
-  const li = g.sentenceIdx != null && g.sentenceIdx >= 0 ? (g.sentenceIdx <= 1 ? 0 : 1) : -1;
+  // AUDIT R-02 — D17 sentence-cadence wiring, full rotation: sentence 0 owns
+  // the LONG line, sentence 1 the SHORT line, 2+ the FAJ verdict card — the
+  // two series trade the spotlight sentence by sentence (drawn as separate
+  // passes so each can recede independently), and the verdict's ping
+  // alternates headline ↔ benefit line so the 30s hold keeps breathing.
+  const siLS = g.sentenceIdx ?? -1;
+  const hotZone = siLS < 0 ? -1 : siLS === 0 ? 0 : siLS === 1 ? 1 : 2;
+  const fresh = g.sentenceT != null ? clamp01(1 - g.sentenceT / 900) : 0;
   // long basket rises, short basket falls — both harvestable
   const ptsL: [number, number][] = [], ptsS: [number, number][] = [];
   for (let i = 0; i <= 12; i++) {
     ptsL.push([i, 100 + i * 2.2 + Math.sin(i) * 4]);
     ptsS.push([i, 100 - i * 1.8 - Math.sin(i * 1.3) * 4]);
   }
+  // the two series drawn as separate passes: the line a sentence owns runs
+  // at full ink while the other recedes (grid/axis only on the first pass)
   ctx.save();
-  ctx.globalAlpha = li === 1 ? 0.55 : 1;
+  ctx.globalAlpha = hotZone === 2 ? 0.55 : hotZone === 1 ? 0.45 : 1;
   lineChart(ctx, {
     x, y: 360, w, h: 360,
-    series: [
-      { tone: 'up', points: ptsL, width: 4.6 },
-      { tone: 'down', points: ptsS, width: 4.6 },
-    ],
+    series: [{ tone: 'up', points: ptsL, width: 4.6 }],
     p: clamp01(t / 2200), t,
     yMin: 60, yMax: 140, yFormat: () => '',
     xLabels: ['', '', '', ''],
     gridLines: 4, showAxis: true,
   });
   ctx.restore();
+  ctx.save();
+  ctx.globalAlpha = hotZone === 2 ? 0.55 : hotZone === 0 ? 0.45 : 1;
+  lineChart(ctx, {
+    x, y: 360, w, h: 360,
+    series: [{ tone: 'down', points: ptsS, width: 4.6 }],
+    p: clamp01(t / 2200), t,
+    yMin: 60, yMax: 140, yFormat: () => '',
+    xLabels: ['', '', '', ''],
+    gridLines: 0, showAxis: false,
+  });
+  ctx.restore();
   setFont(ctx, 28, 700, FONT_UI);
   ctx.fillStyle = PALETTE.up;
+  ctx.globalAlpha = hotZone === 2 ? 0.55 : hotZone === 1 ? 0.45 : 1;
   ctx.fillText('LONG basket — losses to harvest', x + 20, 350);
   ctx.fillStyle = '#F08A8D';
+  ctx.globalAlpha = hotZone === 2 ? 0.55 : hotZone === 0 ? 0.45 : 1;
   ctx.fillText('SHORT basket — losses to harvest', x + 20, 748);
-  if (li === 0) focusPing(ctx, x + w * 0.5, 400, g.sentenceT, 100);
+  ctx.globalAlpha = 1;
+  if (hotZone === 0) focusPing(ctx, x + w - 16, 424, g.sentenceT, 100);
+  if (hotZone === 1) focusPing(ctx, x + w - 16, 640, g.sentenceT, 100);
+  // fresh gold edge on the zone the sentence owns
+  if (hotZone >= 0) {
+    const hx = hotZone === 2 ? x + w + 38 : x - 12;
+    const hy = hotZone === 2 ? 368 : 348;
+    const hw = hotZone === 2 ? 584 : w + 24;
+    const hh = hotZone === 2 ? 344 : 412;
+    ctx.save();
+    ctx.globalAlpha = 0.22 + 0.5 * fresh;
+    ctx.strokeStyle = PALETTE.goldBright;
+    ctx.lineWidth = 2.2;
+    roundRect(ctx, hx, hy, hw, hh, 16);
+    ctx.stroke();
+    ctx.restore();
+  }
   // FAJ verdict
   const va = clamp01((t - 1600) / 600);
   if (va > 0) {
     ctx.save();
-    ctx.globalAlpha = va * (li === 0 ? 0.55 : 1);
-    glassCard(ctx, x + w + 50, 380, 560, 320, { r: 16, alpha: li === 0 ? 0.55 : 1, goldEdge: true });
+    ctx.globalAlpha = va * (hotZone < 2 ? 0.55 : 1);
+    glassCard(ctx, x + w + 50, 380, 560, 320, { r: 16, alpha: hotZone === 2 ? 1 : 0.55, goldEdge: true });
     setFont(ctx, 30, 700, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.ink;
     wrapText(ctx, 'The engineering is real — peer-reviewed, 2020.', 480, 30, 700, FONT_DISPLAY).forEach((ln, i) => ctx.fillText(ln, x + w + 90, 440 + i * 46));
@@ -587,6 +702,10 @@ export function longShortScene(g: SceneCtx): void {
       ctx.fillText(ln, x + w + 90, 600 + i * 36);
     });
     ctx.restore();
+    // R-02 — inside the verdict, the eye alternates headline ↔ benefit line
+    if (hotZone === 2 && va >= 1) {
+      focusPing(ctx, x + w + 90 + 190, siLS % 2 === 0 ? 470 : 636, g.sentenceT, 88);
+    }
   }
 }
 

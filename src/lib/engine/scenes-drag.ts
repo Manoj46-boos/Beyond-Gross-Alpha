@@ -603,25 +603,46 @@ export function benchmarkBarScene(g: SceneCtx): void {
   const { ctx, W, t } = g;
   paintStage(ctx, W, g.H, t, {});
   panelTitle(ctx, 'Before you buy complexity, beat this benchmark', W * 0.10, 220, W * 0.8, t / 2400, { kickerText: 'The floor' });
+  // AUDIT R-02 — D17 sentence-cadence wiring: sentences 0-2 own the
+  // benchmark bar ("beat that benchmark" is sentence 2), sentence 3+ the
+  // "Most pitches can't." verdict — the bar recedes and the verdict carries
+  // the frame, so the hold changes emphasis instead of freezing.
+  const siBB = g.sentenceIdx ?? -1;
+  const hotZone = siBB < 0 ? 0 : siBB <= 2 ? 0 : 1;
+  const fresh = g.sentenceT != null ? clamp01(1 - g.sentenceT / 900) : 0;
   const x = W * 0.10, w = W * 0.62;
   // U1.4: maxV = 0.5 so the honest 0.3% stub fills ~60% of the track — the
   // bar reads as a measured floor, and the value rides the dark cap zone.
+  ctx.save();
+  ctx.globalAlpha = hotZone === 1 ? 0.45 : 1;
   barRow(ctx, {
     x, y: 370, w, h: 130, label: 'Plain index ETF, held for decades', value: 0.3, maxV: 0.5,
     p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'gold', valueText: '≈ 0.3%/yr',
     sub: 'roughly the tax on its dividends',
   });
+  ctx.restore();
   // U3.3 — focus ping on the value the narration is talking about
-  focusPing(ctx, x + w * 0.72, 435, g.sentenceT, 96);
+  if (hotZone === 0) focusPing(ctx, x + w * 0.72, 435, g.sentenceT, 96);
   // competing pitches fade below the line
   const compA = clamp01((t - 1600) / 600);
   if (compA > 0) {
     ctx.save();
-    ctx.globalAlpha = compA * 0.85;
+    ctx.globalAlpha = compA * (hotZone === 1 ? 1 : 0.85);
     setFont(ctx, 36, 600, FONT_DISPLAY);
-    ctx.fillStyle = PALETTE.inkMuted;
+    ctx.fillStyle = hotZone === 1 ? PALETTE.goldBright : PALETTE.inkMuted;
     ctx.fillText('Most pitches can’t.', x + w + 50, 460);
     ctx.restore();
+    // R-02 — the verdict is the hot zone from sentence 3: fresh gold edge
+    if (hotZone === 1) {
+      ctx.save();
+      ctx.globalAlpha = 0.22 + 0.5 * fresh;
+      ctx.strokeStyle = PALETTE.goldBright;
+      ctx.lineWidth = 2.2;
+      roundRect(ctx, x + w + 26, 414, 400, 74, 14);
+      ctx.stroke();
+      ctx.restore();
+      focusPing(ctx, x + w + 160, 460, g.sentenceT, 96);
+    }
   }
 }
 
