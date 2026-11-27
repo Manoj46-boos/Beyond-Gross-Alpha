@@ -135,17 +135,31 @@ export function heartbeatScene(g: SceneCtx): void {
   // pulse/token → the $48B card → the file-it-away line; the active zone
   // lifts, the others recede, so the 42s hold changes with the sentences.
   const hi = g.sentenceIdx != null && g.sentenceIdx >= 0 ? (g.sentenceIdx <= 2 ? 0 : g.sentenceIdx <= 4 ? 1 : 2) : -1;
-  // pulse ring (the "heartbeat")
+  // FIX F7 — the left half is never a void: the ETF token and its label chip
+  // stay on-frame for the WHOLE beat (receded to 0.5 when another zone is
+  // narrated), and the pulse ring floors at 0.30 instead of washing out.
   const pulse = (t / 1100) % 1;
   ctx.save();
-  ctx.globalAlpha = 0.5 * (1 - pulse) * (hi === 0 || hi < 0 ? 1 : 0.55);
+  ctx.globalAlpha = Math.max(0.30, 0.5 * (1 - pulse)) * (hi === 0 || hi < 0 ? 1 : 0.6);
   ctx.beginPath();
   ctx.arc(W * 0.30, H * 0.52, 90 + pulse * 160, 0, Math.PI * 2);
   ctx.strokeStyle = rgba(PALETTE.gold, 0.5);
   ctx.lineWidth = 3;
   ctx.stroke();
   ctx.restore();
-  if (hi === 0 || hi < 0) spinToken(ctx, W * 0.30, H * 0.52, 64, t, PALETTE.goldBright, PALETTE.gold, 'ETF', 1500);
+  ctx.save();
+  ctx.globalAlpha = hi === 0 || hi < 0 ? 1 : 0.5;
+  spinToken(ctx, W * 0.30, H * 0.52, 64, t, PALETTE.goldBright, PALETTE.gold, 'ETF', 1500);
+  ctx.restore();
+  // the anchor's label — a quiet gold chip that keeps the zone NAMED even
+  // while the $48B card holds the spotlight
+  const la = clamp01((t - 800) / 500);
+  if (la > 0) {
+    ctx.save();
+    ctx.globalAlpha = la * (hi === 0 || hi < 0 ? 1 : 0.55);
+    chip(ctx, 'IN-KIND SWAP · NO SALE', W * 0.30, H * 0.52 + 118, { size: 26, gold: true });
+    ctx.restore();
+  }
   // the $48B counter
   const ca = clamp01((t - 1600) / 700);
   if (ca > 0) {
@@ -616,13 +630,16 @@ export function exchangeFundScene(g: SceneCtx): void {
     impactRing(ctx, W * 0.82, 460, t, 3600, 130, 0.9, PALETTE.gold);
   }
   // S-05 — the Principal presents the $1T fact, the pool, then the padlock
-  // (report §6.4), sentence-driven
+  // (report §6.4), sentence-driven.
+  // FIX F9 — every focal sits on the element's NEAR BORDER (the side facing
+  // the figure), never its interior: the contact device terminates ON the
+  // edge instead of entering the $1T+ card / pool / padlock graphic.
   dataSceneFigure(g, 1.42, {
     seed: 43,
     mode: 'present',
     focal: (si) => (si === 0
-      ? { x: W * 0.185 + 235, y: 465 }
-      : si <= 2 ? { x: W * 0.435 + 280, y: 465 } : { x: W * 0.82, y: 470 }),
+      ? { x: W * 0.185 - 34, y: 425 }
+      : si <= 2 ? { x: W * 0.435 - 30, y: 465 } : { x: W * 0.82 - 56, y: 460 }),
   });
 }
 
