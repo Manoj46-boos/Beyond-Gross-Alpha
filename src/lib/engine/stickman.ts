@@ -13,13 +13,18 @@ import { PALETTE, rgba, hexLerp } from './theme';
 import { clamp01, clamp, lerp, springTo, hashStr, hash01, easeOutCubic, easeInOutSine } from './easing';
 
 // ── rig constants ────────────────────────────────────────────────────────────
-const U_LEG = 58, L_LEG = 52, TORSO = 86, NECK = 11;
-const U_ARM = 54, L_ARM = 50;
-const HEAD_R = 26.2; // 72% of the shoulder line — the head must carry the face at phone size (C-02)
-// AUDIT C-06 — proportion re-balance: shoulders 30→34, hips 13→11. The
-// coat-hanger silhouette (wide flat bar over a hook) becomes a V-case —
-// the tailored-jacket read the premium tier lives on.
-const SHOULDER_HW = 34, HIP_HW = 11;
+// FIX C9 — PROPORTION RESET (the highest-leverage single change in the audit):
+// the old rig was a chibi toy (head+hair ≈ 26% of figure height, shoulders
+// barely wider than one head). The premium figure standard for a tailored
+// gentleman is 5.5-7 heads tall with 1.6-2.0 head-widths of shoulder. New rig:
+//   legs 110→122, torso 86→96, arms 104→112, HEAD_R 26.2→19.5
+//   → figure ≈ 6.4 heads tall, shoulders ≈ 1.85 head-widths.
+// Total height changes only +3%, so every scene anchor (groundY, plate Y,
+// camera framing) keeps working; the mass just redistributes off the head.
+const U_LEG = 64, L_LEG = 58, TORSO = 96, NECK = 10;
+const U_ARM = 58, L_ARM = 54;
+const HEAD_R = 19.5;
+const SHOULDER_HW = 36, HIP_HW = 12;
 
 const SUIT = { lit: '#43598A', mid: '#2C3B63', dark: '#161F3A', ink: '#0E1426' };
 /** Phase 1 — the ONE ink: every silhouette in the frame (figure, props,
