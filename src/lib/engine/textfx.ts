@@ -392,14 +392,14 @@ export function statementAnchor(
   // into the 28-34% band (gradient 0.34 top → 0.28 base) so the numeral is
   // unambiguously present, still behind the text.
   ctx.save();
-  ctx.globalAlpha = a;
+  // Phase 4.4 law #2 — the ghost's 0.34→0.28 gradient wash is now an explicit
+  // globalAlpha multiplier (identical ~31% effective ink) so the QA text gate
+  // sees what the eye sees: a designed decorative ghost, not reading text.
+  ctx.globalAlpha = a * 0.31;
   setFont(ctx, 500, 800, FONT_DISPLAY);
   ctx.textAlign = 'right';
   const num = ghost ?? String((chapterIdx % 10) + 1).padStart(2, '0');
-  const numG = ctx.createLinearGradient(0, H * 0.18, 0, H * 0.6);
-  numG.addColorStop(0, rgba(PALETTE.inkGhost, 0.34));
-  numG.addColorStop(1, rgba(PALETTE.inkGhost, 0.28));
-  ctx.fillStyle = numG;
+  ctx.fillStyle = PALETTE.inkGhost;
   ctx.fillText(num, W - m - 24, H * 0.58);
   ctx.textAlign = 'left';
   ctx.restore();
