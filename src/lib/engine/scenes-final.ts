@@ -54,7 +54,7 @@ export function stepUpScene(g: SceneCtx): void {
     ctx.restore();
   }
   // S-05 — the Principal presents the quietest fact (report §6.4)
-  dataSceneFigure(g, 1.42, {
+  dataSceneFigure(g, 1.8, {
     seed: 51,
     mode: 'present',
     focal: () => ({ x: W * 0.24 + 390, y: 620 }),
@@ -219,7 +219,7 @@ export function fiveQuestionsScene(g: SceneCtx): void {
   });
   // S-05 — the Principal presents each question as it is asked (report §6.4):
   // palm open at the hot card, idle stance during the two intro sentences
-  dataSceneFigure(g, 1.42, {
+  dataSceneFigure(g, 1.8, {
     seed: 52,
     mode: 'present',
     focal: (si) => {

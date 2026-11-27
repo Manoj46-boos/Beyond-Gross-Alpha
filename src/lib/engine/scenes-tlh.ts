@@ -232,7 +232,7 @@ export function iraSplitScene(g: SceneCtx): void {
     }
   }
   // S-05 — the Principal presents the split: palm open at the gold segment
-  dataSceneFigure(g, 1.42, {
+  dataSceneFigure(g, 1.8, {
     seed: 33,
     mode: 'present',
     focal: (si) => (si >= 3 ? { x: W * 0.58 + 280, y: 620 } : si >= 1 ? { x: cx + 150, y: cy - 110 } : { x: cx - 60, y: cy - 170 }),
@@ -495,7 +495,7 @@ export function waterfallScene(g: SceneCtx): void {
   }
   // S-05 — the Principal catches the waterfall's last column: open palm
   // presented under the surviving alpha
-  dataSceneFigure(g, 1.42, {
+  dataSceneFigure(g, 1.8, {
     seed: 31,
     mode: 'present',
     focal: () => ({ x: W * 0.34 + W * 0.40 * (5 / 6), y: 545 }),
@@ -568,7 +568,7 @@ export function eraBarsScene(g: SceneCtx): void {
   // S-05 — the Principal WEIGHS two eras against each other (report §6.4):
   // both palms present under the narrated era and its neighbour, hands
   // tracking the D17 sentence walk
-  dataSceneFigure(g, 1.42, {
+  dataSceneFigure(g, 1.8, {
     seed: 32,
     weigh: true,
     mode: 'present',
@@ -838,7 +838,7 @@ export function secCaseScene(g: SceneCtx): void {
   // the way when the SEC stamp slams in (report §6.4); before that he points
   // at the document's $4M hot line. M-03 — the stamp also lands ON the body:
   // a compress + spring recoil at t=3200.
-  dataSceneFigure(g, 1.42, {
+  dataSceneFigure(g, 1.8, {
     seed: 34,
     mood: 'urgent',
     avoid: t > 3200,

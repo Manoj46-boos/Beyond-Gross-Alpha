@@ -1452,6 +1452,9 @@ export function drawStickman(
   ctx.restore(); // torso
 
   // ── arms ──
+  // R2 — the contact point where a prop meets data, recorded by the near arm
+  // for the impact flash (baton tip when pointing, palm front otherwise)
+  let contactPt: { x: number; y: number } | null = null;
   const armDraw = (side: -1 | 1) => {
     const near = side === 1;
     const aU = near ? p.rAU : p.lAU;
@@ -1555,11 +1558,48 @@ export function drawStickman(
       ctx.beginPath();
       ctx.arc(tipP.x, tipP.y, rodW * 0.88, 0, Math.PI * 2);
       ctx.fill();
+      // R2 / Phase 2.4 — the baton tip IS the contact point for pointing hits
+      contactPt = { x: tipP.x, y: tipP.y };
+    } else if (near) {
+      // non-pointing hits (stamp slam, cradle catch) contact at the palm front
+      contactPt = pt(wrist.x, wrist.y, handAng, 7.5);
     }
     return { wrist: { x: wrist.x, y: wrist.y } };
   };
   armDraw(-1);
   armDraw(1);
+
+  // ── R2 / Phase 2.4 — the touch beat: a 2-frame gold contact flash at the
+  // contact point the instant a prop lands (gap-bar catch, stamp slam, column
+  // land). The M3 squash carries the body; this flare carries the HIT — at
+  // phone size a 2-frame (~66ms) gold pop is the cheapest retention per line
+  // of code in the whole plan.
+  if (r.impactT != null && contactPt) {
+    const age = t - r.impactT;
+    if (age >= 0 && age < 66) {
+      const k = 1 - age / 66; // 1 → 0 across the two frames
+      const core = 5.5 + 3.5 * k;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const fg = ctx.createRadialGradient(contactPt.x, contactPt.y, 0, contactPt.x, contactPt.y, core * 2.6);
+      fg.addColorStop(0, `rgba(255,240,204,${(0.9 * k).toFixed(3)})`);
+      fg.addColorStop(0.22, `rgba(233,183,96,${(0.5 * k).toFixed(3)})`);
+      fg.addColorStop(0.6, `rgba(233,183,96,${(0.16 * k).toFixed(3)})`);
+      fg.addColorStop(1, 'rgba(233,183,96,0)');
+      ctx.fillStyle = fg;
+      ctx.beginPath();
+      ctx.arc(contactPt.x, contactPt.y, core * 2.6, 0, Math.PI * 2);
+      ctx.fill();
+      // the expanding ring — the shockwave the eye reads as impact (kept soft:
+      // a low-alpha wide stroke, not a graphics-program circle)
+      ctx.strokeStyle = `rgba(255,214,140,${(0.26 * k).toFixed(3)})`;
+      ctx.lineWidth = 2.6;
+      ctx.beginPath();
+      ctx.arc(contactPt.x, contactPt.y, core * (1.2 + (1 - k) * 2.2), 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
 
   // ── neck + head ──
   const neckX2 = shX, neckY2 = shY - 2;

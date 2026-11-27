@@ -9,7 +9,9 @@
  * Per-scene wiring: each data scene calls dataSceneFigure(g, rigScale, opts)
  * as its LAST draw step, passing a focal(sentenceIdx) closure built from its
  * own layout constants, and shifts its chart zone right of the figure margin
- * (figure span ≈ x 90..330 at rigScale 1.42).
+ * (figure span ≈ x 90..395 at rigScale 1.8 — Phase 2.3: the figure owns the
+ * left margin at ~45% of frame height and may slightly overlap the chart's
+ * y-axis label column; overlap creates depth, floating beside it is collage).
  */
 import { SceneCtx } from './scene-context';
 import { poseAt, drawStickman, applyMood, companionArm, companionArmL, palmPosition, shoulderScreen, armReachPx } from './stickman';
@@ -88,32 +90,39 @@ export function dataSceneFigure(g: SceneCtx, rigScale: number, opts: FigureOpts)
     const reach = armReachPx(rigScale, POINTER_PX);
     const dist = Math.hypot(focal.x - sh.x, focal.y - sh.y);
     if (dist > reach) {
-      const tip = palmPosition(pose, 1, px, groundY, rigScale, 5 + POINTER_PX / rigScale);
-      const a = clamp01((sentenceT ?? 0) / 200) * (speaking ? 0.62 : 0.3);
-      if (a > 0.02) {
-        const dx = focal.x - tip.x, dy = focal.y - tip.y;
-        const l = Math.hypot(dx, dy) || 1;
-        const endX = focal.x - (dx / l) * 12;
-        const endY = focal.y - (dy / l) * 12;
-        ctx.save();
-        const slg = ctx.createLinearGradient(tip.x, tip.y, endX, endY);
-        slg.addColorStop(0, rgba(PALETTE.goldBright, a * 0.25));
-        slg.addColorStop(1, rgba(PALETTE.goldBright, a));
-        ctx.strokeStyle = slg;
-        ctx.lineWidth = 2.0;
-        ctx.beginPath();
-        ctx.moveTo(tip.x, tip.y);
-        ctx.lineTo(endX, endY);
-        ctx.stroke();
-        // the contact mark — a small gold dot exactly ON the data being discussed
-        ctx.beginPath();
-        ctx.arc(focal.x, focal.y, 4.2, 0, Math.PI * 2);
-        ctx.fillStyle = rgba(PALETTE.goldPale, Math.min(1, a * 1.6));
-        ctx.fill();
-        ctx.strokeStyle = rgba(PALETTE.goldDeep, Math.min(1, a * 1.4));
-        ctx.lineWidth = 1.0;
-        ctx.stroke();
-        ctx.restore();
+      // Phase 2.2 — the sight line survives ONLY as a last resort: if the
+      // element lies more than 60px beyond the clamped reach, a line would
+      // read as a needle crossing cards — skip it. Scenes that regularly
+      // exceed this move their anchor x or pull the focal to the element's
+      // near edge instead (F9).
+      if (dist - reach <= 60) {
+        const tip = palmPosition(pose, 1, px, groundY, rigScale, 5 + POINTER_PX / rigScale);
+        const a = clamp01((sentenceT ?? 0) / 200) * (speaking ? 0.62 : 0.3);
+        if (a > 0.02) {
+          const dx = focal.x - tip.x, dy = focal.y - tip.y;
+          const l = Math.hypot(dx, dy) || 1;
+          const endX = focal.x - (dx / l) * 12;
+          const endY = focal.y - (dy / l) * 12;
+          ctx.save();
+          const slg = ctx.createLinearGradient(tip.x, tip.y, endX, endY);
+          slg.addColorStop(0, rgba(PALETTE.goldBright, a * 0.25));
+          slg.addColorStop(1, rgba(PALETTE.goldBright, a));
+          ctx.strokeStyle = slg;
+          ctx.lineWidth = 2.0;
+          ctx.beginPath();
+          ctx.moveTo(tip.x, tip.y);
+          ctx.lineTo(endX, endY);
+          ctx.stroke();
+          // the contact mark — a small gold dot exactly ON the data being discussed
+          ctx.beginPath();
+          ctx.arc(focal.x, focal.y, 4.2, 0, Math.PI * 2);
+          ctx.fillStyle = rgba(PALETTE.goldPale, Math.min(1, a * 1.6));
+          ctx.fill();
+          ctx.strokeStyle = rgba(PALETTE.goldDeep, Math.min(1, a * 1.4));
+          ctx.lineWidth = 1.0;
+          ctx.stroke();
+          ctx.restore();
+        }
       }
     }
   }

@@ -242,7 +242,7 @@ export function distribBarsScene(g: SceneCtx): void {
   // FIX F3 — during the punchline sentences the focal moves OFF the "A
   // structural moat." block onto the empty track beside the 6% tip: the
   // pointing arm marks the datum instead of crossing the words.
-  dataSceneFigure(g, 1.42, {
+  dataSceneFigure(g, 1.8, {
     seed: 41,
     mode: 'present',
     impactT: t >= 2250 ? 2250 : t >= 1250 ? 1250 : undefined,
@@ -469,7 +469,7 @@ export function diMosaicScene(g: SceneCtx): void {
   }
   // S-05 — the Principal points at the ONE ETF block, then at the harvest
   // mosaic as it shatters (report §6.4), sentence-driven
-  dataSceneFigure(g, 1.42, {
+  dataSceneFigure(g, 1.8, {
     seed: 42,
     focal: (si) => (si === 0 ? { x: W * 0.22 + 120, y: 550 } : { x: W * 0.44 + 200, y: 520 }),
   });
@@ -634,7 +634,7 @@ export function exchangeFundScene(g: SceneCtx): void {
   // FIX F9 — every focal sits on the element's NEAR BORDER (the side facing
   // the figure), never its interior: the contact device terminates ON the
   // edge instead of entering the $1T+ card / pool / padlock graphic.
-  dataSceneFigure(g, 1.42, {
+  dataSceneFigure(g, 1.8, {
     seed: 43,
     mode: 'present',
     focal: (si) => (si === 0

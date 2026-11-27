@@ -344,8 +344,10 @@ export function growthCurvesScene(g: SceneCtx): void {
     ptsA.push([i, 100 * Math.pow(1.06 - 0.0071, i)]);   // low turnover (net ~5.29%)
     ptsB.push([i, 100 * Math.pow(1.06 - 0.0194, i)]);   // high turnover (net ~4.06%)
   }
-  // S-05 — chart zone shifts right of the figure margin (figure spans x≈90..330)
-  const chartX = W * 0.30, chartY = 280, chartW = W * 0.44, chartH = 430;
+  // S-05 — chart zone shifts right of the figure margin (figure spans x≈90..395)
+  // Phase 4.4 law #2 — the 2-line title's second baseline sat 18px above the
+  // top y-axis label; the chart top drops 20px so baselines clear ≥24px.
+  const chartX = W * 0.30, chartY = 300, chartW = W * 0.44, chartH = 410;
   lineChart(ctx, {
     x: chartX, y: chartY, w: chartW, h: chartH,
     series: [
@@ -396,7 +398,7 @@ export function growthCurvesScene(g: SceneCtx): void {
   }
   // S-05 — the Principal walks to the growing gap and points at it: the hand
   // rides the curve's leading edge while it grows, then presents the verdict
-  dataSceneFigure(g, 1.42, {
+  dataSceneFigure(g, 1.8, {
     seed: 21,
     focal: (si) => si >= 3
       ? { x: chartX + chartW + 250, y: chartY + 250 }
@@ -594,7 +596,7 @@ export function signatureCurveScene(g: SceneCtx): void {
   // S-05 — the Principal walks to the signature curve and POINTS at the
   // growing gap (report §6.4): hand rides the curve's leading edge per
   // sentence, then presents the $5.1M tax-line badge
-  dataSceneFigure(g, 1.42, {
+  dataSceneFigure(g, 1.8, {
     seed: 22,
     focal: (si) => si >= 3
       ? { x: chartX + chartW + 215, y: chartY + 115 }
