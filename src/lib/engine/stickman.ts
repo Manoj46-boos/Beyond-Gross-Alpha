@@ -1305,7 +1305,12 @@ export function drawStickman(
   const tieBendDeg = clamp(tieSwayDeg * 0.45 + velBob * -1.2 + accTie * 2.4, -14, 14);
   // Phase 1 — burgundy silk: gold is reserved for the pocket-watch chain,
   // the one signature accessory of the gentleman arbitrageur
-  const tieG = ctx.createLinearGradient(0, 0, 0, TORSO * 0.8);
+  // FIX C2 (frame audit) — the blade length ends at the button stance:
+  // BL = TORSO*0.8 hung the silk past the jacket hem so the tie read as a
+  // strap lying over the trousers (audit Figures 1/4/5). 0.52 keeps the tip
+  // ~46 local units ABOVE the hem at every lean angle — a tailored tie.
+  const BL = TORSO * 0.52;
+  const tieG = ctx.createLinearGradient(0, 0, 0, BL);
   tieG.addColorStop(0, '#6E2430');
   tieG.addColorStop(1, '#3A121B');
   ctx.save();
@@ -1330,8 +1335,7 @@ export function drawStickman(
   ctx.stroke();
   // the blade — ONE path from under the knot to the tip. The tip skews by
   // sin(bend)·length and the mid by 55% of that, so the silk curves instead
-  // of hinging. Length tracks the torso (ends at the button stance — C9-safe).
-  const BL = TORSO * 0.8;
+  // of hinging. Length = BL (FIX C2 — button stance, hem-covered tip).
   const tipX = Math.sin(tieBendDeg * D2R) * BL;
   const midX = tipX * 0.55;
   ctx.beginPath();
