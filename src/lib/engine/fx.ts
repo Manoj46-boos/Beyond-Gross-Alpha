@@ -30,9 +30,12 @@ export function goldDust(ctx: CanvasRenderingContext2D, W: number, H: number, t:
     const p = ((t / speed + h1) % 1);
     const x = (h2 * W + driftCamX(i) + Math.sin(t / (2400 + h1 * 1800) + i) * 26) % (W + 40) - 20;
     const y = H * (1.02 - p * 0.9) - h3 * 60;
-    const r = (0.9 + h3 * 2.3) * depth;
+    // FIX F12 — perceptual band: 4-5px cores (was 0.9-3.2px) at alpha
+    // 0.22-0.50 (was 0.10-0.32) — the dust layer now actually registers at
+    // 12 Mbps viewing distance instead of costing draw time for nothing.
+    const r = (1.4 + h3 * 3.0) * depth;
     const tw = 0.5 + 0.5 * Math.sin(t / (500 + h1 * 500) + i * 4.7);
-    const a = (0.10 + 0.22 * tw) * clamp01(p * 6) * clamp01((1 - p) * 4);
+    const a = (0.22 + 0.28 * tw) * clamp01(p * 6) * clamp01((1 - p) * 4);
     if (a <= 0.01) continue;
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
@@ -59,7 +62,9 @@ export function bokehField(ctx: CanvasRenderingContext2D, W: number, H: number, 
     const y = h2 * H * 0.75 + Math.cos(t / (11000 + h2 * 7000) + i) * 40 + camState.dy * depth * 0.4;
     const r = (70 + h3 * 150) * (0.6 + depth);
     const tw = 0.6 + 0.4 * Math.sin(t / (3400 + h1 * 2200) + i * 1.9);
-    const a = (gold ? 0.030 : 0.045) * tw * intensity;
+    // FIX F12 — bokeh raised into the perceptual band (0.055/0.075, was
+    // 0.030/0.045): the lens feel registers without reading as haze.
+    const a = (gold ? 0.055 : 0.075) * tw * intensity;
     if (a < 0.008) continue;
     const col = gold && i % 3 === 0 ? PALETTE.gold : PALETTE.steel;
     glowBlob(ctx, x, y, r, col, a);

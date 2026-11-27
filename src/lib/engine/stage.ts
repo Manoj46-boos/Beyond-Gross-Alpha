@@ -60,7 +60,9 @@ export function paintStage(
   if (grid > 0) {
     const step = 96;
     ctx.save();
-    ctx.globalAlpha = 0.10 * grid;
+    // FIX F12 — lattice raised 0.10 → 0.16: the 'Midnight Ledger' identity
+    // layer is now visible at viewing distance.
+    ctx.globalAlpha = 0.16 * grid;
     ctx.strokeStyle = PALETTE.inkSoft;
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -99,7 +101,7 @@ export function paintStage(
 
     const vpX = W * 0.5 + drift(t / 1000, 3) * 20;
     // D13: floor grid raised from 0.075 to 0.14 — the room must be felt in one glance
-    ctx.strokeStyle = rgba(PALETTE.steel, 0.14);
+    ctx.strokeStyle = rgba(PALETTE.steel, 0.20); // FIX F12 — floor grid 0.14 → 0.20
     ctx.lineWidth = 1;
     ctx.beginPath();
     for (let i = -8; i <= 8; i++) {
