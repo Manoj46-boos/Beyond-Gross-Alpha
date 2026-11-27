@@ -565,20 +565,23 @@ export function exchangeFundScene(g: SceneCtx): void {
     ctx.textAlign = 'center';
     ctx.fillText('THE PRIVATE POOL', poolX + poolW / 2, poolY + 44);
     ctx.textAlign = 'left';
-    // contributing blocks
+    // contributing blocks — FIX D3 (frame audit): "STOCK" at 28px measured
+    // ~88px inside 76px tiles, so five labels merged into one unreadable
+    // strip. Tiles widen 76→88 on a centred 13px gutter and the label drops
+    // to 20px (~63px wide) — every label fits its tile with margin.
     for (let i = 0; i < 5; i++) {
       const ba = clamp01((t - 1300 - i * 180) / 300);
       if (ba <= 0) continue;
       ctx.save();
       ctx.globalAlpha = ba;
-      const bx2 = poolX + 50 + i * 100, by2 = poolY + 80;
+      const bx2 = poolX + 34 + i * 101, by2 = poolY + 80;
       ctx.fillStyle = rgba(PALETTE.steel, 0.55);
-      roundRect(ctx, bx2, by2, 76, 76, 10);
+      roundRect(ctx, bx2, by2, 88, 88, 10);
       ctx.fill();
       ctx.fillStyle = PALETTE.inkSoft;
-      setFont(ctx, 28, 700, FONT_UI);
+      setFont(ctx, 20, 700, FONT_UI);
       ctx.textAlign = 'center';
-      ctx.fillText('STOCK', bx2 + 38, by2 + 44);
+      ctx.fillText('STOCK', bx2 + 44, by2 + 50);
       ctx.textAlign = 'left';
       ctx.restore();
     }
