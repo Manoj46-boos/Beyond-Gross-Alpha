@@ -382,6 +382,13 @@ export function drawChapterWalkOn(
     pose = poseAt(`chapter-${index}`, tMs - 1500, tMs, [], []);
     applyMood(pose, 'calm');
     companionArm(pose, homeX, groundY, rigScale, { x: W * 0.5, y: H * 0.42 }, 'point');
+    // FIX C10 — the walk-on OWNS both arms: the near hand points at the title
+    // (companionArm above), the far arm takes a deliberate quiet rest instead
+    // of whatever gesture poseAt hashed for this sentence id (the old hash
+    // could raise the far hand to head height holding a cuff sliver — the
+    // "salute with a toothpick" read at the most-replayed moment).
+    pose.lAU = -13;
+    pose.lAL = 11;
     pose.look = clamp((W * 0.5 - homeX) / 420, -1, 1);
   } else {
     // L-08 — exits right THROUGH the light blade: the blade sweeps with him
