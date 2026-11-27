@@ -68,17 +68,18 @@ export function hostScene(g: SceneCtx): void {
   const headX = W * 0.44;
   const headMaxW = W * 0.47;
   // stat plate anchored inside the arm's reach envelope: left edge 160px right
-  // of the figure — U1.3: top at 508 (12 px above the old 520) so the plate
-  // clears the caption zone with margin
+  // of the figure — FIX D2 (frame audit): the plate and every palm-present
+  // target move to CHEST height (plateY 508→478, palm at plateY+42 = 520).
+  // The old palm targets sat at plateY+110 = 618 — hip height — so the coin,
+  // the statement card, the weigh pair and the $5.1M catch all presented at
+  // his thighs (audit Figures 1-2). 478 clears the headline descender block
+  // (2-line baselines 356/452 + descenders ≈474) and the caption zone (786).
   const plateX = px + 160;
-  const plateY = 508;
+  const plateY = 478;
   // S-06 — the palm aims just OUTSIDE the plate's left edge (was 14px INSIDE
   // the box): the hand presents the plate without ever entering it
-  // AUDIT C-07 — the weigh carry drops 15px (y+95→y+110): the arms leave the
-  // "talent-show" horizontal and settle into a natural carry angle, and the
-  // plates then rest ON the palms instead of hanging off the hand corners
-  const palmR = { x: plateX - 42, y: plateY + 110 };  // right palm, present height
-  const palmL = { x: px - 140, y: plateY + 110 };     // left palm (the weigh pair)
+  const palmR = { x: plateX - 42, y: plateY + 42 };  // right palm — chest present height
+  const palmL = { x: px - 140, y: plateY + 42 };     // left palm (the weigh pair)
   const pointTip = { x: headX + 60, y: 382 };        // pointing fingertip
   const companionOn = !walking && s.gesture !== 'leanIn' && s.gesture !== 'count';
   if (companionOn) {
