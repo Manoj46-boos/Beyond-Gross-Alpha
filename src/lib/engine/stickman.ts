@@ -49,7 +49,10 @@ function skullPath(ctx: CanvasRenderingContext2D, R: number): void {
   ctx.closePath();
 }
 const SKIN = { lit: '#EFE3CF', dark: '#C6B296', deep: '#A08B70' };
-const HAIR = { lit: '#A7B0C0', dark: '#5F6B80' };
+// FIX C1 (frame audit) — charcoal-silver: the old #A7B0C0/#5F6B80 sat in the
+// same value family as the navy suit, so the whole head read as one blue mass
+// wearing a fitted cap. Charcoal-silver gives hair its own value identity.
+const HAIR = { lit: '#8E99AC', dark: '#4A5468' };
 const SHOE = { lit: '#1C2438', dark: '#0B101E' };
 
 // ── pose contract ────────────────────────────────────────────────────────────
@@ -623,16 +626,22 @@ function drawFace(
   hg.addColorStop(1, HAIR.dark);
   const hairPath = (): void => {
     ctx.beginPath();
-    ctx.moveTo(-R * 0.88, R * 0.14);
-    ctx.quadraticCurveTo(-R * 1.06, -R * 0.52, -R * 0.62, -R * 0.98);
-    ctx.quadraticCurveTo(-R * 0.34, -R * 1.14, -R * 0.02, -R * 1.12); // parting peak
-    ctx.quadraticCurveTo(R * 0.34, -R * 1.16, R * 0.62, -R * 1.0);    // notch 1
-    ctx.quadraticCurveTo(R * 0.78, -R * 1.08, R * 0.9, -R * 0.86);    // notch 2
-    ctx.quadraticCurveTo(R * 1.04, -R * 0.62, R * 0.96, -R * 0.4);    // notch 3 dip
-    ctx.quadraticCurveTo(R * 1.02, -R * 0.2, R * 0.9, R * 0.02);      // temple taper
-    ctx.quadraticCurveTo(R * 0.66, -R * 0.32, R * 0.3, -R * 0.46);    // front hairline (raised)
-    ctx.quadraticCurveTo(-R * 0.18, -R * 0.60, -R * 0.58, -R * 0.42); // parting fall
-    ctx.quadraticCurveTo(-R * 0.8, -R * 0.22, -R * 0.88, R * 0.14);   // nape close
+    // nape — REAL mass behind the head: the old silhouette hugged the skull in
+    // a parallel egg (the swim-cap read). This back volume breaks the parallel.
+    ctx.moveTo(-R * 0.97, R * 0.28);
+    ctx.quadraticCurveTo(-R * 1.18, -R * 0.24, -R * 0.86, -R * 0.94);
+    // crown — asymmetric quiff, peak left of the parting
+    ctx.quadraticCurveTo(-R * 0.58, -R * 1.26, -R * 0.16, -R * 1.21);
+    ctx.quadraticCurveTo(R * 0.32, -R * 1.23, R * 0.60, -R * 1.06);   // notch 1
+    ctx.quadraticCurveTo(R * 0.86, -R * 1.12, R * 1.00, -R * 0.84);   // notch 2
+    ctx.quadraticCurveTo(R * 1.14, -R * 0.50, R * 1.00, -R * 0.28);   // notch 3 dip
+    ctx.quadraticCurveTo(R * 1.10, -R * 0.10, R * 0.94, R * 0.06);    // temple taper
+    // front hairline — a compact band ~0.05-0.14R above the brow line
+    // (eyeY -0.18R, brows ≈ -0.46R): a tight deliberate forehead, not a recede
+    ctx.quadraticCurveTo(R * 0.74, -R * 0.40, R * 0.42, -R * 0.52);
+    ctx.quadraticCurveTo(R * 0.06, -R * 0.60, -R * 0.36, -R * 0.54);  // parting dip
+    ctx.quadraticCurveTo(-R * 0.70, -R * 0.46, -R * 0.88, -R * 0.12);
+    ctx.quadraticCurveTo(-R * 0.96, R * 0.10, -R * 0.97, R * 0.28);   // nape close
     ctx.closePath();
   };
   ctx.fillStyle = hg;
@@ -645,6 +654,15 @@ function drawFace(
     ctx.lineJoin = 'round';
     ctx.stroke();
   }
+  // FIX C1 — the part: a darker seam along the parting fall so the sweep has
+  // a drawn origin — hair reads as styled, not moulded onto the skull
+  ctx.strokeStyle = rgba('#333B4C', 0.55);
+  ctx.lineWidth = Math.max(1.2, 1.4 * k);
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-R * 0.34, -R * 0.55);
+  ctx.quadraticCurveTo(-R * 0.58, -R * 0.36, -R * 0.82, -R * 0.06);
+  ctx.stroke();
   // sideburn into the ear line
   ctx.beginPath();
   ctx.moveTo(-R * 0.88, R * 0.14);
@@ -653,20 +671,26 @@ function drawFace(
   ctx.closePath();
   ctx.fillStyle = HAIR.dark;
   ctx.fill();
-  // FIX C1 — silver strand highlights: CLIPPED to the hair path and run ALONG
-  // the sweep with tips INSIDE the crown (old tips reached −1.32R vs crown
-  // −1.16R and floated above the head like antennae). Nothing escapes now.
+  // FIX C1 — silver strand highlights: CLIPPED to the hair path, swept ALONG
+  // the crown (front-right → back-left, parallel to the part seam). The old
+  // vertical 1px strands read as pins stuck in the crown; these arcs read as
+  // brushed silver and never detach from the sweep.
   if (!lo) {
     ctx.save();
     hairPath();
     ctx.clip();
-    ctx.strokeStyle = rgba('#D7DEEA', 0.40);
-    ctx.lineWidth = sw(1.0);
+    ctx.strokeStyle = rgba('#DDE4EF', 0.40);
+    ctx.lineWidth = sw(1.3);
     ctx.lineCap = 'round';
-    for (const [ox, len] of [[-0.60, 0.40], [-0.30, 0.48]] as const) {
+    const strands: Array<[number, number, number, number, number, number]> = [
+      [0.16, -0.98, -0.30, -1.04, -0.66, -0.72],
+      [0.30, -0.84, -0.20, -0.94, -0.62, -0.52],
+      [0.44, -0.66, -0.08, -0.80, -0.52, -0.30],
+    ];
+    for (const [x0, y0, cx, cy, x1, y1] of strands) {
       ctx.beginPath();
-      ctx.moveTo(R * ox, -R * 0.48);
-      ctx.quadraticCurveTo(R * (ox + 0.05), -R * (0.48 + len * 0.66), R * (ox + 0.08), -R * (0.48 + len));
+      ctx.moveTo(R * x0, R * y0);
+      ctx.quadraticCurveTo(R * cx, R * cy, R * x1, R * y1);
       ctx.stroke();
     }
     ctx.restore();
