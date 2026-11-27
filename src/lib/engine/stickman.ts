@@ -103,14 +103,27 @@ function pt(x: number, y: number, angDeg: number, len: number): { x: number; y: 
  *  bend (= 180° − elbow interior angle) so that forearm = aU + aL lands the
  *  wrist exactly on the target (fixed: the old chain never closed the
  *  triangle — the wrist fell ~70px short). bend=1 drops the elbow below the
- *  shoulder→target line (natural arm carriage). */
-export function armIk(sx: number, sy: number, tx: number, ty: number, lenU: number, lenL: number, bend: 1 | -1 = 1): { aU: number; aL: number } {
-  const dx = tx - sx, dy = ty - sy;
+ *  shoulder→target line (natural arm carriage).
+ *  FIX M2 — gesture carriage: by default the IK aims at a point DROPPED
+ *  12% of the distance below the true target (clamped 12..30 local px), so
+ *  the elbow carries low and the wrist stays angled up toward the datum —
+ *  pointing arms never collapse into board-straight rods again. Deliberate
+ *  full-extension beats (rehearsed title points, prop slams) pass
+ *  `fullExtend` to straighten: the clamp then relaxes to 98.5% and the
+ *  carriage droop is removed for that call only. */
+export function armIk(
+  sx: number, sy: number, tx: number, ty: number, lenU: number, lenL: number,
+  bend: 1 | -1 = 1, opts: { fullExtend?: boolean } = {}
+): { aU: number; aL: number } {
+  const fullExtend = opts.fullExtend === true;
+  let tyEff = ty;
+  if (!fullExtend) tyEff += clamp(Math.hypot(tx - sx, ty - sy) * 0.12, 12, 30); // carriage droop
+  const dx = tx - sx, dy = tyEff - sy;
   let d = Math.hypot(dx, dy);
   // FIX C11/M2 — reach honesty: the IK clamps at 90% of arm length (was 98.5%,
   // board-straight rods). Real gesture carriage keeps a visible elbow bend;
   // only the pointer's length bridges the last distance to the target.
-  d = Math.min(d, (lenU + lenL) * 0.90);
+  d = Math.min(d, (lenU + lenL) * (fullExtend ? 0.985 : 0.90));
   const base = Math.atan2(dx, dy) / D2R; // angle from vertical-down
   const cosA = clamp((lenU * lenU + d * d - lenL * lenL) / (2 * lenU * d), -1, 1);
   const a1 = Math.acos(cosA) / D2R;
@@ -128,6 +141,10 @@ interface BoneOpts {
   rim?: number;          // rim-light stroke alpha on lit edge
   far?: boolean;
   ink?: number;          // Phase 1 — the shared ink contour (2.2px at 1080p)
+  /** FIX M1 — per-limb far shading strength (0..1 toward the dark tone).
+   *  Default 0.34 (the C-08 arm value); the far LEG passes 0.24 so the two
+   *  legs keep a 3-4px lighter value separation at the pass position. */
+  shade?: number;
 }
 function bone(
   ctx: CanvasRenderingContext2D, sx: number, sy: number, ex: number, ey: number,
@@ -161,9 +178,11 @@ function bone(
   ctx.closePath();
   // FIX C8 — far-limb shading lightened (0.5→0.34 toward dark, 0.25→0.12 into
   // the void): the far arm now keeps a distinct value range beside the torso
-  // instead of merging into it and stranding its hand.
-  const lit = o.far ? hexLerp(o.lit, o.dark, 0.34) : o.lit;
-  const dark = o.far ? hexLerp(o.dark, '#05080F', 0.12) : o.dark;
+  // instead of merging into it and stranding its hand. FIX M1 — the strength
+  // is now per-limb (`shade`): legs pass 0.24 so the far leg stays legible.
+  const shd = o.shade ?? 0.34;
+  const lit = o.far ? hexLerp(o.lit, o.dark, shd) : o.lit;
+  const dark = o.far ? hexLerp(o.dark, '#05080F', shd * 0.35) : o.dark;
   const g = ctx.createLinearGradient(
     sx + nx * nSign * o.w0, sy + ny * nSign * o.w0,
     sx - nx * nSign * o.w0, sy - ny * nSign * o.w0
@@ -595,7 +614,9 @@ function drawFace(
   // FIX C2 — the front hairline sits a full band ABOVE the brows: clear skin
   // separates hair from brows, so neither reads through the other.
   ctx.save();
-  ctx.rotate(quiffLag * 0.35 * D2R);
+  // FIX M5 — the quiff answers the gesture accent (always on, film-visible):
+  // a ~1.1° strike shear on content words rides the head-lag channel.
+  ctx.rotate((quiffLag * 0.35 + accentEnv(beatT, wordTimes, wordTexts) * 1.1) * D2R);
   const hg = ctx.createLinearGradient(-R * 0.5, -R * 1.05, R * 0.4, -R * 0.2);
   hg.addColorStop(0, HAIR.lit);
   hg.addColorStop(0.6, hexLerp(HAIR.lit, HAIR.dark, 0.55));
@@ -903,11 +924,12 @@ export function drawReflection(
   // legs — same FK as the figure above (the mirror tells the truth, D2)
   for (const s of [-1, 1] as const) {
     const near = s === 1;
-    const hipX = s * HIP_HW * 0.72;
+    // FIX M1 — mirror legs ride the same widened hips + reduced swing
+    const hipX = s * HIP_HW * 0.92;
     let thighAng: number, kneeBend: number;
     if (p.walkPhase >= 0) {
       const wph = p.walkPhase * Math.PI * 2 + (near ? 0 : Math.PI);
-      thighAng = Math.sin(wph) * 26 * p.walkSpeed + (near ? 0.5 : -0.5);
+      thighAng = Math.sin(wph) * 22 * p.walkSpeed + (near ? 0.5 : -0.5);
       const swingFrac = Math.max(0, -Math.cos(wph));
       kneeBend = swingFrac * 44 * p.walkSpeed + (1 - swingFrac) * 5 * p.walkSpeed + 2;
     } else {
@@ -1013,24 +1035,24 @@ export function drawStickman(
   // (push-off) is vy < 0 → stretch, downward motion (landing) → squash
   const vyPS = (r.vel?.rootY ?? 0) * (1000 / 90);
   sy += clamp(-0.0009 * vyPS, -0.05, 0.05);
-  // M-03 + AUDIT C-09 — impact squash at FILM-visible amplitude: a 2-frame
-  // rise to 9%, a 2-frame overshoot to 10.5%, then a damped recoil (stretch
-  // up to 6%) into settle. The old 6% cap was also being clipped by the
-  // sy clamp at 0.92 — the clamp now moves to 0.885..1.10 so the full
-  // compress actually reaches the screen.
+  // M-03 + AUDIT C-09 — impact squash at FILM-visible amplitude. FIX M3 —
+  // raised into the perception band: a 2-frame rise to 12%, a 2-frame
+  // overshoot to 13.5%, then a damped recoil (stretch up to 6%) into settle.
+  // The clamp moves to 0.86..1.10 so the compress actually reaches the screen
+  // (the old floor clipped the 9% event before it landed).
   let impactAmp = 0;
   if (r.impactT != null) {
     const age = t - r.impactT;
     if (age >= 0 && age < 900) {
       let a: number;
-      if (age < 66) a = 0.09 * (age / 66);                       // rise to 9%
-      else if (age < 100) a = 0.09 + 0.015 * ((age - 66) / 34);  // overshoot 10.5%
-      else a = 0.105 * Math.exp(-(age - 100) / 210) * Math.cos((age - 100) / 160);
+      if (age < 66) a = 0.12 * (age / 66);                       // rise to 12%
+      else if (age < 100) a = 0.12 + 0.015 * ((age - 66) / 34);  // overshoot 13.5%
+      else a = 0.135 * Math.exp(-(age - 100) / 210) * Math.cos((age - 100) / 160);
       impactAmp = Math.max(0, a);
       sy -= Math.max(-0.06, a);
     }
   }
-  sy = clamp(sy, 0.885, 1.10);
+  sy = clamp(sy, 0.86, 1.10);
   const sx = 1 - (sy - 1) * 0.6;
   ctx.scale(sx, sy);
 
@@ -1044,12 +1066,17 @@ export function drawStickman(
   // ── legs (far first, then near) ──
   const legDraw = (side: -1 | 1) => {
     const near = side === 1;
-    const hipX = side * HIP_HW * 0.72;
+    // FIX M1 — hipX widened to ~11 (was ±8.6): at the pass position the two
+    // thighs no longer overlap around the centerline, so the silhouette
+    // separates instead of merging into one mass.
+    const hipX = side * HIP_HW * 0.92;
     let thighAng: number, kneeBend: number, ankleAng: number;
     if (p.walkPhase >= 0) {
       const wph = p.walkPhase * Math.PI * 2 + (side === 1 ? 0 : Math.PI);
       const sp = ((wph / (Math.PI * 2)) % 1 + 1) % 1;
-      thighAng = Math.sin(wph) * 26 * p.walkSpeed + (near ? 0.5 : -0.5);
+      // FIX M1 — thigh swing cut to ±22° (was ±26°): with the wider hips the
+      // stride stays natural while the legs keep clear of each other.
+      thighAng = Math.sin(wph) * 22 * p.walkSpeed + (near ? 0.5 : -0.5);
       // knee: deep flexion mid-swing (foot clears the floor), STRAIGHT support
       // through stance — knee bend → ~0 at the pass position (U2.5; the old
       // formula was inverted: the stance leg bent 46° while the swing leg
@@ -1074,11 +1101,14 @@ export function drawStickman(
     const knee2 = pt(knee.x, knee.y, thighAng + kneeBend, L_LEG);
     const foot = pt(knee2.x, knee2.y, thighAng + kneeBend + 90 + ankleAng, 7.5);
     const W = near ? 15.6 : 13.3; // AUDIT C-06 — thigh width +15%: legs read as trousered limbs, not 2px sticks
-    bone(ctx, hipX, hipY, knee.x, knee.y, 2.5, { w0: W, w1: W * 0.82, lit: SUIT.lit, dark: SUIT.dark, rim: near ? rim * 0.7 : 0, far: !near, ink: inkW });
+    // FIX M1 — the far leg keeps a 3-4px LIGHTER value than the near leg
+    // (shade 0.24 vs the shared 0.34 darkening): at the pass position the two
+    // legs read as two limbs, not one merged mass.
+    bone(ctx, hipX, hipY, knee.x, knee.y, 2.5, { w0: W, w1: W * 0.82, lit: SUIT.lit, dark: SUIT.dark, rim: near ? rim * 0.7 : 0, far: !near, ink: inkW, shade: 0.24 });
     // C-08 — sleeved knee: the shin starts 2.5px inside the joint (cloth
     // overlaps the joint) and a soft crease replaces the polished sphere
     const kSx = knee.x - Math.sin(thighAng * D2R) * 2.5, kSy = knee.y - Math.cos(thighAng * D2R) * 2.5;
-    bone(ctx, kSx, kSy, knee2.x, knee2.y, 2, { w0: W * 0.8, w1: W * 0.6, lit: SUIT.lit, dark: SUIT.dark, rim: near ? rim * 0.5 : 0, far: !near, ink: inkW });
+    bone(ctx, kSx, kSy, knee2.x, knee2.y, 2, { w0: W * 0.8, w1: W * 0.6, lit: SUIT.lit, dark: SUIT.dark, rim: near ? rim * 0.5 : 0, far: !near, ink: inkW, shade: 0.24 });
     // FIX C7 — rounded joint cap bridges the bone width step, then a smaller
     // crease reads as trouser cloth INSIDE the covered joint
     jointCap(ctx, knee.x, knee.y, W * 0.38, !near);
@@ -1189,14 +1219,21 @@ export function drawStickman(
   }
 
   // AUDIT C-09 — coat-hem secondary motion: two trailing cloth flaps hang from
-  // the hem and lag the walk cycle by ~90ms (phase-shifted), so the jacket
-  // visibly answers the stride. Frozen when standing; scaled by walk speed.
-  if (p.walkPhase >= 0 && p.walkSpeed > 0.05) {
-    const lag = -Math.sin(p.walkPhase * Math.PI * 2 + 0.9);
+  // the hem. FIX M5 — the flaps are ALWAYS ON: the walk cycle lags them by
+  // ~90ms (phase-shifted), and standing gestures now drive them through the
+  // word-accent envelope at film-visible gain (±3.2° per strike) plus a quiet
+  // breathing sway — the jacket answers every gesture, not just strides.
+  {
+    const accM5 = r.wordTimes && r.wordTexts ? accentEnv(r.beatT ?? t, r.wordTimes, r.wordTexts) : 0;
+    const flap = clamp(
+      (p.walkPhase >= 0 ? -Math.sin(p.walkPhase * Math.PI * 2 + 0.9) * 2.6 * Math.max(0.62, p.walkSpeed) : 0)
+      + accM5 * 3.2 + Math.sin(t / 2400) * 0.5,
+      -7, 7,
+    );
     for (const s of [-1, 1]) {
       ctx.save();
       ctx.translate(s * (HIP_HW + 5), hipY + 6);
-      ctx.rotate(lag * 2.6 * D2R * p.walkSpeed * s);
+      ctx.rotate(flap * D2R * s);
       ctx.beginPath();
       ctx.moveTo(-3.2, 0);
       ctx.quadraticCurveTo(-1.6, 7, -2.6, 12);
@@ -1234,10 +1271,14 @@ export function drawStickman(
   // corner and dislocated at ordinary gesture velocities (the snapped-tie
   // read). The whole tie now sways with the torso and the blade BENDS as
   // cloth — a quadratic skew capped at ±14°, fully deterministic.
+  // FIX M5 — the tie (and the pocket-square riding tieSwayDeg) respond to the
+  // word-accent envelope at film-visible gain (2-3× the old finite-difference
+  // response), ALWAYS ON: standing gestures now move the silk.
   const velLean = r.vel?.lean ?? 0;
   const velBob = r.vel?.rootY ?? 0;
-  const tieSwayDeg = clamp(velLean * -3.2 + velBob * -1.8, -24, 24);
-  const tieBendDeg = clamp(tieSwayDeg * 0.45 + velBob * -1.2, -14, 14);
+  const accTie = r.wordTimes && r.wordTexts ? accentEnv(r.beatT ?? t, r.wordTimes, r.wordTexts) : 0;
+  const tieSwayDeg = clamp(velLean * -3.2 + velBob * -1.8 + accTie * 6.5, -24, 24);
+  const tieBendDeg = clamp(tieSwayDeg * 0.45 + velBob * -1.2 + accTie * 2.4, -14, 14);
   // Phase 1 — burgundy silk: gold is reserved for the pocket-watch chain,
   // the one signature accessory of the gentleman arbitrageur
   const tieG = ctx.createLinearGradient(0, 0, 0, TORSO * 0.8);
@@ -1450,7 +1491,12 @@ export function drawStickman(
     // one gold accessory)
     // hand — wrist follow-through: the hand keeps moving after the forearm
     // settles (D4), and points when the scene asks it to touch data (D1)
-    const handAng = aU + aL - (near ? (r.vel?.rAL ?? 0) * 0.9 : 0);
+    // FIX M2 — the pointing wrist stays ANGED: the hand (and the carried
+    // baton) cock 8° off the forearm axis, so a pointing arm reads as wrist +
+    // forelimb carriage, never one rigid rod.
+    const handAng = aU + aL
+      - (near ? (r.vel?.rAL ?? 0) * 0.9 : 0)
+      + (near && (p.hand ?? 'open') === 'point' ? -8 : 0);
     // AUDIT C-02 — hands ×1.4 (7.2→10.0 near, 6.2→8.4 far): fingers resolve as
     // fingers at 1080p instead of a cream smudge
     drawHand(ctx, wrist.x, wrist.y, handAng, near ? 10.0 : 8.4, near, p.hand ?? 'open', W, inkW);
@@ -1660,7 +1706,9 @@ export function walkIn(
   const p = clamp01(t / durMs);
   const ease = p < 0.22 ? easeInOutSine(p / 0.22) * 0.22 : p > 0.8 ? 0.22 + easeInOutSine((p - 0.8) / 0.2) * 0.78 : 0.22 + (p - 0.22) / 0.58 * 0.78;
   const dist = Math.abs(toX - fromX);
-  const stride = 2 * Math.sin(26 * D2R) * (U_LEG + L_LEG) * rigScale;
+  // FIX M1 — stride re-locked to the new ±22° thigh swing so the phase-lock
+  // keeps the feet tracking the ground exactly after the M1 geometry change
+  const stride = 2 * Math.sin(22 * D2R) * (U_LEG + L_LEG) * rigScale;
   const walking = p > 0.02 && p < 0.985 && dist > 4;
   const speed = walking ? clamp01(dist / 320 + 0.55) : 0;
   const phase = ((ease * dist) / stride) % 1;
@@ -1669,19 +1717,55 @@ export function walkIn(
   return { x, pose, walking, phase };
 }
 
+// ── FIX M4 — the arc system ─────────────────────────────────────────────────
+/** Gesture-arc state per rig instance: the drawn IK target chases the real
+ *  target and is sampled along a quadratic whose control point sits at the
+ *  mid-target offset OUTWARD-DOWN (~40-60px on screen at rig scales 1.4-2.3),
+ *  so wrists travel on classical arcs instead of the straight chord. The
+ *  cursor easing is a fixed per-frame step (deterministic at 30fps renders). */
+interface ArcState { x: number; y: number; fx: number; fy: number; tx: number; ty: number; }
+const ARCS = new Map<string, ArcState>();
+function arcTarget(key: string, tx: number, ty: number): { x: number; y: number } {
+  let s = ARCS.get(key);
+  if (!s) {
+    s = { x: tx, y: ty, fx: tx, fy: ty, tx, ty };
+    ARCS.set(key, s);
+  } else if (Math.hypot(tx - s.tx, ty - s.ty) > 3) {
+    // new target: re-anchor the arc (from = wherever the wrist is now)
+    s.fx = s.x; s.fy = s.y; s.tx = tx; s.ty = ty;
+  }
+  const tot = Math.hypot(s.tx - s.fx, s.ty - s.fy);
+  s.x += (s.tx - s.x) * 0.17;
+  s.y += (s.ty - s.y) * 0.17;
+  if (tot < 2) return { x: s.tx, y: s.ty };
+  const rem = Math.hypot(s.tx - s.x, s.ty - s.y);
+  const e = easeInOutSine(clamp01(1 - rem / tot));
+  // quadratic control point: mid-target, offset outward-down (M4: 40-60px)
+  const cx = (s.fx + s.tx) / 2 + Math.sign(s.tx - s.fx || 1) * 14;
+  const cy = (s.fy + s.ty) / 2 + 42;
+  return { x: quadPt(s.fx, cx, s.tx, e), y: quadPt(s.fy, cy, s.ty, e) };
+}
+
 // ── D1: the companion contract ───────────────────────────────────────────────
 /** Aim the near hand at a scene prop with 2-bone IK and lead the gaze to it.
  *  Target is in SCENE pixels; the rig math is done in local units. This is what
- *  makes the figure touch the data it narrates instead of gesturing into air. */
+ *  makes the figure touch the data it narrates instead of gesturing into air.
+ *  FIX M2 — `fullExtend` opts in to the straightened arm for deliberate
+ *  full-extension beats; the default keeps the carriage bend. */
 export function companionArm(
   pose: Pose, px: number, groundY: number, rigScale: number,
-  target: { x: number; y: number }, mode: 'point' | 'present' = 'point'
+  target: { x: number; y: number }, mode: 'point' | 'present' = 'point',
+  opts: { fullExtend?: boolean } = {}
 ): void {
   const shx = px + Math.sin((pose.lean + pose.torsoTilt) * D2R) * TORSO * rigScale;
   const shy = groundY + (-(U_LEG + L_LEG) + pose.rootY - TORSO) * rigScale;
   const dx = (target.x - shx) / rigScale;
   const dy = (target.y - shy) / rigScale;
-  const ik = armIk(0, 0, dx, dy, U_ARM, L_ARM, 1);
+  // FIX M4 — gesture arcs: the IK target interpolates along a quadratic
+  // control point (mid-target offset outward-down ≈ 40-60px on screen) so
+  // wrists travel on curves, never the straight chord between angle targets.
+  const at = arcTarget(`R_${Math.round(px)}_${Math.round(groundY)}_${rigScale.toFixed(2)}`, dx, dy);
+  const ik = armIk(0, 0, at.x, at.y, U_ARM, L_ARM, 1, opts);
   pose.rAU = ik.aU;
   pose.rAL = ik.aL;
   pose.hand = mode === 'point' ? 'point' : 'open';
@@ -1694,13 +1778,15 @@ export function companionArm(
  *  through the same armIk(), angles negated for the left side. */
 export function companionArmL(
   pose: Pose, px: number, groundY: number, rigScale: number,
-  target: { x: number; y: number }, mode: 'point' | 'present' = 'present'
+  target: { x: number; y: number }, mode: 'point' | 'present' = 'present',
+  opts: { fullExtend?: boolean } = {}
 ): void {
   const shx = px + Math.sin((pose.lean + pose.torsoTilt) * D2R) * TORSO * rigScale;
   const shy = groundY + (-(U_LEG + L_LEG) + pose.rootY - TORSO) * rigScale;
   const dx = (target.x - shx) / rigScale;
   const dy = (target.y - shy) / rigScale;
-  const ik = armIk(0, 0, -dx, dy, U_ARM, L_ARM, 1);
+  const at = arcTarget(`L_${Math.round(px)}_${Math.round(groundY)}_${rigScale.toFixed(2)}`, -dx, dy);
+  const ik = armIk(0, 0, at.x, at.y, U_ARM, L_ARM, 1, opts);
   pose.lAU = -ik.aU;
   pose.lAL = -ik.aL;
   if (mode !== 'point') pose.hand = 'open';

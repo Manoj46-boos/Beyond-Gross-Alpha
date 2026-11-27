@@ -357,7 +357,11 @@ export function drawChapterWalkOn(
   // break on the most-replayed moment of every chapter card. Phase 1.5: the
   // card's message fades over ~450ms as he starts the exit, so the text has
   // left the frame before he reaches it. The ghost numeral and room stay.
-  const EXIT_AT = Math.max(2350, durMs - 1950);
+  // FIX M6 — the exit window lengthens to ≥2.6s (was 1.95s): at W+160 travel
+  // the 1.95s stride phase-lock visibly shuffled against the entrance's
+  // cadence. The card now cuts before the walk completes — he exits mid-stride
+  // on the hard cut, which is how every chapter-out in the film reads.
+  const EXIT_AT = Math.max(2350, durMs - 2600);
   const exitFade = tMs < EXIT_AT ? 1 : 1 - clamp01((tMs - EXIT_AT - 120) / 450);
   // AUDIT I-03 — schedule the signature light on chapter-open beats: the
   // volumetric pass sits BEHIND the card on every walk-on (8 cards ≈ 34s of
@@ -381,7 +385,10 @@ export function drawChapterWalkOn(
     // stopped centre-left, turned to the title, presenting it
     pose = poseAt(`chapter-${index}`, tMs - 1500, tMs, [], []);
     applyMood(pose, 'calm');
-    companionArm(pose, homeX, groundY, rigScale, { x: W * 0.5, y: H * 0.42 }, 'point');
+    // FIX M2 — the rehearsed title point is the deliberate full-extension
+    // beat: it opts into the straightened arm; every data-scene gesture keeps
+    // the carriage bend.
+    companionArm(pose, homeX, groundY, rigScale, { x: W * 0.5, y: H * 0.42 }, 'point', { fullExtend: true });
     // FIX C10 — the walk-on OWNS both arms: the near hand points at the title
     // (companionArm above), the far arm takes a deliberate quiet rest instead
     // of whatever gesture poseAt hashed for this sentence id (the old hash
@@ -392,8 +399,10 @@ export function drawChapterWalkOn(
     pose.look = clamp((W * 0.5 - homeX) / 420, -1, 1);
   } else {
     // L-08 — exits right THROUGH the light blade: the blade sweeps with him
-    // over the exit window, so it reads as a door he walks out of
-    const exitDur = Math.max(1950, durMs - EXIT_AT);
+    // over the exit window, so it reads as a door he walks out of.
+    // FIX M6 — the stride window floors at 2.6s (was 1.95s): the cadence now
+    // reads as a stride, not a shuffle, against the 1.5s entrance walk.
+    const exitDur = Math.max(2600, durMs - EXIT_AT);
     const w = walkIn(tMs - EXIT_AT, homeX, W + 160, exitDur, rigScale, index + 9);
     px = w.x;
     pose = w.pose;
