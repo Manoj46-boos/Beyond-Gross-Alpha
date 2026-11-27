@@ -5,7 +5,7 @@
  */
 
 import { SceneCtx } from './scene-context';
-import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, goldRule, chip, fitText, kicker } from './theme';
+import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, goldRule, chip, fitText, kicker, diamond } from './theme';
 import { clamp01, easeOutCubic, easeInOutCubic, springTo, hash01, fmtMoney } from './easing';
 import { goldDust, impactRing, softBloom, microShake, spinToken, floatY, focusPing, lightBlade, godRays } from './fx';
 import { drawStatement, statementAnchor } from './textfx';
@@ -252,6 +252,28 @@ export function coldOpenScene(g: SceneCtx): void {
       ctx.lineTo(W * 0.68, H * 0.475);
       ctx.stroke();
     }
+    // FIX F11 — the numbers beat's top/bottom whitespace: the setup facts and
+    // the beat's own quiet line frame the two numbers (both verbatim from the
+    // VO), so the frame reads composed instead of floating in navy. They ride
+    // the restage transform and recede with it.
+    const sa = a1 * (1 - restage * 0.35);
+    if (sa > 0) {
+      ctx.save();
+      ctx.globalAlpha = sa;
+      chip(ctx, 'SAME $2M · SAME 8% RETURN · SAME 25 YEARS', W / 2, H * 0.155, { size: 26, gold: true, center: true, maxW: 900 });
+      ctx.restore();
+    }
+    const sb = a2 * (1 - restage * 0.45);
+    if (sb > 0) {
+      ctx.save();
+      ctx.globalAlpha = sb;
+      setFont(ctx, 30, 600, FONT_DISPLAY);
+      ctx.fillStyle = PALETTE.inkSoft;
+      ctx.textAlign = 'center';
+      ctx.fillText('No crash. No bad pick. No scandal.', W / 2, H * 0.70);
+      ctx.textAlign = 'left';
+      ctx.restore();
+    }
     ctx.restore();
     // AUDIT R-01 — the tax-line seal (full-size, over the dim): the gold
     // band lands where the narration says the money left.
@@ -327,6 +349,25 @@ export function gapBarsScene(g: SceneCtx): void {
     ctx.restore();
     // U3.3 — the eye lands on the FILLED TIP of the bar being narrated
     focusPing(ctx, idx === 1 ? tipB : tipA, (idx === 1 ? y + rh + 70 : y) + rh * 0.5, g.sentenceT, 110);
+  }
+  // FIX F11 — the right column of the 17% row is empty track at rest: the
+  // row's tail carries the narration's own arithmetic ("Only seventeen
+  // percent…" ≈ 1 in 6) as a quiet annotated datum, so the wide track reads
+  // as composed, not abandoned. Beat-clock entrance (rides with the row),
+  // persistent afterwards — including during sentence 0's long opening.
+  {
+    const ga = clamp01((t - 1900) / 500);
+    if (ga > 0) {
+      ctx.save();
+      ctx.globalAlpha = ga * 0.9;
+      const dy2 = y + rh + 70 + rh * 0.5;
+      const dx2 = Math.max(tipB + 90, x + w * 0.30);
+      diamond(ctx, dx2, dy2, 11, PALETTE.inkMuted);
+      setFont(ctx, 26, 600, FONT_UI);
+      ctx.fillStyle = PALETTE.inkMuted;
+      ctx.fillText('≈ 1 in 6 lets after-tax returns drive decisions', dx2 + 28, dy2 + 9);
+      ctx.restore();
+    }
   }
   // live gold edge on the bar under discussion
   if (idx >= 2) {
