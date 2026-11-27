@@ -363,7 +363,7 @@ export function titleCardScene(g: SceneCtx): void {
   // AUDIT I-03 — the film's own chapter-open carries the signature light:
   // the volumetric pass sits behind the title, on the same schedule as the
   // walk-on cards, instead of reserving godRays for host scenes alone.
-  godRays(ctx, W, H, t, { alpha: 0.35, x: W * 0.5 });
+  godRays(ctx, W, H, t, { alpha: 0.35, x: W * 0.30 });
   ctx.save();
   ctx.globalAlpha = a;
   ctx.textAlign = 'center';
@@ -387,7 +387,7 @@ export function rehookScene(g: SceneCtx): void {
   const { ctx, W, H, t } = g;
   // the same signature light the chapter opens carry — the promise reads as
   // an authored beat, not a thrown-up card
-  godRays(ctx, W, H, t, { alpha: 0.32, x: W * 0.5 });
+  godRays(ctx, W, H, t, { alpha: 0.32, x: W * 0.28 });
   statementAnchor(ctx, W, H, g.chapterIdx, t, '5');
   const a = clamp01(t / 600);
   kicker(ctx, 'HALFWAY · A PROMISE', W * 0.10, 300, a);

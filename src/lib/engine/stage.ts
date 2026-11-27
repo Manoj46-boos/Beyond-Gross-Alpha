@@ -37,12 +37,16 @@ export function paintStage(
   ctx.fillStyle = base;
   ctx.fillRect(0, 0, W, H);
 
-  // 2. breathing ambient glows — indigo upper-right, gold lower-left
+  // 2. breathing ambient glows — FIX C12 (one-light discipline): the whole
+  // room now agrees with the character's key L = (−0.55, −0.85) upper-LEFT.
+  // The indigo key glow anchors upper-left, the gold counter-glow sits
+  // lower-RIGHT; the old upper-right indigo pool contradicted the figure's
+  // shading in every frame (the classic two-sun read).
   const breathe = 0.5 + 0.5 * Math.sin(t / 5200);
   const breathe2 = 0.5 + 0.5 * Math.sin(t / 7100 + 2.1);
   const toneTint = tone === 'gold' ? '#B08A28' : tone === 'down' ? '#5A2A32' : tone === 'up' ? '#1F5A4C' : '#2A4470';
-  glowBlob(ctx, W * 0.84, H * 0.14, W * 0.55, toneTint, 0.115 + 0.028 * breathe);
-  glowBlob(ctx, W * 0.10, H * 0.88, W * 0.42, tone === 'down' ? '#3A1A22' : '#8A6D1F', 0.075 + 0.022 * breathe2);
+  glowBlob(ctx, W * 0.16, H * 0.14, W * 0.55, toneTint, 0.115 + 0.028 * breathe);
+  glowBlob(ctx, W * 0.90, H * 0.88, W * 0.42, tone === 'down' ? '#3A1A22' : '#8A6D1F', 0.075 + 0.022 * breathe2);
   // U1.5: the key-light pool — one radial GOLD pool (alpha ≈ 0.10, radius
   // ≈ 45% of width) centred behind the figure so he separates from the room
   if (opts.keyLight) {

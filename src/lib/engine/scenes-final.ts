@@ -15,7 +15,7 @@ import { dataSceneFigure } from './scenes-figure';
 export function stepUpScene(g: SceneCtx): void {
   const { ctx, W, H, t } = g;
   paintStage(ctx, W, H, t, { tone: 'gold' });
-  godRays(ctx, W, H, t, { alpha: 0.5, x: W * 0.7 });
+  godRays(ctx, W, H, t, { alpha: 0.5, x: W * 0.25 });
   goldDust(ctx, W, H, t, 51, 1.2);
   kicker(ctx, 'The quietest, most powerful fact', W * 0.10, 220, clamp01(t / 500));
   const bigA = clamp01((t - 300) / 700);
@@ -237,7 +237,7 @@ export function fiveQuestionsScene(g: SceneCtx): void {
 export function endScreenScene(g: SceneCtx): void {
   const { ctx, W, H, t, channelName, nextVideoTitle } = g;
   paintStage(ctx, W, H, t, { tone: 'gold' });
-  godRays(ctx, W, H, t, { alpha: 0.45, x: W * 0.75 });
+  godRays(ctx, W, H, t, { alpha: 0.45, x: W * 0.25 });
   goldDust(ctx, W, H, t, 61, 1.1);
   bokehField(ctx, W, H, t, 9, true, 1);
 

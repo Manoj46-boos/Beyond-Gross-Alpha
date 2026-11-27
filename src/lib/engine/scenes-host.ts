@@ -130,7 +130,7 @@ export function hostScene(g: SceneCtx): void {
     horizonFade: { x: px, r: 400 }, // C-10 — wider dip so the hairline reads as depth, not a line under his feet
     keyLight: { x: px, y: groundY - 330, r: W * 0.45 },
   });
-  godRays(ctx, W, H, t, { alpha: 0.4, x: W * 0.80 });
+  godRays(ctx, W, H, t, { alpha: 0.4, x: W * 0.20 });
   bokehField(ctx, W, H, t, 4, true, 0.8);
   goldDust(ctx, W, H, t, 11, 0.8);
 
@@ -362,7 +362,7 @@ export function drawChapterWalkOn(
   // AUDIT I-03 — schedule the signature light on chapter-open beats: the
   // volumetric pass sits BEHIND the card on every walk-on (8 cards ≈ 34s of
   // runtime), so the cinematic look is no longer confined to host scenes.
-  godRays(ctx, W, H, tMs, { alpha: 0.30, x: W * 0.62 });
+  godRays(ctx, W, H, tMs, { alpha: 0.30, x: W * 0.30 });
   drawChapterCard(ctx, W, H, tMs, durMs, index, title, 0, totalChapters, exitFade);
   const groundY = H * 0.88;
   const rigScale = 2.3;

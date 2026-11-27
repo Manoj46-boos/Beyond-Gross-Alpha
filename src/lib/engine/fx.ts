@@ -77,7 +77,7 @@ export function godRays(
   ctx: CanvasRenderingContext2D, W: number, H: number, t: number,
   opts: { alpha?: number; x?: number; sway?: number } = {}
 ): void {
-  const { alpha = 0.5, x = W * 0.78, sway = 1 } = opts;
+  const { alpha = 0.5, x = W * 0.22, sway = 1 } = opts;
   ctx.save();
   ctx.globalCompositeOperation = 'screen';
   ctx.translate(x, -60);

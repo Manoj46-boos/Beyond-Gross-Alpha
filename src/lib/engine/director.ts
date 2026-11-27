@@ -317,7 +317,7 @@ export function drawFrame(
   // so the volumetric look lands at each act boundary.
   for (const c of tl.chapterCards) {
     if (t >= c.startMs && t < c.endMs) {
-      godRays(ctx, W, H, t, { alpha: 0.34, x: W * 0.72 });
+      godRays(ctx, W, H, t, { alpha: 0.34, x: W * 0.28 });
       drawChapterWalkOn(ctx, W, H, t - c.startMs, c.endMs - c.startMs, c.index, c.title, tl.chapters.length);
       // light blade accompanies the card (he exits through it)
       const bp = clamp01((t - c.startMs) / (c.endMs - c.startMs));
