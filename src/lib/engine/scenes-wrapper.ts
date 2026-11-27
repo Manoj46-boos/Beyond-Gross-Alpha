@@ -199,7 +199,9 @@ export function distribBarsScene(g: SceneCtx): void {
   ctx.restore();
   ctx.save();
   ctx.globalAlpha = hotZone === 0 || hotZone === 2 ? 0.45 : 1;
-  barRow(ctx, { x, y: 535, w, h: 120, label: 'Equity ETFs', value: 6, maxV: 100, p: clamp01((t - 1300) / 900), t, landT: 2250, tone: 'up', valueText: '6%' });
+  // FIX F3 — barRow returns the ETF row's FILLED TIP: the punchline's contact
+  // devices anchor to it instead of painting over the verdict text.
+  const tipEtf = barRow(ctx, { x, y: 535, w, h: 120, label: 'Equity ETFs', value: 6, maxV: 100, p: clamp01((t - 1300) / 900), t, landT: 2250, tone: 'up', valueText: '6%' });
   ctx.restore();
   if (hotZone === 0) dimRect(ctx, x, 535, w, 120);
   if (hotZone === 1) dimRect(ctx, x, 345, w, 120);
@@ -214,18 +216,23 @@ export function distribBarsScene(g: SceneCtx): void {
     ctx.fillStyle = PALETTE.goldBright;
     ctx.fillText('A structural moat.', x + w + 60, 660);
     ctx.restore();
+    // FIX F3 — the eye-landing ring frames the 6% BAR TIP (the datum the
+    // moat is made of), never the middle of the verdict words it points at.
     if (hotZone === 2 && ma >= 1) {
-      focusPing(ctx, x + w + 200, 660, g.sentenceT, 96);
+      focusPing(ctx, tipEtf + 6, 595, g.sentenceT, 96);
     }
   }
   // S-05 — the Principal leans on the 57%/6% bars (report §6.4): open palm
   // presented at the bar being narrated, per sentence. M-03 — his body
   // answers each bar landing (landT 1250 / 2250 in barRow).
+  // FIX F3 — during the punchline sentences the focal moves OFF the "A
+  // structural moat." block onto the empty track beside the 6% tip: the
+  // pointing arm marks the datum instead of crossing the words.
   dataSceneFigure(g, 1.42, {
     seed: 41,
     mode: 'present',
     impactT: t >= 2250 ? 2250 : t >= 1250 ? 1250 : undefined,
-    focal: (si) => (si <= 1 ? { x: x + w - 70, y: si === 0 ? 460 : 650 } : { x: x + w + 170, y: 640 }),
+    focal: (si) => (si <= 1 ? { x: x + w - 70, y: si === 0 ? 460 : 650 } : { x: tipEtf + 150, y: 640 }),
   });
 }
 
