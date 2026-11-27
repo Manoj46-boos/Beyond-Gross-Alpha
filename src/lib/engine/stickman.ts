@@ -1532,9 +1532,10 @@ export function drawStickman(
     const handAng = aU + aL
       - (near ? (r.vel?.rAL ?? 0) * 0.9 : 0)
       + (near && (p.hand ?? 'open') === 'point' ? -8 : 0);
-    // AUDIT C-02 — hands ×1.4 (7.2→10.0 near, 6.2→8.4 far): fingers resolve as
-    // fingers at 1080p instead of a cream smudge
-    drawHand(ctx, wrist.x, wrist.y, handAng, near ? 10.0 : 8.4, near, p.hand ?? 'open', W, inkW);
+    // AUDIT C-02 + FIX C4 (frame audit) — hands: 10.0/8.4 still merged the
+    // finger capsules into a cream mitten at scene scales. 12.5/10.5 plus the
+    // two-value finger pass in drawHand keeps fingers as fingers.
+    drawHand(ctx, wrist.x, wrist.y, handAng, near ? 12.5 : 10.5, near, p.hand ?? 'open', W, inkW);
     // FIX C11 — the presentation pointer is a REAL PROP: a presenter's baton
     // with an ink shaft 7-9px wide on screen at any rig scale, a gold pommel,
     // ferrule and tip with a rim-light catch, a 3° carriage droop, and a soft
@@ -1688,11 +1689,30 @@ function drawHand(
     ctx.lineWidth = ink;
     ctx.stroke();
   }
-  // FIX C8 — the far hand keeps a value range close to the lightened far
-  // sleeve (was 0.55: a bright cream blob floating beside a dark torso)
-  const fk = hexLerp(SKIN.lit, SKIN.dark, near ? 0.3 : 0.42);
-  ctx.strokeStyle = fk;
+  // FIX C8 + FIX C4 (frame audit) — the far hand drops further toward the
+  // suit value (0.42→0.55): a bright cream blob beside a dark torso read as
+  // a rubber glove; now it stays subordinate to the near hand.
+  const fk = hexLerp(SKIN.lit, SKIN.dark, near ? 0.3 : 0.55);
   ctx.lineCap = 'round';
+  // FIX C4 — two-value finger separation: every capsule is drawn twice, a
+  // warm shadow pass under a lit pass, so adjacent fingers read as separate
+  // volumes instead of one merged cream shape at scene scales.
+  const twoTone = (x0: number, y0: number, cx: number, cy: number, x1: number, y1: number, w: number): void => {
+    const dk = hexLerp(fk, SKIN.deep, 0.55);
+    ctx.strokeStyle = dk;
+    ctx.lineWidth = w * 1.12;
+    ctx.beginPath();
+    ctx.moveTo(x0, y0 + w * 0.16);
+    ctx.quadraticCurveTo(cx, cy + w * 0.16, x1, y1 + w * 0.16);
+    ctx.stroke();
+    ctx.strokeStyle = fk;
+    ctx.lineWidth = w;
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.quadraticCurveTo(cx, cy, x1, y1);
+    ctx.stroke();
+  };
+  ctx.strokeStyle = fk;
   if (mode === 'cup') {
     // S-04 — fingers curled UP under the object: the cradling palm. Tips pull
     // back toward the palm line so a resting prop reads as held, not hovered.
@@ -1700,11 +1720,10 @@ function drawHand(
       [-0.34, 0.62], [-0.1, 0.72], [0.14, 0.76], [0.38, 0.64],
     ];
     for (const [fy, fl] of fingersC) {
-      ctx.lineWidth = size * (0.26 + fl * 0.06);
-      ctx.beginPath();
-      ctx.moveTo(size * 0.5, fy * size * 0.9);
-      ctx.quadraticCurveTo(size * (0.5 + fl * 0.9), fy * size * 1.02, size * (0.5 + fl * 0.5), fy * size * 0.22);
-      ctx.stroke();
+      twoTone(size * 0.5, fy * size * 0.9,
+        size * (0.5 + fl * 0.9), fy * size * 1.02,
+        size * (0.5 + fl * 0.5), fy * size * 0.22,
+        size * (0.26 + fl * 0.06));
     }
     // thumb wraps across the near edge (AUDIT C-02 — thickened so the wrap
     // reads as a gripping thumb at phone size)
@@ -1716,20 +1735,13 @@ function drawHand(
   } else if (mode === 'point') {
     // AUDIT C-02 — the index is TWO segments with a 12° knuckle bend: the
     // pointing read becomes a gesture with a real joint, not a straight spike
+    // (FIX C4 — both segments run through the two-tone pass)
     const seg1 = size * 0.95, seg2 = size * 0.82;
     const knX = size * 0.5 + seg1, knY = -size * 0.20;
     const bendR = 12 * D2R;
     const tipX2 = knX + Math.cos(bendR) * seg2, tipY2 = knY + Math.sin(bendR) * seg2;
-    ctx.lineWidth = size * 0.30;
-    ctx.beginPath();
-    ctx.moveTo(size * 0.5, -size * 0.18);
-    ctx.lineTo(knX, knY);
-    ctx.stroke();
-    ctx.lineWidth = size * 0.24;
-    ctx.beginPath();
-    ctx.moveTo(knX, knY);
-    ctx.quadraticCurveTo(knX + seg2 * 0.6, knY + seg2 * 0.08, tipX2, tipY2);
-    ctx.stroke();
+    twoTone(size * 0.5, -size * 0.18, (size * 0.5 + knX) / 2, (-size * 0.18 + knY) / 2, knX, knY, size * 0.30);
+    twoTone(knX, knY, knX + seg2 * 0.6, knY + seg2 * 0.08, tipX2, tipY2, size * 0.24);
     // folded middle/ring/pinky + thumb wrapped across the palm
     ctx.fillStyle = fk;
     ctx.beginPath();
@@ -1742,6 +1754,8 @@ function drawHand(
     ctx.stroke();
   } else {
     // C-07 — four tapered capsules fanned from the palm edge + opposing thumb
+    // (FIX C4 — every capsule through the two-tone pass: fingers read as
+    // separate volumes, not a merged cream shape)
     const fingers: Array<[number, number, number]> = [
       [-0.34, 0.78, -0.16], // pinky: y, length, spread
       [-0.1, 0.92, -0.05],
@@ -1749,12 +1763,11 @@ function drawHand(
       [0.38, 0.8, 0.18],    // index
     ];
     for (const [fy, fl, spread] of fingers) {
-      ctx.lineWidth = size * (0.24 + fl * 0.08);
       const tipX = size * (0.62 + fl), tipY = fy * size * 1.28 + spread * size * 0.9;
-      ctx.beginPath();
-      ctx.moveTo(size * 0.52, fy * size * 0.92);
-      ctx.quadraticCurveTo(size * (0.62 + fl * 0.6), fy * size * 1.15 + spread * size * 0.4, tipX, tipY);
-      ctx.stroke();
+      twoTone(size * 0.52, fy * size * 0.92,
+        size * (0.62 + fl * 0.6), fy * size * 1.15 + spread * size * 0.4,
+        tipX, tipY,
+        size * (0.24 + fl * 0.08));
     }
     // thumb — a thicker capsule from the near edge crossing the palm
     // (AUDIT C-02 — thickened to 0.40 so the opposing thumb survives phone size)
