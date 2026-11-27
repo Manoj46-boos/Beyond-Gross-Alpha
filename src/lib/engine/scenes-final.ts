@@ -127,17 +127,29 @@ export function hierarchyScene(g: SceneCtx): void {
     chip(ctx, tr.verdict, lx + w - 320, ly + h / 2 - 26, { size: 28, gold: tr.tone === 'gold' });
     ctx.restore();
   });
-  // footer benchmark (top-right, above the shifted grid, never behind the
-  // caption pill — AUDIT K-02)
+  // FIX F2 — the footer no longer shares the title band. The title's RIGHT
+  // edge is measured at runtime; the footer becomes a corner block whose left
+  // edge starts 48px past it, wrapped to fit [titleRight+48, W−120]. Title
+  // tail and footer can never sit within a few pixels again on the scene the
+  // kicker calls "screenshot this". (Below the title's extent is not an
+  // option here: the tier grid begins at y=300 and the caption guard at 786 —
+  // the corner block is the only collision-free zone, and it now MEASURES its
+  // start instead of assuming one.)
   const fa = clamp01((t - 700 + 3 * 900 + 200) / 600);
   if (fa > 0) {
     ctx.save();
     ctx.globalAlpha = fa;
+    setFont(ctx, 72, 800, FONT_DISPLAY);
+    const titleRight = W * 0.10 + ctx.measureText('The After-Tax Hierarchy').width;
     setFont(ctx, 28, 600, FONT_UI);
+    const zoneX = Math.min(titleRight + 48, W - 620);
+    const zoneW = (W - 120) - zoneX;
+    const fl: string[] = [];
+    wrapText(ctx, 'Benchmark to beat: plain index ETF held for decades ≈ 0.3%/yr drag', zoneW, 28, 600, FONT_UI).forEach((ln) => fl.push(ln));
+    wrapText(ctx, 'Complexity is a cost you pay every year.', zoneW, 28, 600, FONT_UI).forEach((ln) => fl.push(ln));
     ctx.fillStyle = PALETTE.inkMuted;
     ctx.textAlign = 'right';
-    ctx.fillText('Benchmark to beat: plain index ETF held for decades ≈ 0.3%/yr drag', W - 120, 250);
-    ctx.fillText('Complexity is a cost you pay every year.', W - 120, 284);
+    fl.slice(0, 3).forEach((ln, i) => ctx.fillText(ln, W - 120, 214 + i * 32));
     ctx.textAlign = 'left';
     ctx.restore();
   }
