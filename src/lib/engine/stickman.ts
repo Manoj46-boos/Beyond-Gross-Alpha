@@ -1396,15 +1396,19 @@ export function drawStickman(
   ctx.save();
   ctx.translate(-shW * 0.42, shY + 16);
   ctx.rotate(tieSwayDeg * 0.4 * D2R);
-  const cx2 = 8, cy2 = 46;  // watch pocket (button stance)
-  const sagCX = 14, sagCY = 26; // catenary control — a real outward drape
+  // FIX C3 (frame audit) — the chain is a DISCOVERED detail, not a silhouette
+  // element: drape 46→24 local units, ribbon half-width 2.0→1.3, whole layer
+  // at alpha 0.8, fob medallion 3.2→2.4. The pocket square carries the chest.
+  ctx.globalAlpha = 0.8;
+  const cx2 = 8, cy2 = 24;  // watch pocket (short drape — barely visible)
+  const sagCX = 11, sagCY = 13; // catenary control — a quiet outward drape
   const CHN = 14;
   const chPts: Array<{ x: number; y: number }> = [];
   for (let i = 0; i <= CHN; i++) {
     const q = i / CHN;
     chPts.push({ x: quadPt(0, sagCX, cx2, q), y: quadPt(0, sagCY, cy2, q) });
   }
-  const chainHalfW = (q: number): number => 2.0 - 0.7 * q; // tapers toward the pocket
+  const chainHalfW = (q: number): number => 1.3 - 0.5 * q; // tapers toward the pocket
   const chainNorm = (i: number): { x: number; y: number } => {
     const a = chPts[Math.max(0, i - 1)], b = chPts[Math.min(CHN, i + 1)];
     const dx = b.x - a.x, dy = b.y - a.y;
@@ -1437,14 +1441,14 @@ export function drawStickman(
     if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
   }
   ctx.stroke();
-  // the fob — a small gold ring into a 6.4px medallion at the pocket
+  // the fob — a small gold ring into a 4.8px medallion at the pocket (C3)
   ctx.beginPath();
-  ctx.arc(cx2, cy2, 1.8, 0, Math.PI * 2);
+  ctx.arc(cx2, cy2, 1.4, 0, Math.PI * 2);
   ctx.fillStyle = PALETTE.goldBright;
   ctx.fill();
   ctx.beginPath();
-  ctx.arc(cx2, cy2 + 4.4, 3.2, 0, Math.PI * 2);
-  const fg = ctx.createRadialGradient(cx2 - 1, cy2 + 3.2, 0.5, cx2, cy2 + 4.4, 3.4);
+  ctx.arc(cx2, cy2 + 3.4, 2.4, 0, Math.PI * 2);
+  const fg = ctx.createRadialGradient(cx2 - 1, cy2 + 2.4, 0.5, cx2, cy2 + 3.4, 2.6);
   fg.addColorStop(0, PALETTE.goldPale);
   fg.addColorStop(0.6, PALETTE.goldBright);
   fg.addColorStop(1, PALETTE.goldDeep);
@@ -1452,9 +1456,9 @@ export function drawStickman(
   ctx.fill();
   // rim light on the medallion's lit edge (one light, upper-left)
   ctx.strokeStyle = 'rgba(255,243,214,0.85)';
-  ctx.lineWidth = 0.9;
+  ctx.lineWidth = 0.8;
   ctx.beginPath();
-  ctx.arc(cx2, cy2 + 4.4, 2.6, Math.PI * 0.8, Math.PI * 1.45);
+  ctx.arc(cx2, cy2 + 3.4, 1.9, Math.PI * 0.8, Math.PI * 1.45);
   ctx.stroke();
   ctx.restore();
   ctx.restore(); // torso detail
