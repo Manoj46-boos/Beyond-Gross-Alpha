@@ -454,7 +454,10 @@ export function waterfallScene(g: SceneCtx): void {
 export function eraBarsScene(g: SceneCtx): void {
   const { ctx, W, H, t } = g;
   paintStage(ctx, W, H, t, {});
-  panelTitle(ctx, 'A volatility strategy: it feeds on dispersion', W * 0.10, 210, W * 0.62, t / 2400, { kickerText: 'Lever 2 · 1926–2018, four eras' });
+  // FIX F1 — capture the title block's MEASURED bottom: the verdict's y is
+  // derived from it, never a fixed 190 (which shared the title band on every
+  // play of the Act IV centerpiece).
+  const titleBottom = panelTitle(ctx, 'A volatility strategy: it feeds on dispersion', W * 0.10, 210, W * 0.62, t / 2400, { kickerText: 'Lever 2 · 1926–2018, four eras' });
   const cols = [
     { label: '1926–49\nDepression', value: 2.13, tone: 'gold' },
     { label: '1949–72\nPostwar boom', value: 0.51, tone: 'platinum' },
@@ -495,7 +498,10 @@ export function eraBarsScene(g: SceneCtx): void {
       focusPing(ctx, cx, baseY - maxH * (c.value / 2.2) - 24, g.sentenceT, 84);
     }
   });
-  // verdict (right column, clear of the caption band)
+  // verdict (right column) — FIX F1: starts BELOW the title block's measured
+  // bottom (gutter 30px). At that height the era columns' value texts (their
+  // tops sit at y ≥ 438 in this x-range) stay clear, and the caption guard is
+  // untouched — the collision can no longer occur at any wrap/width.
   const va = clamp01((t - 2200) / 500);
   if (va > 0) {
     ctx.save();
@@ -503,7 +509,7 @@ export function eraBarsScene(g: SceneCtx): void {
     setFont(ctx, 34, 600, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.inkSoft;
     ctx.textAlign = 'right';
-    ctx.fillText('In a straight-line bull market, it starves.', W * 0.90, 190);
+    ctx.fillText('In a straight-line bull market, it starves.', W * 0.90, titleBottom + 52);
     ctx.textAlign = 'left';
     ctx.restore();
   }

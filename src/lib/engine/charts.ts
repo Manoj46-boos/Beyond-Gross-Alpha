@@ -13,10 +13,14 @@ import { glowLine, impactRing, impactPuff } from './fx';
 export interface ChartSource { chip: string; }
 
 // ── panel title + footnote ───────────────────────────────────────────────────
+/** FIX F1 — panelTitle now RETURNS the title block's measured bottom (the
+ *  last line's baseline plus the gold underline). Any right-column verdict
+ *  must start BELOW this value — never at a fixed y — so title and verdict
+ *  can never share a pixel band again (the eraBars collision). */
 export function panelTitle(
   ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxW: number, p: number,
   opts: { size?: number; kickerText?: string; alpha?: number } = {}
-): void {
+): number {
   const { size = 52, kickerText, alpha = 1 } = opts;
   ctx.save();
   ctx.globalAlpha = alpha;
@@ -44,6 +48,7 @@ export function panelTitle(
     ctx.fillRect(x, lastY + 12, uw * easeOutCubic(e), 2.6);
   }
   ctx.restore();
+  return lastY + 16;
 }
 
 export function sourceTag(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, alpha = 0.8): void {
