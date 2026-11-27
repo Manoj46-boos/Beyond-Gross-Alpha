@@ -287,6 +287,22 @@ export function barRow(ctx: CanvasRenderingContext2D, o: BarRowOpts): number {
     ctx.fill();
     ctx.fillStyle = 'rgba(246,241,230,0.96)';
     ctx.fillText(vText, bx + fw - vw - 16, y + h * 0.5 + 12);
+  } else if (fw > 4 && frac < 0.15 && bw > vw + 32) {
+    // FIX D4 (frame audit) — short fills: the value right-aligns in a fixed
+    // 110px value column at the track's right end, over the same depth-shade
+    // the long fills use. The old rule printed the numeral at the tiny fill
+    // tip, jamming it against the row label (the broken 6% ETF row).
+    const colW = Math.min(110, bw);
+    const cg = ctx.createLinearGradient(bx + bw - colW, 0, bx + bw, 0);
+    cg.addColorStop(0, 'rgba(10,14,26,0)');
+    cg.addColorStop(1, 'rgba(10,14,26,0.55)');
+    roundRect(ctx, bx + bw - colW, y + h * 0.18, colW, h * 0.64, 8);
+    ctx.fillStyle = cg;
+    ctx.fill();
+    ctx.fillStyle = 'rgba(246,241,230,0.96)';
+    ctx.textAlign = 'right';
+    ctx.fillText(vText, bx + bw - 14, y + h * 0.5 + 12);
+    ctx.textAlign = 'left';
   } else {
     ctx.fillStyle = PALETTE.ink;
     ctx.fillText(vText, Math.min(bx + fw + 16, bx + bw - vw - 8), y + h * 0.5 + 12);
