@@ -1527,7 +1527,12 @@ export function drawStickman(
   // (C-03 — the old floating shoulder spheres are gone; the deltoid sleeve
   // caps are now drawn inside armDraw, overlapping torso edge and arm root)
 
-  drawFace(ctx, headX, headY, p.headTilt * 0.6 + lagLean * 0.4, p, t, r.faceScale ?? 1, r.wordTexts ?? [], r.wordTimes ?? [], r.beatT ?? 0, p.look, lagLean, 2.2 / (scale * (r.faceScale ?? 1)));
+  // FIX C13 — adaptive face detail: below ~55px of head on screen (the data
+  // scenes at rigScale 1.42) the face switches to 'lo' — fine detail gates
+  // off and stroke widths floor higher, so the face stays a face instead of
+  // collapsing into a smudge. Host/walk-on scale keeps full detail.
+  const headScreenR = HEAD_R * scale * (r.faceScale ?? 1);
+  drawFace(ctx, headX, headY, p.headTilt * 0.6 + lagLean * 0.4, p, t, r.faceScale ?? 1, r.wordTexts ?? [], r.wordTimes ?? [], r.beatT ?? 0, p.look, lagLean, 2.2 / (scale * (r.faceScale ?? 1)), headScreenR < 55 ? 'lo' : 'hi');
 
   ctx.restore(); // upper-body strike squash
   ctx.restore();
