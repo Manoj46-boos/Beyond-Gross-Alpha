@@ -1197,18 +1197,17 @@ export function drawStickman(
   ctx.closePath();
   ctx.fillStyle = 'rgba(226,232,242,0.92)';
   ctx.fill();
-  // tie — a 2-SEGMENT pendulum (U2.4c): the knot+upper blade swing with the
-  // torso motion; the lower blade trails on a second, softer angle driven by
-  // the same velocities — classic follow-through, fully deterministic
-  // M-04 — follow-through at PERCEPTUAL amplitude (3.5× raise, same damping):
-  // the tie and pocket square now visibly answer gesture velocity
+  // tie — FIX C4: ONE-PIECE silk. The old 2-segment pendulum hinged at a hard
+  // corner and dislocated at ordinary gesture velocities (the snapped-tie
+  // read). The whole tie now sways with the torso and the blade BENDS as
+  // cloth — a quadratic skew capped at ±14°, fully deterministic.
   const velLean = r.vel?.lean ?? 0;
   const velBob = r.vel?.rootY ?? 0;
-  const tieSwayDeg = clamp(velLean * -3.2 + velBob * -1.8, -28, 28);
-  const bladeSwayDeg = clamp(tieSwayDeg * 0.55 + velBob * -3.0, -42, 42);
+  const tieSwayDeg = clamp(velLean * -3.2 + velBob * -1.8, -24, 24);
+  const tieBendDeg = clamp(tieSwayDeg * 0.45 + velBob * -1.2, -14, 14);
   // Phase 1 — burgundy silk: gold is reserved for the pocket-watch chain,
   // the one signature accessory of the gentleman arbitrageur
-  const tieG = ctx.createLinearGradient(0, 0, 0, 42);
+  const tieG = ctx.createLinearGradient(0, 0, 0, TORSO * 0.8);
   tieG.addColorStop(0, '#6E2430');
   tieG.addColorStop(1, '#3A121B');
   ctx.save();
@@ -1231,30 +1230,21 @@ export function drawStickman(
   ctx.strokeStyle = 'rgba(110,87,22,0.55)';
   ctx.lineWidth = 0.9;
   ctx.stroke();
-  // segment 1: upper blade hanging from the knot (width ×1.25)
+  // the blade — ONE path from under the knot to the tip. The tip skews by
+  // sin(bend)·length and the mid by 55% of that, so the silk curves instead
+  // of hinging. Length tracks the torso (ends at the button stance — C9-safe).
+  const BL = TORSO * 0.8;
+  const tipX = Math.sin(tieBendDeg * D2R) * BL;
+  const midX = tipX * 0.55;
   ctx.beginPath();
-  ctx.moveTo(-4.8, 1);
-  ctx.lineTo(4.8, 1);
-  ctx.lineTo(6.1, 16);
-  ctx.lineTo(0, 18);
-  ctx.lineTo(-6.1, 16);
+  ctx.moveTo(-4.6, 0.5);
+  ctx.quadraticCurveTo(midX - 6.0, BL * 0.5, tipX - 3.2, BL * 0.82);
+  ctx.quadraticCurveTo(tipX - 1.6, BL * 0.94, tipX, BL);
+  ctx.quadraticCurveTo(tipX + 1.6, BL * 0.94, tipX + 3.2, BL * 0.82);
+  ctx.quadraticCurveTo(midX + 6.0, BL * 0.5, 4.6, 0.5);
   ctx.closePath();
   ctx.fillStyle = tieG;
   ctx.fill();
-  // segment 2: lower blade, trailing on its own angle about (0, 18)
-  ctx.save();
-  ctx.translate(0, 18);
-  ctx.rotate(bladeSwayDeg * D2R);
-  ctx.beginPath();
-  ctx.moveTo(-6.1, -2);
-  ctx.lineTo(6.1, -2);
-  ctx.lineTo(3.0, 10);
-  ctx.lineTo(0, 24);
-  ctx.lineTo(-3.0, 10);
-  ctx.closePath();
-  ctx.fillStyle = tieG;
-  ctx.fill();
-  ctx.restore();
   ctx.restore();
   // collar
   ctx.beginPath();
@@ -1297,26 +1287,54 @@ export function drawStickman(
   ctx.lineWidth = 0.7;
   ctx.stroke();
   ctx.restore();
-  // AUDIT C-03 — the pocket-watch chain as a TRUE catenary: a 12-link chain
-  // draping from the left breast to the watch pocket at the button stance,
-  // sagging outward-down (the old sagX=4 rendered as a near-vertical dot
-  // string that read as buttons). The fob is a 6.4px medallion with a rim
-  // light catching the key light — the ONE gold accessory, now drawn like one.
+  // AUDIT C-03 / FIX C5 — the pocket-watch chain as a TRUE catenary drawn as
+  // ONE continuous tapered ribbon: a filled crescent along the drape with a
+  // highlight edge on the lit side. The old 12 stroked rings rendered as a
+  // bead necklace at rig scale — the ribbon reads as gold watch chain.
   ctx.save();
   ctx.translate(-shW * 0.42, shY + 16);
   ctx.rotate(tieSwayDeg * 0.4 * D2R);
   const cx2 = 8, cy2 = 46;  // watch pocket (button stance)
   const sagCX = 14, sagCY = 26; // catenary control — a real outward drape
-  ctx.strokeStyle = rgba(PALETTE.goldBright, 0.9);
-  ctx.lineWidth = 1.35;
-  for (let i = 0; i <= 12; i++) {
-    const q = i / 12;
-    const lx = quadPt(0, sagCX, cx2, q);
-    const ly = quadPt(0, sagCY, cy2, q);
-    ctx.beginPath();
-    ctx.arc(lx, ly, i % 2 === 0 ? 1.6 : 1.25, 0, Math.PI * 2);
-    ctx.stroke();
+  const CHN = 14;
+  const chPts: Array<{ x: number; y: number }> = [];
+  for (let i = 0; i <= CHN; i++) {
+    const q = i / CHN;
+    chPts.push({ x: quadPt(0, sagCX, cx2, q), y: quadPt(0, sagCY, cy2, q) });
   }
+  const chainHalfW = (q: number): number => 2.0 - 0.7 * q; // tapers toward the pocket
+  const chainNorm = (i: number): { x: number; y: number } => {
+    const a = chPts[Math.max(0, i - 1)], b = chPts[Math.min(CHN, i + 1)];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const l = Math.hypot(dx, dy) || 1;
+    return { x: -dy / l, y: dx / l };
+  };
+  ctx.beginPath();
+  for (let i = 0; i <= CHN; i++) {
+    const n = chainNorm(i), w = chainHalfW(i / CHN);
+    const px = chPts[i].x + n.x * w, py = chPts[i].y + n.y * w;
+    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  for (let i = CHN; i >= 0; i--) {
+    const n = chainNorm(i), w = chainHalfW(i / CHN);
+    ctx.lineTo(chPts[i].x - n.x * w, chPts[i].y - n.y * w);
+  }
+  ctx.closePath();
+  const chg = ctx.createLinearGradient(0, 0, cx2, cy2);
+  chg.addColorStop(0, PALETTE.goldBright);
+  chg.addColorStop(1, PALETTE.goldDeep);
+  ctx.fillStyle = chg;
+  ctx.fill();
+  // highlight along the lit (upper-left) edge of the ribbon
+  ctx.strokeStyle = 'rgba(255,243,214,0.5)';
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  for (let i = 0; i <= CHN; i++) {
+    const n = chainNorm(i), w = chainHalfW(i / CHN) * 0.45;
+    const px = chPts[i].x + n.x * w, py = chPts[i].y + n.y * w;
+    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.stroke();
   // the fob — a small gold ring into a 6.4px medallion at the pocket
   ctx.beginPath();
   ctx.arc(cx2, cy2, 1.8, 0, Math.PI * 2);
