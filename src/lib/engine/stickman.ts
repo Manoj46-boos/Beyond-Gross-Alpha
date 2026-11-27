@@ -26,7 +26,10 @@ const U_ARM = 58, L_ARM = 54;
 const HEAD_R = 19.5;
 const SHOULDER_HW = 36, HIP_HW = 12;
 
-const SUIT = { lit: '#43598A', mid: '#2C3B63', dark: '#161F3A', ink: '#0E1426' };
+// FIX C6 (frame audit) — three clearly separated values per garment group.
+// The old #43598A lit tone collapsed torso and legs into one navy value; the
+// raised lit tone + wider lit band restore a lit/mid/shadow read on camera.
+const SUIT = { lit: '#4C63A0', mid: '#2C3B63', dark: '#161F3A', ink: '#0E1426' };
 /** Phase 1 — the ONE ink: every silhouette in the frame (figure, props,
  *  glowLine charts) shares this contour weight and colour. */
 const INK = 'rgba(14,20,38,0.92)';
@@ -1217,8 +1220,10 @@ export function drawStickman(
   ctx.save();
   ctx.rotate(p.lean * D2R * 0.22);
   const tg = ctx.createLinearGradient(-shW, shY - 10, shW * 0.8, hipY);
+  // FIX C6 — the lit band widens 0.42→0.52: the key-facing half of the torso
+  // now carries the lit tone before falling to mid, so three values read.
   tg.addColorStop(0, SUIT.lit);
-  tg.addColorStop(0.42, SUIT.mid);
+  tg.addColorStop(0.52, SUIT.mid);
   tg.addColorStop(1, SUIT.dark);
   ctx.beginPath();
   ctx.moveTo(-shW * 0.92, shY + 4);
@@ -1288,6 +1293,14 @@ export function drawStickman(
   ctx.quadraticCurveTo(shW * 0.8, shY - 11, shW * 0.9, shY - 6);
   ctx.strokeStyle = rgba('#F4E5BF', rim * 0.85);
   ctx.lineWidth = 1.6;
+  ctx.stroke();
+  // FIX C6 — warm bounce: a whisper of key-pool bounce on the front-facing
+  // edge, so the jacket separates from the room without a second light
+  ctx.beginPath();
+  ctx.moveTo(shW * 0.92, shY + 4);
+  ctx.quadraticCurveTo(shW * 1.04, shY - 9, shW * 0.62, shY - 13);
+  ctx.strokeStyle = rgba('#C8A94E', rim * 0.30);
+  ctx.lineWidth = 1.2;
   ctx.stroke();
 
   // shirt V + tie (premium detail) — AUDIT C-05: the V widens ×1.3 (±9→±12,
