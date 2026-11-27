@@ -125,8 +125,10 @@ function cameraFor(group: Group, gt: number, d: number, chapterIdx: number): Cam
   if (!layered) zTarget = Math.min(zTarget, 0.048);
   const scale = zBase + zTarget * easeInOutSine(p);
   const driftBase = type.startsWith('statement') || type === 'finalLines' ? 0.12 : type === 'coldOpen' ? 0.35 : 0.6;
-  const dx = drift(gt, 1) * (layered ? 46 * driftBase : 34);
-  const dy = drift(gt, 7) * (layered ? 26 : 15);
+  // FIX M3 — camera drift raised ×1.5 (34→51, 15→22, layered 46→69, 26→39):
+  // the drift is a life signal and now registers at viewing distance.
+  const dx = drift(gt, 1) * (layered ? 69 * driftBase : 51);
+  const dy = drift(gt, 7) * (layered ? 39 : 22);
   // entry whip only where there is a subject to track (host/chapter cards)
   const whip = gt < 340 && layered ? (1 - easeOutCubic(gt / 340)) * 26 : 0;
   const dir = (group.beatIdx % 2 === 0 ? 1 : -1);
@@ -233,11 +235,14 @@ export function drawFrame(
         cdy = Math.min((H - mF) - H / 2 - (full.y + full.h - H / 2) * s, Math.max(mF - H / 2 - (full.y - H / 2) * s, cdy));
         camEff = { dx: cdx, dy: cdy, scale: s };
       }
-      if (k > 0) cutPunch = scalePunch(gt - k * 8000, 240, 0.03);
+      // FIX M3 — the cut punch raised to 3.8% (was 3%) with scalePunch's
+      // visible 2-frame peak hold — the cut now lands at viewing distance.
+      if (k > 0) cutPunch = scalePunch(gt - k * 8000, 240, 0.038);
     }
   }
   const punchAge = group ? t - group.startMs : 9999;
-  const punch = scalePunch(punchAge, 240, 0.022) * cutPunch;
+  // FIX M3 — the beat-entrance punch raised to 3.6% (was 2.2%), same hold
+  const punch = scalePunch(punchAge, 240, 0.036) * cutPunch;
   setCamState(camEff.dx, camEff.dy, camEff.scale * punch);
   ctx.translate(W / 2 + camEff.dx, H / 2 + camEff.dy);
   ctx.scale(camEff.scale * punch, camEff.scale * punch);

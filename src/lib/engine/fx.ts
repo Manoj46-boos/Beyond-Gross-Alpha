@@ -356,10 +356,16 @@ export function microShake(t: number, t0: number, amp = 10): { dx: number; dy: n
 }
 
 // ── scale punch (cut impact) ─────────────────────────────────────────────────
+/** FIX M3 — the cut punch now crosses the perception threshold at 1080p:
+ *  a fast rise to the peak, a VISIBLE 2-frame hold at the extreme (the
+ *  classic animator's beat), then a decay. Amplitude is passed by the
+ *  director (3.6-3.8% on cut families). */
 export function scalePunch(age: number, dur = 220, amp = 0.03): number {
   if (age < 0 || age > dur) return 1;
-  const p = age / dur;
-  return 1 + amp * Math.sin(p * Math.PI) * (1 - p);
+  const HOLD = 66; // two frames at 30fps
+  if (age < HOLD) return 1 + amp * (1 - Math.pow(1 - age / HOLD, 2));
+  const p = (age - HOLD) / Math.max(1, dur - HOLD);
+  return 1 + amp * (1 - p) * (1 - p * 0.55);
 }
 
 // ── afloat token (3D-ish spinning coin/token) ────────────────────────────────
