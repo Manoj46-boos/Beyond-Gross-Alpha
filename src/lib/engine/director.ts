@@ -137,6 +137,35 @@ function cameraFor(group: Group, gt: number, d: number, chapterIdx: number): Cam
 // payoff rect: the whole content column, guaranteed on-frame (fit ≈ 1.12).
 const DEFAULT_CLOSEUP = { x: 140, y: 210, w: 1640, h: 620 };
 
+// FIX F4 — FULL-CONTENT BBOX per scene family. The close-up transform now
+// clamps THE WHOLE COMPOSITION on-frame — title, cards, annotations AND the
+// figure margin where the scene carries one (FIX F5) — not only the payoff
+// rect. Declared from each scene's real layout extents (title band 130..290,
+// content bottom ≤ 770, figure span x 45..345 / ground reflection to ~1000).
+// Scenes not listed use the conservative default. The payoff rect remains the
+// FOCUS: the camera still aims at it, but the zoom is capped by what keeps
+// every declared element visible — no more half-compositions.
+const DEFAULT_FULL = { x: 130, y: 125, w: 1660, h: 875 };
+const SCENE_FULL_BBOX: Record<string, { x: number; y: number; w: number; h: number }> = {
+  gapBars: { x: 230, y: 130, w: 1580, h: 610 },
+  feeChips: { x: 185, y: 130, w: 1705, h: 610 },
+  memoCard: { x: 615, y: 215, w: 880, h: 580 },
+  taxRates: { x: 130, y: 125, w: 1660, h: 655 },
+  growthCurves: { x: 120, y: 125, w: 1690, h: 875 },
+  signatureCurve: { x: 45, y: 125, w: 1465, h: 875 },
+  waterfall: { x: 45, y: 125, w: 1835, h: 875 },
+  vendorCompare: { x: 185, y: 125, w: 1415, h: 620 },
+  bpsCompare: { x: 185, y: 125, w: 1210, h: 650 },
+  distribBars: { x: 45, y: 125, w: 1730, h: 875 },
+  taxManaged: { x: 185, y: 125, w: 1640, h: 615 },
+  pitchDeck: { x: 180, y: 125, w: 1705, h: 625 },
+  exchangeFund: { x: 45, y: 125, w: 1670, h: 875 },
+  longShort: { x: 185, y: 125, w: 1625, h: 640 },
+  benchmarkBar: { x: 130, y: 125, w: 1660, h: 655 },
+  hierarchy: { x: 185, y: 125, w: 1545, h: 645 },
+  finalLines: { x: 130, y: 125, w: 1660, h: 655 },
+};
+
 // ── frame ────────────────────────────────────────────────────────────────────
 export function drawFrame(
   ctx: CanvasRenderingContext2D, tl: Timeline, tMs: number, opts: RenderOptions
@@ -185,18 +214,23 @@ export function drawFrame(
         // get the house-grid fallback — everything stays visible.
         const statementFam = sceneType === 'statement' || sceneType === 'finalLines' || sceneType === 'turnCard' || sceneType === 'policyRisk';
         const cu = (beat.beat.scene.closeup ?? DEFAULT_CLOSEUP) as { x: number; y: number; w: number; h: number };
-        // AUDIT §0.1 — the safe-area margin is the report's 120px: the rect
-        // fits inside the safe frame and the content-bbox clamp holds the
-        // payoff inside x ∈ [120, 1800] (the old 40px margin let close-ups
-        // crowd the watermark and caption gutters).
+        // FIX F4/F5 — the safe-area margin is the report's 120px for the
+        // payoff focus; the FULL-content bbox gets a 70px content margin and
+        // caps the zoom: the composition can recompose toward the payoff but
+        // never slice its edges (or drop the figure) again.
         const m = 120;
+        const mF = 70;
+        const full = SCENE_FULL_BBOX[sceneType] ?? DEFAULT_FULL;
         const fit = Math.min((W - 2 * m) / cu.w, (H - 2 * m) / cu.h);
-        const s = Math.min(statementFam ? 1.22 : 1.30, Math.max(1.0, fit));
+        const fitFull = Math.min((W - 2 * mF) / full.w, (H - 2 * mF) / full.h);
+        const s = Math.min(statementFam ? 1.22 : 1.30, Math.max(1.0, Math.min(fit, fitFull)));
         let cdx = -(cu.x + cu.w / 2 - W / 2) * s + drift(gt, 3) * 10;
         let cdy = -(cu.y + cu.h / 2 - H / 2) * s + drift(gt, 9) * 6;
-        // content-bbox clamp — the payoff rect stays on-frame even with drift
-        cdx = Math.min((W - m) - W / 2 - (cu.x + cu.w - W / 2) * s, Math.max(m - W / 2 - (cu.x - W / 2) * s, cdx));
-        cdy = Math.min((H - m) - H / 2 - (cu.y + cu.h - H / 2) * s, Math.max(m - H / 2 - (cu.y - H / 2) * s, cdy));
+        // full-content-bbox clamp — every declared element stays on-frame even
+        // with drift; the payoff centering yields to it (F4), and scenes that
+        // carry the Principal keep his margin inside the frame (F5)
+        cdx = Math.min((W - mF) - W / 2 - (full.x + full.w - W / 2) * s, Math.max(mF - W / 2 - (full.x - W / 2) * s, cdx));
+        cdy = Math.min((H - mF) - H / 2 - (full.y + full.h - H / 2) * s, Math.max(mF - H / 2 - (full.y - H / 2) * s, cdy));
         camEff = { dx: cdx, dy: cdy, scale: s };
       }
       if (k > 0) cutPunch = scalePunch(gt - k * 8000, 240, 0.03);
