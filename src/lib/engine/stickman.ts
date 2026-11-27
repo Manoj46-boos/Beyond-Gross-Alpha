@@ -1859,11 +1859,16 @@ function arcTarget(key: string, tx: number, ty: number): { x: number; y: number 
  *  Target is in SCENE pixels; the rig math is done in local units. This is what
  *  makes the figure touch the data it narrates instead of gesturing into air.
  *  FIX M2 — `fullExtend` opts in to the straightened arm for deliberate
- *  full-extension beats; the default keeps the carriage bend. */
+ *  full-extension beats; the default keeps the carriage bend.
+ *  FIX D1 (frame audit) — tip-true pointing: pass `tipLen` (the drawn rod's
+ *  length in LOCAL units) and the wrist target is SOLVED so the rod's tip
+ *  lands ON the datum — a 3-pass fixed point on the rod axis, fully
+ *  deterministic. Beyond the 90% carriage reach the solve straightens the arm
+ *  (fullExtend) so the pointer bridges the gap honestly. */
 export function companionArm(
   pose: Pose, px: number, groundY: number, rigScale: number,
   target: { x: number; y: number }, mode: 'point' | 'present' = 'point',
-  opts: { fullExtend?: boolean } = {}
+  opts: { fullExtend?: boolean; tipLen?: number } = {}
 ): void {
   const shx = px + Math.sin((pose.lean + pose.torsoTilt) * D2R) * TORSO * rigScale;
   const shy = groundY + (-(U_LEG + L_LEG) + pose.rootY - TORSO) * rigScale;
@@ -1873,7 +1878,26 @@ export function companionArm(
   // control point (mid-target offset outward-down ≈ 40-60px on screen) so
   // wrists travel on curves, never the straight chord between angle targets.
   const at = arcTarget(`R_${Math.round(px)}_${Math.round(groundY)}_${rigScale.toFixed(2)}`, dx, dy);
-  const ik = armIk(0, 0, at.x, at.y, U_ARM, L_ARM, 1, opts);
+  // FIX D1 — solve the wrist target so the ROD TIP lands on the datum
+  let tx = at.x, ty = at.y;
+  const tipLen = opts.tipLen ?? 0;
+  const fullEx = opts.fullExtend === true
+    || (tipLen > 0 && Math.hypot(tx, ty) > (U_ARM + L_ARM) * 0.90);
+  if (mode === 'point' && tipLen > 0) {
+    for (let pass = 0; pass < 3; pass++) {
+      const ik = armIk(0, 0, tx, ty, U_ARM, L_ARM, 1, { fullExtend: fullEx });
+      const elbow = pt(0, 0, ik.aU, U_ARM);
+      const wristFk = pt(elbow.x, elbow.y, ik.aU + ik.aL, L_ARM);
+      // the rod is drawn along the forearm axis with a −5° carriage (cock −8 + droop +3)
+      const ang = (ik.aU + ik.aL - 5) * D2R;
+      const tipX = wristFk.x + Math.sin(ang) * tipLen;
+      const tipY = wristFk.y + Math.cos(ang) * tipLen;
+      // shift the wrist target by the tip's miss — converges in ~2 passes
+      tx += at.x - tipX;
+      ty += at.y - tipY;
+    }
+  }
+  const ik = armIk(0, 0, tx, ty, U_ARM, L_ARM, 1, { fullExtend: fullEx });
   pose.rAU = ik.aU;
   pose.rAL = ik.aL;
   pose.hand = mode === 'point' ? 'point' : 'open';

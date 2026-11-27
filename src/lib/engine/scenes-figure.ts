@@ -36,9 +36,9 @@ export interface FigureOpts {
 }
 
 export function dataSceneFigure(g: SceneCtx, rigScale: number, opts: FigureOpts): void {
-  const { ctx, H, t, speaking, wordTimes, wordTexts, sentenceId, prevSentenceId, sentenceT, sentenceIdx } = g;
+  const { ctx, W, H, t, speaking, wordTimes, wordTexts, sentenceId, prevSentenceId, sentenceT, sentenceIdx } = g;
   const groundY = H * 0.885;
-  const px = g.W * 0.108;
+  let px = W * 0.108;
   const sid = sentenceId ?? `data-${g.chapterIdx}`;
   // AUDIT R-04 — script-level gestures: beat.gestures[sentenceIdx] (script-data)
   // overrides the sentenceHash pick inside poseAt, so the body tracks MEANING
@@ -49,11 +49,29 @@ export function dataSceneFigure(g: SceneCtx, rigScale: number, opts: FigureOpts)
 
   const si = sentenceIdx ?? 0;
   const focal = opts.focal(si);
+  // FIX D1 (frame audit) — the pointer NEVER floats: the drawn rod's length in
+  // screen px (same clamp as the draw pass), the honest arm+rod reach, and a
+  // bounded walk of the figure toward far data (≤56px, still inside the left
+  // margin) before the tip-true IK solve. The sight line below bridges any
+  // remainder and ALWAYS lands the gold contact dot ON the datum.
+  const POINTER_PX = 190;
+  const pointerPx = Math.min(140, Math.max(70, POINTER_PX / rigScale));
+  const tipLenLocal = pointerPx / rigScale;
+  if (!opts.avoid && focal) {
+    const sh = shoulderScreen(pose, px, groundY, rigScale);
+    const reach = armReachPx(rigScale, pointerPx);
+    const dist = Math.hypot(focal.x - sh.x, focal.y - sh.y);
+    if (dist > reach) {
+      const shortfall = dist - reach;
+      const dirX = Math.sign(focal.x - sh.x) || 1;
+      px = Math.min(Math.max(px + dirX * Math.min(shortfall * 0.5, 56), W * 0.06), W * 0.16);
+    }
+  }
   if (opts.avoid) {
     // duck out of the way — arms in, weight back (the incoming SEC stamp)
     pose.lean -= 2.6; pose.torsoTilt -= 1.6; pose.rAU -= 12; pose.lAU += 10;
   } else if (focal) {
-    companionArm(pose, px, groundY, rigScale, focal, opts.mode ?? 'point');
+    companionArm(pose, px, groundY, rigScale, focal, opts.mode ?? 'point', { tipLen: tipLenLocal });
     if (opts.weigh) {
       const next = opts.focal(si + 1) ?? focal;
       companionArmL(pose, px, groundY, rigScale, { x: Math.max(px - 175, next.x - 260), y: next.y }, 'present');
@@ -84,45 +102,41 @@ export function dataSceneFigure(g: SceneCtx, rigScale: number, opts: FigureOpts)
   // gold contact dot lands exactly ON the data being discussed. It fades in
   // over 200ms and dies at the sentence boundary — contact stays a drawn
   // fact, and the line never crosses INTO a card's interior.
+  // FIX D1 (frame audit) — the 60px skip rule is GONE: a beyond-reach datum
+  // now ALWAYS gets the line + the ON-datum contact dot (the presenter's
+  // baton-line-dot read), because the alternative — a baton pointing into
+  // empty sky — is the one thing the panel called a signature-device killer.
   if (focal && !opts.avoid) {
-    const POINTER_PX = 190;
     const sh = shoulderScreen(pose, px, groundY, rigScale);
-    const reach = armReachPx(rigScale, POINTER_PX);
+    const reach = armReachPx(rigScale, pointerPx);
     const dist = Math.hypot(focal.x - sh.x, focal.y - sh.y);
     if (dist > reach) {
-      // Phase 2.2 — the sight line survives ONLY as a last resort: if the
-      // element lies more than 60px beyond the clamped reach, a line would
-      // read as a needle crossing cards — skip it. Scenes that regularly
-      // exceed this move their anchor x or pull the focal to the element's
-      // near edge instead (F9).
-      if (dist - reach <= 60) {
-        const tip = palmPosition(pose, 1, px, groundY, rigScale, 5 + POINTER_PX / rigScale);
-        const a = clamp01((sentenceT ?? 0) / 200) * (speaking ? 0.62 : 0.3);
-        if (a > 0.02) {
-          const dx = focal.x - tip.x, dy = focal.y - tip.y;
-          const l = Math.hypot(dx, dy) || 1;
-          const endX = focal.x - (dx / l) * 12;
-          const endY = focal.y - (dy / l) * 12;
-          ctx.save();
-          const slg = ctx.createLinearGradient(tip.x, tip.y, endX, endY);
-          slg.addColorStop(0, rgba(PALETTE.goldBright, a * 0.25));
-          slg.addColorStop(1, rgba(PALETTE.goldBright, a));
-          ctx.strokeStyle = slg;
-          ctx.lineWidth = 2.0;
-          ctx.beginPath();
-          ctx.moveTo(tip.x, tip.y);
-          ctx.lineTo(endX, endY);
-          ctx.stroke();
-          // the contact mark — a small gold dot exactly ON the data being discussed
-          ctx.beginPath();
-          ctx.arc(focal.x, focal.y, 4.2, 0, Math.PI * 2);
-          ctx.fillStyle = rgba(PALETTE.goldPale, Math.min(1, a * 1.6));
-          ctx.fill();
-          ctx.strokeStyle = rgba(PALETTE.goldDeep, Math.min(1, a * 1.4));
-          ctx.lineWidth = 1.0;
-          ctx.stroke();
-          ctx.restore();
-        }
+      const tip = palmPosition(pose, 1, px, groundY, rigScale, 5 + tipLenLocal);
+      const a = clamp01((sentenceT ?? 0) / 200) * (speaking ? 0.62 : 0.3);
+      if (a > 0.02) {
+        const dx = focal.x - tip.x, dy = focal.y - tip.y;
+        const l = Math.hypot(dx, dy) || 1;
+        const endX = focal.x - (dx / l) * 12;
+        const endY = focal.y - (dy / l) * 12;
+        ctx.save();
+        const slg = ctx.createLinearGradient(tip.x, tip.y, endX, endY);
+        slg.addColorStop(0, rgba(PALETTE.goldBright, a * 0.25));
+        slg.addColorStop(1, rgba(PALETTE.goldBright, a));
+        ctx.strokeStyle = slg;
+        ctx.lineWidth = 2.0;
+        ctx.beginPath();
+        ctx.moveTo(tip.x, tip.y);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+        // the contact mark — a small gold dot exactly ON the data being discussed
+        ctx.beginPath();
+        ctx.arc(focal.x, focal.y, 4.2, 0, Math.PI * 2);
+        ctx.fillStyle = rgba(PALETTE.goldPale, Math.min(1, a * 1.6));
+        ctx.fill();
+        ctx.strokeStyle = rgba(PALETTE.goldDeep, Math.min(1, a * 1.4));
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+        ctx.restore();
       }
     }
   }
