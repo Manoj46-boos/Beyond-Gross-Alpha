@@ -76,8 +76,11 @@ export interface Pose {
 export function basePose(): Pose {
   return {
     rootY: 0, lean: 0, torsoTilt: 0, headTilt: 0, headNod: 0, shoulderTilt: 0, pelvisTilt: 0,
-    rAU: 6, rAL: 8, lAU: -6, lAL: 8,
+    rAU: 6, rAL: 8, lAU: -13, lAL: 11,
     rKnee: 4, rAnkle: 0, lKnee: 4, lAnkle: 0,
+    // FIX C8 — resting far arm angles -14/+11: the arm hangs with a slight
+    // outward carriage so its silhouette separates from the torso (the old
+    // -6/8 tucked it behind the jacket and stranded the hand).
     brow: 0, browAsym: 0, lid: 0, smile: 0.08, surprise: 0, blink: 0, mouth: 0,
     hand: 'open',
     walkPhase: -1, walkSpeed: 0, look: 0,
@@ -148,14 +151,17 @@ function bone(
     ctx.lineTo(px, py);
   }
   ctx.closePath();
-  const lit = o.far ? hexLerp(o.lit, o.dark, 0.5) : o.lit;
-  const dark = o.far ? hexLerp(o.dark, '#05080F', 0.25) : o.dark;
+  // FIX C8 — far-limb shading lightened (0.5→0.34 toward dark, 0.25→0.12 into
+  // the void): the far arm now keeps a distinct value range beside the torso
+  // instead of merging into it and stranding its hand.
+  const lit = o.far ? hexLerp(o.lit, o.dark, 0.34) : o.lit;
+  const dark = o.far ? hexLerp(o.dark, '#05080F', 0.12) : o.dark;
   const g = ctx.createLinearGradient(
     sx + nx * nSign * o.w0, sy + ny * nSign * o.w0,
     sx - nx * nSign * o.w0, sy - ny * nSign * o.w0
   );
   g.addColorStop(0, lit);
-  g.addColorStop(0.55, o.far ? hexLerp(lit, dark, 0.45) : hexLerp(lit, dark, 0.25));
+  g.addColorStop(0.55, o.far ? hexLerp(lit, dark, 0.38) : hexLerp(lit, dark, 0.25));
   g.addColorStop(1, dark);
   ctx.fillStyle = g;
   ctx.fill();
@@ -192,8 +198,8 @@ function sleeveCap(ctx: CanvasRenderingContext2D, sx: number, sy: number, angDeg
   ctx.save();
   ctx.translate(sx, sy);
   ctx.rotate((angDeg + 90) * D2R); // local +x along the arm axis
-  const litC = far ? hexLerp(SUIT.mid, SUIT.dark, 0.45) : SUIT.mid;
-  const darkC = far ? hexLerp(SUIT.dark, '#05080F', 0.3) : SUIT.dark;
+  const litC = far ? hexLerp(SUIT.mid, SUIT.dark, 0.32) : SUIT.mid;
+  const darkC = far ? hexLerp(SUIT.dark, '#05080F', 0.18) : SUIT.dark;
   const g = ctx.createLinearGradient(-w * 0.6, -w * 0.5, w * 0.7, w * 0.55);
   g.addColorStop(0, hexLerp(litC, '#F4E5BF', 0.12));
   g.addColorStop(0.55, litC);
@@ -214,11 +220,27 @@ function sleeveCap(ctx: CanvasRenderingContext2D, sx: number, sy: number, angDeg
  *  No outline, no highlight dot — sleeve cloth, not a hinge pin. */
 function clothCrease(ctx: CanvasRenderingContext2D, x: number, y: number, axisDeg: number, r: number): void {
   ctx.beginPath();
-  ctx.arc(x, y, r, (90 - axisDeg - 42) * D2R, (90 - axisDeg + 42) * D2R);
-  ctx.strokeStyle = 'rgba(5,8,16,0.34)';
-  ctx.lineWidth = 1.6;
+  ctx.arc(x, y, r, (90 - axisDeg - 38) * D2R, (90 - axisDeg + 38) * D2R);
+  ctx.strokeStyle = 'rgba(5,8,16,0.30)';
+  ctx.lineWidth = 1.5;
   ctx.lineCap = 'round';
   ctx.stroke();
+}
+
+/** FIX C7 — joint cap: a rounded cover at the elbow/knee filled with the
+ *  upper bone's end gradient. Bridges the width step between the bones so no
+ *  rectangular notch bulges out of the limb silhouette (the crease is then
+ *  drawn smaller, INSIDE the covered joint). */
+function jointCap(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, far: boolean): void {
+  const g = ctx.createRadialGradient(x - r * 0.4, y - r * 0.4, r * 0.15, x, y, r);
+  // tones match the upper bone's gradient AT the joint (~55% toward dark), so
+  // the cap reads as the same cloth, not a pale disc
+  g.addColorStop(0, far ? hexLerp(SUIT.lit, SUIT.dark, 0.58) : hexLerp(SUIT.lit, SUIT.dark, 0.30));
+  g.addColorStop(1, far ? hexLerp(SUIT.dark, '#05080F', 0.25) : hexLerp(SUIT.lit, SUIT.dark, 0.66));
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = g;
+  ctx.fill();
 }
 
 // ── talk + viseme ────────────────────────────────────────────────────────────
@@ -264,7 +286,7 @@ const GESTURES: Gesture[] = [
   { name: 'count',     rAU: 52, rAL: 66, lAU: -8, lAL: 10, lean: 2, torsoTilt: 2, shoulderTilt: 4, headTilt: 2.5, brow: 0.15, smile: 0.12 },
   { name: 'weigh',     rAU: 34, rAL: 30, lAU: -34, lAL: 28, lean: 0.5, torsoTilt: 1.5, shoulderTilt: 1, headTilt: -1.5, brow: 0.05, smile: 0.15 },
   { name: 'chin',      rAU: 64, rAL: 118, lAU: -6, lAL: 8, lean: -1, torsoTilt: 3, shoulderTilt: 2, headTilt: 4, brow: -0.15, smile: 0.1 },
-  { name: 'rest',      rAU: 8, rAL: 10, lAU: -8, lAL: 10, lean: 0, torsoTilt: 0.5, shoulderTilt: 0, headTilt: 0, brow: 0, smile: 0.08 },
+  { name: 'rest',      rAU: 8, rAL: 10, lAU: -13, lAL: 11, lean: 0, torsoTilt: 0.5, shoulderTilt: 0, headTilt: 0, brow: 0, smile: 0.08 },
   { name: 'sweep',     rAU: 60, rAL: 34, lAU: -30, lAL: -34, lean: 2.5, torsoTilt: 1, shoulderTilt: 3, headTilt: 2, brow: 0.3, smile: 0.18 },
 ];
 
@@ -1049,7 +1071,10 @@ export function drawStickman(
     // overlaps the joint) and a soft crease replaces the polished sphere
     const kSx = knee.x - Math.sin(thighAng * D2R) * 2.5, kSy = knee.y - Math.cos(thighAng * D2R) * 2.5;
     bone(ctx, kSx, kSy, knee2.x, knee2.y, 2, { w0: W * 0.8, w1: W * 0.6, lit: SUIT.lit, dark: SUIT.dark, rim: near ? rim * 0.5 : 0, far: !near, ink: inkW });
-    clothCrease(ctx, knee.x + Math.sin((thighAng + kneeBend) * D2R) * 2.5, knee.y + Math.cos((thighAng + kneeBend) * D2R) * 2.5, thighAng + kneeBend - 90, W * 0.5);
+    // FIX C7 — rounded joint cap bridges the bone width step, then a smaller
+    // crease reads as trouser cloth INSIDE the covered joint
+    jointCap(ctx, knee.x, knee.y, W * 0.38, !near);
+    clothCrease(ctx, knee.x + Math.sin((thighAng + kneeBend) * D2R) * 2.0, knee.y + Math.cos((thighAng + kneeBend) * D2R) * 2.0, thighAng + kneeBend - 90, W * 0.34);
     // shoe — tailored profile: heel, vamp, toe cap, sole line, gold welt (D2).
     // No more gold-outlined ellipse: the 'hoverboard ring' read is dead.
     ctx.save();
@@ -1395,7 +1420,23 @@ export function drawStickman(
     // soft cloth crease replaces the polished sphere
     const eSx = elbow.x - Math.sin(aU * D2R) * 2.5, eSy = elbow.y - Math.cos(aU * D2R) * 2.5;
     bone(ctx, eSx, eSy, wrist.x, wrist.y, 1.6, { w0: W * 0.78, w1: W * 0.52, lit: SUIT.lit, dark: SUIT.dark, rim: near ? rim * 0.5 : 0, far: !near, ink: inkW });
-    clothCrease(ctx, elbow.x + Math.sin((aU + aL) * D2R) * 2.5, elbow.y + Math.cos((aU + aL) * D2R) * 2.5, aU + aL - Math.sign(aL || 1) * 90, W * 0.44);
+    // FIX C7 — rounded joint cap bridges the bone width step, then a smaller
+    // crease reads as sleeve cloth INSIDE the covered joint
+    jointCap(ctx, elbow.x, elbow.y, W * 0.38, !near);
+    clothCrease(ctx, elbow.x + Math.sin((aU + aL) * D2R) * 2.0, elbow.y + Math.cos((aU + aL) * D2R) * 2.0, aU + aL - Math.sign(aL || 1) * 90, W * 0.30);
+    // FIX C6 — the shirt cuff is drawn HERE, in the forearm's frame at the
+    // wrist: the hand's follow-through rotation can never detach it from the
+    // sleeve again (the old cuff was parented to the hand transform).
+    const cuffA = aU + aL;
+    const fsx = Math.sin(cuffA * D2R), fcy = Math.cos(cuffA * D2R);
+    const cuffX = wrist.x - fsx * 2.0, cuffY = wrist.y - fcy * 2.0;
+    ctx.strokeStyle = near ? 'rgba(226,232,242,0.94)' : 'rgba(210,218,230,0.80)';
+    ctx.lineWidth = 3.2;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(cuffX - fcy * W * 0.58, cuffY + fsx * W * 0.58);
+    ctx.lineTo(cuffX + fcy * W * 0.58, cuffY - fsx * W * 0.58);
+    ctx.stroke();
     // (C-07 — the cuff moved INSIDE drawHand: parented to the hand transform)
     // (Phase 1 — the wrist gold dot retired; the pocket-watch chain is the
     // one gold accessory)
@@ -1476,15 +1517,8 @@ function drawHand(
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate((angDeg + 90) * D2R); // local +x = along the arm axis
-  // cuff FIRST — parented to this transform, aligned with the hand whatever
-  // the follow-through angle does (C-07)
-  ctx.beginPath();
-  ctx.moveTo(-size * 0.62, -sleeveW * 0.52);
-  ctx.lineTo(-size * 0.62, sleeveW * 0.52);
-  ctx.strokeStyle = 'rgba(226,232,242,0.92)';
-  ctx.lineWidth = 3.4;
-  ctx.lineCap = 'round';
-  ctx.stroke();
+  // (FIX C6 — the cuff moved OUT of the hand transform into armDraw: it is
+  // parented to the forearm end now, so follow-through can't detach it.)
   const g = ctx.createLinearGradient(-size * 0.5, 0, size * 0.8, 0);
   g.addColorStop(0, hexLerp(SKIN.lit, SKIN.dark, 0.22));
   g.addColorStop(1, SKIN.dark);
@@ -1504,7 +1538,9 @@ function drawHand(
     ctx.lineWidth = ink;
     ctx.stroke();
   }
-  const fk = hexLerp(SKIN.lit, SKIN.dark, near ? 0.3 : 0.55);
+  // FIX C8 — the far hand keeps a value range close to the lightened far
+  // sleeve (was 0.55: a bright cream blob floating beside a dark torso)
+  const fk = hexLerp(SKIN.lit, SKIN.dark, near ? 0.3 : 0.42);
   ctx.strokeStyle = fk;
   ctx.lineCap = 'round';
   if (mode === 'cup') {
