@@ -4,7 +4,7 @@
  * waterfall · eraBars · vendorCompare · wealthfrontCase · decayCurve · secCase
  */
 
-import { CAPTION_SAFE_TOP, SceneCtx } from './scene-context';
+import { SceneCtx } from './scene-context';
 import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, kicker, chip, hexLerp, dimRect } from './theme';
 import { clamp01, easeOutCubic, easeInOutCubic, springTo, hash01, fmtComma } from './easing';
 import { goldDust, impactRing, softBloom, glowLine, spinToken, floatY, microShake, focusPing, impactPuff } from './fx';
@@ -15,8 +15,8 @@ import { dataSceneFigure } from './scenes-figure';
 // ── G5 — the location map (three columns) ────────────────────────────────────
 const LOC_COLUMNS = [
   { title: 'TAXABLE', tone: 'up', items: ['Broad index ETFs', 'Growth stocks', 'Municipal bonds'], note: 'low turnover · qualified dividends' },
-  { title: 'TAX-DEFERRED', tone: 'down', items: ['Taxable bonds', 'TIPS', 'REITs', 'High-turnover active'], note: 'the IRS can’t reach it annually' },
-  { title: 'ROTH', tone: 'gold', items: ['Highest-expected-growth equity'], note: 'never taxed again' },
+  { title: 'TAX-DEFERRED', tone: 'down', items: ['Taxable bonds', 'TIPS', 'REITs', 'High-turnover active'], note: 'the IRA · the 401(k) · sealed annually' },
+  { title: 'ROTH', tone: 'gold', items: ['Highest-expected-growth equity'], note: 'the Roth — never taxed again' },
 ];
 export function locationMapScene(g: SceneCtx): void {
   const { ctx, W, H, t } = g;
@@ -59,7 +59,26 @@ export function locationMapScene(g: SceneCtx): void {
       ctx.fillText(item, x + 58, iy + 32);
       ctx.restore();
     });
-    setFont(ctx, 28, 500, FONT_UI);
+    // FIX F11 — the one-item ROTH column: the empty interior carries a gold
+    // sub-card with the slot's WHY (the narration's own words), so the card
+    // the eye lands on is not two-thirds air.
+    if (c.items.length < 3) {
+      const ra = clamp01((t - 1500 - i * 500) / 500);
+      if (ra > 0) {
+        ctx.save();
+        ctx.globalAlpha = ra;
+        glassCard(ctx, x + 36, y + 196, colW - 72, 128, { r: 12, shadow: false, fill: 'rgba(212,175,55,0.10)', border: rgba(PALETTE.gold, 0.4) });
+        setFont(ctx, 26, 700, FONT_UI);
+        ctx.fillStyle = PALETTE.goldBright;
+        ctx.fillText('the growth is', x + 62, y + 240);
+        ctx.fillText('never taxed again', x + 62, y + 274);
+        setFont(ctx, 22, 600, FONT_UI);
+        ctx.fillStyle = PALETTE.inkSoft;
+        ctx.fillText('the highest-leverage slot', x + 62, y + 304);
+        ctx.restore();
+      }
+    }
+    setFont(ctx, 24, 500, FONT_UI);
     ctx.fillStyle = dim ? PALETTE.inkFaint : PALETTE.inkSoft;
     ctx.fillText(c.note, x + 36, y + h - 32);
     ctx.restore();
@@ -120,6 +139,27 @@ export function trapTileScene(g: SceneCtx): void {
     ctx.textAlign = 'center';
     ctx.fillText('A tax advantage laundered into a tax bill.', w / 2, 230);
     ctx.textAlign = 'left';
+    ctx.restore();
+  }
+  // FIX F11 — the card interior was two-thirds empty: the mechanics line and
+  // the correct-home chip (the narration's own resolution) fill the foot with
+  // reserved slots — verdict 230, mechanics 272, chip 306.
+  const ma = clamp01((t - 2200) / 500);
+  if (ma > 0) {
+    ctx.save();
+    ctx.globalAlpha = ma * (zi === 0 ? 0.55 : 1);
+    setFont(ctx, 24, 600, FONT_UI);
+    ctx.fillStyle = PALETTE.inkSoft;
+    ctx.textAlign = 'center';
+    ctx.fillText('the coupon arrives tax-exempt — the IRA withdrawal leaves as ordinary income', w / 2, 272);
+    ctx.textAlign = 'left';
+    ctx.restore();
+  }
+  const ca = clamp01((t - 2700) / 500);
+  if (ca > 0) {
+    ctx.save();
+    ctx.globalAlpha = ca * (zi === 0 ? 0.55 : 1);
+    chip(ctx, 'correct home: taxable accounts — that’s the whole point of them', w / 2, 296, { size: 26, gold: true, center: true, maxW: w - 120 });
     ctx.restore();
   }
   ctx.restore();
@@ -210,21 +250,26 @@ export function bpsCompareScene(g: SceneCtx): void {
   const bi = g.sentenceIdx != null && g.sentenceIdx >= 0 ? g.sentenceIdx : -1;
   const hotEl = bi < 1 ? -1 : bi === 1 ? 0 : bi === 2 ? 1 : 2;
   const x = W * 0.10, w = W * 0.62;
-  barRow(ctx, { x, y: 400, w, h: 120, label: 'Vanguard simulations', value: 30, maxV: 60, p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'up', valueText: 'up to 30 bps/yr' });
-  if (hotEl === 1 || hotEl === 2) dimRect(ctx, x, 348, w, 234);
-  if (hotEl === 0) focusPing(ctx, x + w * 0.52, 460, g.sentenceT, 104);
-  barRow(ctx, { x, y: 590, w, h: 120, label: 'Goldman Sachs AM', value: 45, maxV: 60, p: clamp01((t - 1300) / 900), t, landT: 2250, tone: 'gold', valueText: '45+ bps/yr', sub: 'high brackets + strategic allocation' });
-  if (hotEl === 0 || hotEl === 2) dimRect(ctx, x, 538, w, 234);
-  if (hotEl === 1) focusPing(ctx, x + w * 0.78, 650, g.sentenceT, 104);
+  // FIX F10 — the whole stack lifts so the last content line ends ~140px
+  // above CAPTION_SAFE_TOP: the last 90px above the guard hold nothing but
+  // air, and the two bottom lines can no longer merge into the caption pill
+  // on phones. The closing note moves INTO the empty right column beside the
+  // bars (it also fills the dead third there — F11's rule).
+  barRow(ctx, { x, y: 370, w, h: 120, label: 'Vanguard simulations', value: 30, maxV: 60, p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'up', valueText: 'up to 30 bps/yr' });
+  if (hotEl === 1 || hotEl === 2) dimRect(ctx, x, 318, w, 234);
+  if (hotEl === 0) focusPing(ctx, x + w * 0.52, 430, g.sentenceT, 104);
+  barRow(ctx, { x, y: 550, w, h: 120, label: 'Goldman Sachs AM', value: 45, maxV: 60, p: clamp01((t - 1300) / 900), t, landT: 2250, tone: 'gold', valueText: '45+ bps/yr', sub: 'high brackets + strategic allocation' });
+  if (hotEl === 0 || hotEl === 2) dimRect(ctx, x, 498, w, 234);
+  if (hotEl === 1) focusPing(ctx, x + w * 0.78, 610, g.sentenceT, 104);
   const na = clamp01((t - 2300) / 500);
   if (na > 0) {
     ctx.save();
     ctx.globalAlpha = na;
     setFont(ctx, 32, 600, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.inkSoft;
-    ctx.textAlign = 'center';
-    ctx.fillText('Which is why the next lever matters more.', W / 2, CAPTION_SAFE_TOP - 22);
-    ctx.textAlign = 'left';
+    wrapText(ctx, 'Which is why the next lever matters more.', 380, 32, 600, FONT_DISPLAY).forEach((ln, i) => {
+      ctx.fillText(ln, x + w + 60, 470 + i * 44);
+    });
     ctx.restore();
   }
 }
@@ -236,7 +281,12 @@ export function tlhMechanicScene(g: SceneCtx): void {
   panelTitle(ctx, 'Sell the loss. Keep the exposure. Bank the tax asset.', W * 0.10, 210, W * 0.8, t / 2400, { kickerText: 'Lever 2 · The mechanic' });
 
   const stepW = W * 0.26;
-  const y = 480;
+  // FIX F8 — fixed vertical rhythm per card, with RESERVED slots: visual
+  // (cy), the BANK card's "TAX ASSET" tag, the stage label, two sub lines.
+  // The old stack ran the TAX ASSET tag ~8px above the stage label and the
+  // wrapped sub-caption 16px from the card bottom — the middle card (the one
+  // the mechanism is named after) rendered as a cramped stack.
+  const y = 460, hC = 290;
   const stages = [
     { label: 'SELL the position', sub: 'down 20% — realize the loss', x: W * 0.16, tone: 'down' },
     { label: 'BANK the loss', sub: 'offsets gains · $3,000/yr income · carries forward', x: W * 0.44, tone: 'gold' },
@@ -248,15 +298,15 @@ export function tlhMechanicScene(g: SceneCtx): void {
     ctx.save();
     ctx.globalAlpha = ent;
     const x = st.x;
-    glassCard(ctx, x, y, stepW, 240, { r: 18, goldEdge: st.tone === 'gold', border: st.tone === 'down' ? rgba(PALETTE.down, 0.4) : st.tone === 'up' ? rgba(PALETTE.up, 0.4) : undefined });
-    // stage visual
-    const cx = x + stepW / 2, cy = y + 90;
+    glassCard(ctx, x, y, stepW, hC, { r: 18, goldEdge: st.tone === 'gold', border: st.tone === 'down' ? rgba(PALETTE.down, 0.4) : st.tone === 'up' ? rgba(PALETTE.up, 0.4) : undefined });
+    // stage visual — slot 1: centered at y+86
+    const cx = x + stepW / 2, cy = y + 86;
     if (i === 0) {
       // red position falling
       const fall = easeInOutCubic(clamp01((t - 700) / 900));
       ctx.save();
-      ctx.translate(cx, cy + fall * 26);
-      const r = 46;
+      ctx.translate(cx, cy + fall * 20);
+      const r = 42;
       const g2 = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
       g2.addColorStop(0, '#B8434A');
       g2.addColorStop(1, PALETTE.downDeep);
@@ -272,15 +322,15 @@ export function tlhMechanicScene(g: SceneCtx): void {
       ctx.restore();
     } else if (i === 1) {
       // the gold tax-asset token
-      spinToken(ctx, cx, cy, 44, t, PALETTE.goldBright, PALETTE.gold, '$', 1600);
+      spinToken(ctx, cx, cy, 42, t, PALETTE.goldBright, PALETTE.gold, '$', 1600);
       const ta = clamp01((t - 1600) / 500);
       if (ta > 0) {
         ctx.save();
         ctx.globalAlpha = ta;
-        setFont(ctx, 28, 700, FONT_UI);
+        setFont(ctx, 26, 700, FONT_UI);
         ctx.fillStyle = PALETTE.goldBright;
         ctx.textAlign = 'center';
-        ctx.fillText('TAX ASSET', cx, cy + 74);
+        ctx.fillText('TAX ASSET', cx, cy + 62);
         ctx.textAlign = 'left';
         ctx.restore();
       }
@@ -288,7 +338,7 @@ export function tlhMechanicScene(g: SceneCtx): void {
       // replacement position — similar but different
       ctx.save();
       ctx.translate(cx, cy);
-      const r = 44;
+      const r = 42;
       ctx.beginPath();
       ctx.arc(0, 0, r, 0, Math.PI * 2);
       const g3 = ctx.createLinearGradient(-r, -r, r, r);
@@ -302,38 +352,40 @@ export function tlhMechanicScene(g: SceneCtx): void {
       ctx.stroke();
       ctx.setLineDash([]);
       ctx.fillStyle = 'rgba(240,250,245,0.92)';
-      setFont(ctx, 28, 700, FONT_UI);
+      setFont(ctx, 26, 700, FONT_UI);
       ctx.textAlign = 'center';
       ctx.fillText('similar', 0, -4);
       ctx.fillText('not identical', 0, 20);
       ctx.textAlign = 'left';
       ctx.restore();
     }
+    // slot 2: the stage label — reserved baseline y+196
     setFont(ctx, 28, 700, FONT_UI);
     ctx.fillStyle = PALETTE.ink;
     ctx.textAlign = 'center';
-    ctx.fillText(st.label, cx, y + 172);
+    ctx.fillText(st.label, cx, y + 196);
     ctx.textAlign = 'left';
-    setFont(ctx, 28, 500, FONT_UI);
+    // slot 3: two reserved sub lines, y+226 / y+250, ≥40px above the card foot
+    setFont(ctx, 20, 500, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
     wrapText(ctx, st.sub, stepW - 60, 20, 500, FONT_UI).forEach((ln, li) => {
-      ctx.fillText(ln, x + 30, y + 200 + li * 24);
+      ctx.fillText(ln, x + 30, y + 226 + li * 24);
     });
     ctx.restore();
-    // connector
+    // connector — rides the visual row
     if (i > 0) {
       ctx.save();
       ctx.globalAlpha = clamp01((t - 400 - i * 900 + 300) / 300);
       ctx.beginPath();
-      ctx.moveTo(st.x - 54, y + 120);
-      ctx.lineTo(st.x - 8, y + 120);
+      ctx.moveTo(st.x - 54, y + 86);
+      ctx.lineTo(st.x - 8, y + 86);
       ctx.strokeStyle = rgba(PALETTE.gold, 0.5);
       ctx.lineWidth = 2;
       ctx.stroke();
       ctx.beginPath();
-      ctx.moveTo(st.x - 18, y + 113);
-      ctx.lineTo(st.x - 8, y + 120);
-      ctx.lineTo(st.x - 18, y + 127);
+      ctx.moveTo(st.x - 18, y + 79);
+      ctx.lineTo(st.x - 8, y + 86);
+      ctx.lineTo(st.x - 18, y + 93);
       ctx.fillStyle = rgba(PALETTE.gold, 0.6);
       ctx.fill();
       ctx.restore();
@@ -551,8 +603,9 @@ export function vendorCompareScene(g: SceneCtx): void {
     // AUDIT K-04 — the cards used to end at y≈650, leaving a ~300px dead band
     // above the caption zone. Enlarged + dropped: they now carry down to 740,
     // inside the caption guard, so the composition fills the lower half.
-    statCard(ctx, { x: c.x, y: 350, w: W * 0.36, h: 390, big: c.big, label: c.label, sub: c.sub, p: ent, tone: c.tone as any, bigSize: i === 0 ? 84 : 100, goldEdge: i === 0 || i === hotCard });
-    if (dim) dimRect(ctx, c.x, 350, W * 0.36, 390);
+    // FIX F6 — the non-narrated plate recedes via its OWN alpha (0.62): the
+    // 0.8–1.0% / 2.3% values are never washed under a dim overlay.
+    statCard(ctx, { x: c.x, y: 350, w: W * 0.36, h: 390, big: c.big, label: c.label, sub: c.sub, p: ent, tone: c.tone as any, bigSize: i === 0 ? 84 : 100, goldEdge: i === 0 || i === hotCard, alpha: dim ? 0.62 : 1 });
     ctx.restore();
     if (i === hotCard) focusPing(ctx, c.x + W * 0.18, 545, g.sentenceT, 100);
   });
@@ -565,9 +618,9 @@ export function wealthfrontCaseScene(g: SceneCtx): void {
   goldDust(ctx, W, H, t, 33, 0.9);
   panelTitle(ctx, 'In production: the frequency argument in one number', W * 0.10, 210, W * 0.8, t / 2400, { kickerText: 'Lever 2 · Wealthfront, 2025' });
   // two stat plates (chart lives INSIDE the second card, below its label)
-  statCard(ctx, { x: W * 0.10, y: 330, w: 520, h: 300, big: '$161M', label: 'client tax savings, 2025', p: clamp01((t - 300) / 800), tone: 'gold', bigSize: 92 });
-  // AUDIT R-02 — the $161M plate recedes when the tariff card is narrated
-  if (g.sentenceIdx != null && g.sentenceIdx >= 3) dimRect(ctx, W * 0.10, 330, 520, 300);
+  // FIX F6 — the $161M plate recedes via its OWN alpha (0.62) when the tariff
+  // card is narrated: the value text is never washed under a dim overlay.
+  statCard(ctx, { x: W * 0.10, y: 330, w: 520, h: 300, big: '$161M', label: 'client tax savings, 2025', p: clamp01((t - 300) / 800), tone: 'gold', bigSize: 92, alpha: g.sentenceIdx != null && g.sentenceIdx >= 3 ? 0.62 : 1 });
   const ent2 = clamp01((t - 1400) / 700);
   if (ent2 > 0) {
     ctx.save();

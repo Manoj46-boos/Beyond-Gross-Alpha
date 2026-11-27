@@ -289,12 +289,15 @@ export function chip(
 /** AUDIT R-02 — spotlight dim for self-managing components (statCard,
  *  barRow, lineChart, … set their own globalAlpha, so an inherited dim
  *  cannot reach them). Painting the room colour back over the element's
- *  bbox recedes it — the same device as the cold open's stage-2 dim. */
+ *  bbox recedes it — the same device as the cold open's stage-2 dim.
+ *  FIX F6 — the wash floors at 0.30 (was 0.52): dimmed bar values and
+ *  sub-labels stay above the phone-contrast floor. NEVER lay this over a
+ *  card's own value text — recede the card via its alpha instead. */
 export function dimRect(
   ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, k = 1
 ): void {
   ctx.save();
-  ctx.fillStyle = `rgba(5,8,15,${0.52 * Math.min(1, Math.max(0, k))})`;
+  ctx.fillStyle = `rgba(5,8,15,${0.30 * Math.min(1, Math.max(0, k))})`;
   ctx.fillRect(x, y, w, h);
   ctx.restore();
 }

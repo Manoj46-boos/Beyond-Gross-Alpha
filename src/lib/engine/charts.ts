@@ -508,11 +508,14 @@ export interface StatCardOpts {
   goldEdge?: boolean;
   bigSize?: number;
   tag?: string;
+  /** FIX F6 — recede the whole card via its own alpha (0.55-0.65) instead of
+   *  painting a dim wash over the value text. */
+  alpha?: number;
 }
 export function statCard(ctx: CanvasRenderingContext2D, o: StatCardOpts): void {
   const ent = easeOutCubic(clamp01(o.p / 0.4));
   ctx.save();
-  ctx.globalAlpha = clamp01(o.p * 3);
+  ctx.globalAlpha = clamp01(o.p * 3) * (o.alpha ?? 1);
   glassCard(ctx, o.x + (1 - ent) * 26, o.y, o.w, o.h, { r: 22, goldEdge: o.goldEdge ?? o.tone === 'gold', border: o.tone === 'down' ? rgba(PALETTE.down, 0.4) : o.tone === 'up' ? rgba(PALETTE.up, 0.4) : undefined });
   // S-06 — the value no longer crowds the left border (padding 44 → 56) and
   // the label's shrink floor rises 13 → 18 so it stays legible on phones

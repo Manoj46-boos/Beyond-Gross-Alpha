@@ -103,12 +103,13 @@ export function feeChipsScene(g: SceneCtx): void {
   // stat card → squeeze chart → invisible-tax chip, so this 40s hold
   // changes its layout every few seconds instead of freezing once.
   const hotIdx = g.sentenceIdx != null && g.sentenceIdx >= 0 ? g.sentenceIdx % 3 : -1;
-  // hero stat: 83% (statCard manages its own alpha — the dim is an overlay)
+  // hero stat: 83% (FIX F6 — the plate recedes via its OWN alpha when another
+  // zone is narrated; the value text is never washed under a dim overlay)
   statCard(ctx, {
     x: W * 0.10, y: 350, w: 560, h: 380,
     big: '83%', label: 'advisors charging <1% on $5M+ clients by 2026', sub: 'average fees → ⅔ of a point (Cerulli)', p: clamp01((t - 300) / 900), tone: 'gold', bigSize: 130,
+    alpha: hotIdx >= 0 && hotIdx !== 0 ? 0.62 : 1,
   });
-  if (hotIdx >= 0 && hotIdx !== 0) dimRect(ctx, W * 0.10, 350, 560, 380);
   if (hotIdx === 0) focusPing(ctx, W * 0.10 + 280, 540, g.sentenceT, 96);
   // the squeeze visual: fee arrow down, tax work fading
   const x2 = W * 0.58, y2 = 380;
@@ -135,7 +136,10 @@ export function feeChipsScene(g: SceneCtx): void {
     // 55-char pill fits to x=1880 instead of being guillotined at 1920.
     // R-02 — the chip is the third cadence element: it pops when its
     // sentence plays and recedes otherwise.
-    if (dimSqueeze) dimRect(ctx, x2, y2, 620, hotIdx === 2 ? 244 : 316);
+    // FIX F6 — the squeeze card's dim covers only the CHART ZONE (y2..y2+244):
+    // the "tax management — invisible" chip line below it recedes via its own
+    // alpha and is never washed under the overlay.
+    if (dimSqueeze) dimRect(ctx, x2, y2, 620, 244);
     ctx.save();
     ctx.globalAlpha = hotIdx === 1 || hotIdx < 0 ? 0.55 : 1;
     chip(ctx, 'tax management — expensive to deliver, invisible when done', x2 + 60, y2 + 262, { size: 28, gold: true, maxW: W - (x2 + 60) - 40, alpha: hotIdx === 1 || hotIdx < 0 ? 0.55 : 1 });
