@@ -27,14 +27,19 @@ export function drawThumbnail(ctx: CanvasRenderingContext2D, W: number, H: numbe
 
   if (variant === 0) {
     // T1 — split statement: $13.7M white/gold vs $8.6M red + SAME PORTFOLIO
-    ctx.textAlign = 'center';
-    goldFillText(ctx, '$13.7M', W * 0.27, H * 0.42, 150, 900, FONT_DISPLAY, 'center');
+    // FIX D5 (frame audit): the old fixed-centre placement clipped "$8.6M" at
+    // the frame edge. Both numerals are MEASURED and anchored to the divider
+    // (gold right-aligned to it, red left-aligned from it) — the divider stays
+    // the exact axis of the pair and no font width can clip a numeral.
     setFont(ctx, 160, 900, FONT_DISPLAY);
+    const gap = 56;
+    goldFillText(ctx, '$13.7M', W / 2 - gap / 2, H * 0.42, 160, 900, FONT_DISPLAY, 'right');
     const rg = ctx.createLinearGradient(0, H * 0.45, 0, H * 0.62);
     rg.addColorStop(0, '#F08A8D');
     rg.addColorStop(1, PALETTE.down);
+    setFont(ctx, 160, 900, FONT_DISPLAY);
     ctx.fillStyle = rg;
-    ctx.fillText('$8.6M', W * 0.73, H * 0.42);
+    ctx.fillText('$8.6M', W / 2 + gap / 2, H * 0.42);
     ctx.strokeStyle = rgba(PALETTE.inkSoft, 0.4);
     ctx.lineWidth = 3;
     ctx.beginPath();
@@ -147,10 +152,11 @@ export function drawThumbnail(ctx: CanvasRenderingContext2D, W: number, H: numbe
     ctx.fillText('THE GAP', W / 2, H * 0.75);
     ctx.textAlign = 'left';
   }
-  // channel mark
+  // channel mark — FIX D5 (frame audit): on T4 the mark printed over the
+  // figure's hair; on that variant it moves to the clear bottom-left corner.
   setFont(ctx, 22, 700, FONT_UI);
   try { (ctx as any).letterSpacing = '4px'; } catch { /* noop */ }
   ctx.fillStyle = rgba(PALETTE.inkSoft, 0.8);
-  ctx.fillText(channelName.toUpperCase(), 40, 44);
+  ctx.fillText(channelName.toUpperCase(), 40, variant === 3 ? H - 40 : 44);
   try { (ctx as any).letterSpacing = '0px'; } catch { /* noop */ }
 }
