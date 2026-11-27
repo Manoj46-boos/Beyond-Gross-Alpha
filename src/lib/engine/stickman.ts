@@ -483,9 +483,20 @@ export function walkPose(phase: number, speed: number): Pose {
 }
 
 // ── face ─────────────────────────────────────────────────────────────────────
+// AUDIT FIX C1 · C2 · C3 · C13 — the premium face rebuild. Design law:
+//  • ORDER: skull → jaw shade → brow ridge (BEFORE the hair, so no shading
+//    line can ever smear across the hair) → hair → ears → brows → eyes →
+//    nose → mouth → glasses;
+//  • every feature constant is scaled by k = R / 26.2, so the rig proportion
+//    reset (C9) rescales the whole face automatically;
+//  • the silver strands are CLIPPED to the hair silhouette — no geometry
+//    escapes the outline (C1);
+//  • detail 'lo' (head < ~55px on screen) drops fine detail and floors the
+//    stroke widths so the face stays a face at data-scene scale (C13).
 function drawFace(
   ctx: CanvasRenderingContext2D, hx: number, hy: number, tiltDeg: number,
-  p: Pose, t: number, faceScale: number, wordTexts: string[], wordTimes: number[], beatT: number, look: number, quiffLag = 0, inkW = 0
+  p: Pose, t: number, faceScale: number, wordTexts: string[], wordTimes: number[], beatT: number, look: number, quiffLag = 0, inkW = 0,
+  detail: 'hi' | 'lo' = 'hi'
 ): void {
   ctx.save();
   ctx.translate(hx, hy);
@@ -494,6 +505,10 @@ function drawFace(
   ctx.scale(fs, fs);
 
   const R = HEAD_R;
+  const k = R / 26.2;               // feature scale — tracks the rig proportions (C9)
+  const lo = detail === 'lo';
+  const sw = (w: number): number => Math.max(lo ? 1.25 : 1.05, w * (lo ? 1.3 : 1)); // stroke floor
+
   // C-01 — skin reads shaded, not cream: a small off-centre hot spot on the
   // lit cheek, mid-tones pulled dark early, one shadow side into the jaw
   const g = ctx.createRadialGradient(-R * 0.42, -R * 0.05, R * 0.14, 0, 0, R * 1.32);
@@ -501,9 +516,6 @@ function drawFace(
   g.addColorStop(0.42, hexLerp(SKIN.lit, SKIN.dark, 0.42));
   g.addColorStop(0.8, SKIN.dark);
   g.addColorStop(1, SKIN.deep);
-  // Phase 1 — the skull PATH, not a bare ellipse: a designed head silhouette
-  // with the brow ridge built into the profile (a shelf over the eye line)
-  // and a slight nose projection at the bottom centre. One ink contour.
   ctx.beginPath();
   skullPath(ctx, R);
   ctx.fillStyle = g;
@@ -514,7 +526,14 @@ function drawFace(
     ctx.stroke();
   }
 
-  // jaw shade (one-light rule)
+  const eyeY = -R * 0.18;
+  const eyeX = R * 0.36;
+  const lid = clamp01(p.lid + p.blink);
+  const surprise = p.surprise;
+
+  // jaw shade + FIX C2 brow ridge — one clip, drawn BEFORE the hair: the shelf
+  // sits between hairline and brows, and its lit top edge can never paint a
+  // smear across the hair again. Alpha 0.20→0.13: architecture, not eye-bags.
   ctx.save();
   ctx.beginPath();
   skullPath(ctx, R);
@@ -524,31 +543,49 @@ function drawFace(
   sh.addColorStop(1, rgba('#7A5F46', 0.28));
   ctx.fillStyle = sh;
   ctx.fillRect(-R, -R, R * 2, R * 2.4);
-  ctx.restore();
+  const ridge = ctx.createLinearGradient(0, eyeY - 14 * k, 0, eyeY - 3 * k);
+  ridge.addColorStop(0, 'rgba(126,99,72,0.03)');
+  ridge.addColorStop(0.55, 'rgba(112,88,64,0.13)');
+  ridge.addColorStop(1, 'rgba(92,72,52,0.05)');
+  ctx.fillStyle = ridge;
+  ctx.fillRect(-R * 0.66, eyeY - 14 * k, R * 1.32, 11 * k);
+  if (!lo) {
+    ctx.strokeStyle = 'rgba(232,208,178,0.22)';
+    ctx.lineWidth = sw(1.1 * k);
+    ctx.beginPath();
+    ctx.moveTo(-R * 0.54, eyeY - 12.6 * k);
+    ctx.quadraticCurveTo(0, eyeY - 14.6 * k, R * 0.54, eyeY - 12.6 * k);
+    ctx.stroke();
+  }
+  ctx.restore(); // skull clip
 
   // C-01 — designed hair: a closed swept-back shape with a left parting, three
   // silhouette notches against the sky, a tapered temple and a nape at the
   // back. NOT clipped to the skull — the silhouette breaks the head outline.
+  // FIX C2 — the front hairline sits a full band ABOVE the brows: clear skin
+  // separates hair from brows, so neither reads through the other.
   ctx.save();
   ctx.rotate(quiffLag * 0.35 * D2R);
   const hg = ctx.createLinearGradient(-R * 0.5, -R * 1.05, R * 0.4, -R * 0.2);
   hg.addColorStop(0, HAIR.lit);
   hg.addColorStop(0.6, hexLerp(HAIR.lit, HAIR.dark, 0.55));
   hg.addColorStop(1, HAIR.dark);
+  const hairPath = (): void => {
+    ctx.beginPath();
+    ctx.moveTo(-R * 0.88, R * 0.14);
+    ctx.quadraticCurveTo(-R * 1.06, -R * 0.52, -R * 0.62, -R * 0.98);
+    ctx.quadraticCurveTo(-R * 0.34, -R * 1.14, -R * 0.02, -R * 1.12); // parting peak
+    ctx.quadraticCurveTo(R * 0.34, -R * 1.16, R * 0.62, -R * 1.0);    // notch 1
+    ctx.quadraticCurveTo(R * 0.78, -R * 1.08, R * 0.9, -R * 0.86);    // notch 2
+    ctx.quadraticCurveTo(R * 1.04, -R * 0.62, R * 0.96, -R * 0.4);    // notch 3 dip
+    ctx.quadraticCurveTo(R * 1.02, -R * 0.2, R * 0.9, R * 0.02);      // temple taper
+    ctx.quadraticCurveTo(R * 0.66, -R * 0.32, R * 0.3, -R * 0.46);    // front hairline (raised)
+    ctx.quadraticCurveTo(-R * 0.18, -R * 0.60, -R * 0.58, -R * 0.42); // parting fall
+    ctx.quadraticCurveTo(-R * 0.8, -R * 0.22, -R * 0.88, R * 0.14);   // nape close
+    ctx.closePath();
+  };
   ctx.fillStyle = hg;
-  ctx.beginPath();
-  // crown sweeping from the left part over the top
-  ctx.moveTo(-R * 0.88, R * 0.14);
-  ctx.quadraticCurveTo(-R * 1.06, -R * 0.52, -R * 0.62, -R * 0.98);
-  ctx.quadraticCurveTo(-R * 0.34, -R * 1.14, -R * 0.02, -R * 1.12); // parting peak
-  ctx.quadraticCurveTo(R * 0.34, -R * 1.16, R * 0.62, -R * 1.0);   // notch 1
-  ctx.quadraticCurveTo(R * 0.78, -R * 1.08, R * 0.9, -R * 0.86);   // notch 2
-  ctx.quadraticCurveTo(R * 1.04, -R * 0.62, R * 0.96, -R * 0.4);   // notch 3 dip
-  ctx.quadraticCurveTo(R * 1.02, -R * 0.2, R * 0.9, R * 0.02);     // temple taper
-  ctx.quadraticCurveTo(R * 0.66, -R * 0.24, R * 0.3, -R * 0.38);   // front hairline
-  ctx.quadraticCurveTo(-R * 0.18, -R * 0.52, -R * 0.58, -R * 0.34);// parting fall
-  ctx.quadraticCurveTo(-R * 0.8, -R * 0.16, -R * 0.88, R * 0.14);  // nape close
-  ctx.closePath();
+  hairPath();
   ctx.fill();
   // Phase 1 — the hair silhouette joins the ink system
   if (inkW > 0) {
@@ -565,66 +602,54 @@ function drawFace(
   ctx.closePath();
   ctx.fillStyle = HAIR.dark;
   ctx.fill();
-  // AUDIT C-04 — silver strand highlights: only TWO strands now, both running
-  // ALONG the sweep (same start angle, no crossings). The old four strands
-  // crossed the sweep at opposing angles and read as a plaid/tartan artifact
-  // on the hair — the most damaging kind of face bug.
-  ctx.strokeStyle = rgba('#D7DEEA', 0.45);
-  ctx.lineWidth = 1.1;
-  ctx.lineCap = 'round';
-  for (const [ox, len] of [[-0.62, 0.66], [-0.30, 0.8]] as const) {
+  // FIX C1 — silver strand highlights: CLIPPED to the hair path and run ALONG
+  // the sweep with tips INSIDE the crown (old tips reached −1.32R vs crown
+  // −1.16R and floated above the head like antennae). Nothing escapes now.
+  if (!lo) {
+    ctx.save();
+    hairPath();
+    ctx.clip();
+    ctx.strokeStyle = rgba('#D7DEEA', 0.40);
+    ctx.lineWidth = sw(1.0);
+    ctx.lineCap = 'round';
+    for (const [ox, len] of [[-0.60, 0.40], [-0.30, 0.48]] as const) {
+      ctx.beginPath();
+      ctx.moveTo(R * ox, -R * 0.48);
+      ctx.quadraticCurveTo(R * (ox + 0.05), -R * (0.48 + len * 0.66), R * (ox + 0.08), -R * (0.48 + len));
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  ctx.restore(); // hair transform
+
+  // FIX C3 — ears: small, tucked, darker, two-thirds up the skull with the
+  // lobe at the jaw line — a hint of ear, not two headphone pads.
+  ctx.fillStyle = SKIN.dark;
+  for (const s of [-1, 1]) {
     ctx.beginPath();
-    ctx.moveTo(R * ox, -R * 0.52);
-    ctx.quadraticCurveTo(R * (ox + 0.06), -R * (0.52 + len * 0.62), R * (ox + 0.1), -R * (0.52 + len));
+    ctx.ellipse(s * R * 0.845, R * 0.06, R * 0.095, R * 0.15, s * 0.18, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = rgba('#7A5F46', 0.4);
+    ctx.lineWidth = sw(0.8 * k);
+    ctx.beginPath();
+    ctx.arc(s * R * 0.845, R * 0.05, R * 0.055, s > 0 ? Math.PI * 1.15 : Math.PI * 1.35, s > 0 ? Math.PI * 1.75 : Math.PI * 1.95);
     ctx.stroke();
   }
-  ctx.restore();
 
-  // ears
-  ctx.fillStyle = SKIN.deep;
-  ctx.beginPath(); ctx.ellipse(-R * 0.82, R * 0.1, R * 0.14, R * 0.2, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(R * 0.82, R * 0.1, R * 0.14, R * 0.2, 0, 0, Math.PI * 2); ctx.fill();
-
-  const eyeY = -R * 0.18;
-  const eyeX = R * 0.36;
-  const lid = clamp01(p.lid + p.blink);
-  const surprise = p.surprise;
-
-  // Phase 1 — brow RIDGE: a filled shelf over the eye line. Under-edge sits
-  // in shadow, top plane catches the single key light — skull architecture.
-  ctx.save();
-  ctx.beginPath();
-  skullPath(ctx, R);
-  ctx.clip();
-  const ridge = ctx.createLinearGradient(0, eyeY - 15, 0, eyeY - 3);
-  ridge.addColorStop(0, 'rgba(126,99,72,0.04)');
-  ridge.addColorStop(0.55, 'rgba(112,88,64,0.20)');
-  ridge.addColorStop(1, 'rgba(92,72,52,0.06)');
-  ctx.fillStyle = ridge;
-  ctx.fillRect(-R * 0.72, eyeY - 15, R * 1.44, 12);
-  // the ridge's lit top edge (one light, upper-left)
-  ctx.strokeStyle = 'rgba(232,208,178,0.30)';
-  ctx.lineWidth = 1.2;
-  ctx.beginPath();
-  ctx.moveTo(-R * 0.6, eyeY - 13.4);
-  ctx.quadraticCurveTo(0, eyeY - 15.6, R * 0.6, eyeY - 13.4);
-  ctx.stroke();
-  ctx.restore();
-
-  // brows — filled tapered shapes that survive 20px (C-01); the LEADING brow
-  // takes the content-word strike (U2.6)
-  const browLift = p.brow * 5.2;
-  ctx.fillStyle = rgba('#3E4A62', 0.96);
+  // brows — thin tapered strokes above the glasses line (the old filled blobs
+  // vanished against the ridge shelf). The LEADING brow takes the word strike.
+  const browLift = p.brow * 4.6 * k;
+  ctx.strokeStyle = rgba('#3E4A62', 0.96);
+  ctx.lineCap = 'round';
   for (const s of [-1, 1]) {
-    const liftS = browLift + (s === 1 ? (p.browAsym ?? 0) * 5.2 : 0);
-    const bx = s * eyeX, by = eyeY - 9.5 - liftS + (p.brow < 0 ? p.brow * 2.5 : 0);
+    const liftS = browLift + (s === 1 ? (p.browAsym ?? 0) * 4.6 * k : 0);
+    const bx = s * eyeX;
+    const by = eyeY - 7.4 * k - liftS + (p.brow < 0 ? p.brow * 2.2 * k : 0);
+    ctx.lineWidth = sw(2.4 * k);
     ctx.beginPath();
-    ctx.moveTo(bx - 7.2, by + 1.2);
-    ctx.quadraticCurveTo(bx - 2, by - 2.6 - s * 0.3, bx + 4.2, by - 1.4 - s * 0.6);
-    ctx.quadraticCurveTo(bx + 6.8, by - 0.8 - s * 0.5, bx + 7.4, by + 0.6 - s * 0.4);
-    ctx.quadraticCurveTo(bx + 2, by + 1.6, bx - 4, by + 2.6);
-    ctx.closePath();
-    ctx.fill();
+    ctx.moveTo(bx - s * 6.2 * k, by + 1.1 * k);
+    ctx.quadraticCurveTo(bx, by - 2.3 * k, bx + s * 6.4 * k, by + 0.4 * k);
+    ctx.stroke();
   }
 
   // eyes — confident, subtle iris, glint
@@ -632,13 +657,11 @@ function drawFace(
   for (const s of [-1, 1]) {
     const ex = s * eyeX + gaze * 0.6;
     const openH = R * 0.155 * (1 - lid * 0.92) * (1 + surprise * 0.5);
-    // eye white
     ctx.beginPath();
     ctx.ellipse(ex, eyeY, R * 0.165, Math.max(0.6, openH), 0, 0, Math.PI * 2);
     ctx.fillStyle = '#F4F2EC';
     ctx.fill();
     if (lid < 0.85) {
-      // iris + pupil
       ctx.beginPath();
       ctx.arc(ex + gaze, eyeY, R * 0.085 * (1 + surprise * 0.25), 0, Math.PI * 2);
       ctx.fillStyle = '#2E3B55';
@@ -652,8 +675,7 @@ function drawFace(
       ctx.fillStyle = 'rgba(255,255,255,0.9)';
       ctx.fill();
     }
-    // Phase 1 — lids as FILLED shapes (≥2.5px read): a skin-tone lid plane
-    // sinking into the eye + a dark lash edge on its rim
+    // lids as FILLED shapes with a dark lash edge on the rim
     if (lid > 0.08) {
       const lidH = Math.max(0.6, openH);
       ctx.save();
@@ -667,52 +689,46 @@ function drawFace(
       ctx.moveTo(ex - R * 0.16, eyeY - lidH * 0.16);
       ctx.quadraticCurveTo(ex, eyeY + lidH * 0.14, ex + R * 0.16, eyeY - lidH * 0.16);
       ctx.strokeStyle = 'rgba(70,56,42,0.85)';
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = sw(2.2 * k);
       ctx.stroke();
     }
   }
 
-  // Phase 1 — nose as a PROFILE FORM, not a line: a shadow plane away from
-  // the key light, a lit plane toward it, a ball tip and nostril hints —
-  // filled shapes that survive 220px head height.
-  const noseY = eyeY + 3;
-  ctx.save();
-  // shadow plane (right of the bridge — away from the upper-left light)
+  // nose — PROFILE FORM (shadow plane away from the key, lit plane toward it,
+  // ball tip). Nostril hints only at detail 'hi' (they smudge at 'lo').
+  const noseY = eyeY + 3 * k;
   ctx.beginPath();
-  ctx.moveTo(0.6, noseY);
-  ctx.quadraticCurveTo(R * 0.10, noseY + 6, R * 0.082, noseY + 11);
-  ctx.quadraticCurveTo(0.25, noseY + 12.6, 0, noseY + 12.8);
+  ctx.moveTo(0.6 * k, noseY);
+  ctx.quadraticCurveTo(R * 0.10, noseY + 6 * k, R * 0.082, noseY + 11 * k);
+  ctx.quadraticCurveTo(0.25 * k, noseY + 12.6 * k, 0, noseY + 12.8 * k);
   ctx.closePath();
   ctx.fillStyle = 'rgba(116,90,66,0.32)';
   ctx.fill();
-  // lit plane (left of the bridge — toward the light)
   ctx.beginPath();
-  ctx.moveTo(-0.4, noseY);
-  ctx.quadraticCurveTo(-R * 0.082, noseY + 6, -R * 0.068, noseY + 11);
-  ctx.quadraticCurveTo(-0.3, noseY + 13.2, 0, noseY + 13.2);
+  ctx.moveTo(-0.4 * k, noseY);
+  ctx.quadraticCurveTo(-R * 0.082, noseY + 6 * k, -R * 0.068, noseY + 11 * k);
+  ctx.quadraticCurveTo(-0.3 * k, noseY + 13.2 * k, 0, noseY + 13.2 * k);
   ctx.closePath();
   ctx.fillStyle = 'rgba(228,206,180,0.30)';
   ctx.fill();
-  // ball tip + nostril shadows
   ctx.beginPath();
-  ctx.ellipse(0, noseY + 11.2, R * 0.082, R * 0.06, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, noseY + 11.2 * k, R * 0.082, R * 0.06, 0, 0, Math.PI * 2);
   ctx.fillStyle = 'rgba(150,116,86,0.36)';
   ctx.fill();
-  ctx.fillStyle = 'rgba(74,56,40,0.5)';
-  ctx.beginPath(); ctx.ellipse(-R * 0.052, noseY + 12.4, R * 0.023, R * 0.016, 0.3, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(R * 0.052, noseY + 12.4, R * 0.023, R * 0.016, -0.3, 0, Math.PI * 2); ctx.fill();
-  ctx.restore();
+  if (!lo) {
+    ctx.fillStyle = 'rgba(74,56,40,0.5)';
+    ctx.beginPath(); ctx.ellipse(-R * 0.052, noseY + 12.4 * k, R * 0.023, R * 0.016, 0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(R * 0.052, noseY + 12.4 * k, R * 0.023, R * 0.016, -0.3, 0, Math.PI * 2); ctx.fill();
+  }
 
-  // mouth — viseme-driven, soft shapes
+  // mouth — viseme-driven talk; resting = a SHORT composed line, not a wide
+  // grin arc (FIX C3). Corner ticks appear only on a real smile.
   const talk = p.mouth;
   const v = visemeAt(beatT, wordTimes, wordTexts);
   const mx = 0, my = R * 0.52;
   const smile = p.smile;
   ctx.save();
   if (talk > 0.14 && v !== 'X') {
-    // M-07 — lip-sync must READ at phone size: viseme widths spread to
-    // 0.16–0.72·R (was 0.24–0.52·R ≈ 2-4px differences) and the jaw DROPS
-    // with openness instead of the teeth bar just popping in and out
     const jaw = Math.max(0, talk - 0.18) * R * 0.15;
     const myJ = my + jaw;
     let mw = R * 0.52, mh = R * 0.38 * talk, round = 1;
@@ -723,12 +739,10 @@ function drawFace(
     else if (v === 'L') { mw = R * 0.42; mh = R * 0.30 * talk; }
     else if (v === 'S') { mw = R * 0.56; mh = R * 0.20 * talk; }
     ctx.beginPath();
-    if (round > 0.5) ctx.ellipse(mx, myJ, mw, Math.max(1.2, mh), 0, 0, Math.PI * 2);
-    else ctx.ellipse(mx, myJ, mw, Math.max(1.2, mh), 0, 0, Math.PI * 2);
+    ctx.ellipse(mx, myJ, mw, Math.max(1.2, mh), 0, 0, Math.PI * 2);
     ctx.fillStyle = '#4A2E28';
     ctx.fill();
     if (mh > R * 0.16) {
-      // teeth bar + cavity depth
       ctx.save();
       ctx.beginPath(); ctx.ellipse(mx, myJ, mw, mh, 0, 0, Math.PI * 2); ctx.clip();
       ctx.fillStyle = 'rgba(240,232,220,0.85)';
@@ -738,59 +752,60 @@ function drawFace(
       ctx.restore();
     }
   } else {
-    // resting expression — composed neutral with mouth CORNERS, not a wide
-    // flat grin arc (C-01). k = smile bends the line and lifts the corners.
-    const k = smile;
-    const mw = R * 0.20 + k * R * 0.06;
-    const drop = 1.6 + k * 3.4;
+    const mw = R * 0.115 + smile * R * 0.045;
+    const drop = 1.1 * k + smile * 3.0 * k;
     ctx.beginPath();
-    ctx.moveTo(-mw, my - 1.4 - k * 1.6);
-    ctx.quadraticCurveTo(0, my + drop, mw, my - 1.4 - k * 1.6);
+    ctx.moveTo(-mw, my - 1.2 * k - smile * 1.4 * k);
+    ctx.quadraticCurveTo(0, my + drop, mw, my - 1.2 * k - smile * 1.4 * k);
     ctx.strokeStyle = 'rgba(74,46,40,0.85)';
-    ctx.lineWidth = 2.2;
+    ctx.lineWidth = sw(2.0 * k);
     ctx.lineCap = 'round';
     ctx.stroke();
-    // corners — tiny dark ticks anchoring the expression
-    ctx.fillStyle = 'rgba(74,46,40,0.7)';
-    ctx.beginPath(); ctx.arc(-mw, my - 1.4 - k * 1.6, 1.1, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(mw, my - 1.4 - k * 1.6, 1.1, 0, Math.PI * 2); ctx.fill();
+    if (smile >= 0.25) {
+      ctx.fillStyle = 'rgba(74,46,40,0.7)';
+      ctx.beginPath(); ctx.arc(-mw, my - 1.2 * k - smile * 1.4 * k, 1.0 * k, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(mw, my - 1.2 * k - smile * 1.4 * k, 1.0 * k, 0, Math.PI * 2); ctx.fill();
+    }
   }
   ctx.restore();
 
-  // glasses — AUDIT §1.4 — 2.0px HALF-rim (the top arc only) with a gold
-  // brow-bar accent: the signature detail stays legible at phone size and
-  // the full dark barrel that made the eyes read wide-set is gone.
-  const lensW = R * 0.38, lensH = R * 0.3;
+  // glasses — FIX C3: REAL spectacles. Full thin rims around each lens, a
+  // bridge over the nose, temples running to the ears, and one restrained
+  // gold accent line on the top rim — legible as eyewear at every scale,
+  // not a floating wire.
+  const lensW = R * 0.20, lensH = R * 0.155;
+  ctx.strokeStyle = 'rgba(14,20,38,0.88)';
+  ctx.lineWidth = sw(1.9 * k);
   for (const s of [-1, 1]) {
     const ex = s * eyeX + gaze * 0.6;
-    // half-rim — the top arc only, the lens bottom stays open
-    ctx.strokeStyle = 'rgba(14,20,38,0.88)';
-    ctx.lineWidth = 2.0;
     ctx.beginPath();
-    ctx.moveTo(ex - lensW / 2, eyeY - lensH * 0.08);
-    ctx.quadraticCurveTo(ex, eyeY - lensH * 0.62, ex + lensW / 2, eyeY - lensH * 0.08);
-    ctx.stroke();
-    // gold brow-bar accent riding the rim
-    ctx.strokeStyle = 'rgba(233,196,106,0.65)';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(ex - lensW / 2 + 1.5, eyeY - lensH * 0.30);
-    ctx.quadraticCurveTo(ex, eyeY - lensH * 0.80, ex + lensW / 2 - 1.5, eyeY - lensH * 0.30);
+    ctx.ellipse(ex, eyeY - R * 0.01, lensW, lensH, 0, 0, Math.PI * 2);
     ctx.stroke();
   }
-  // bridge + temples — same ink
+  // bridge
   ctx.beginPath();
-  ctx.moveTo(-eyeX + lensW / 2 + gaze * 0.6, eyeY - 2);
-  ctx.quadraticCurveTo(gaze * 0.6, eyeY - 5, eyeX - lensW / 2 + gaze * 0.6, eyeY - 2);
+  ctx.moveTo(-eyeX + lensW + gaze * 0.6, eyeY - R * 0.045);
+  ctx.quadraticCurveTo(gaze * 0.6, eyeY - R * 0.115, eyeX - lensW + gaze * 0.6, eyeY - R * 0.045);
   ctx.stroke();
+  // temples to the ears
   for (const s of [-1, 1]) {
     ctx.beginPath();
-    ctx.moveTo(s * (eyeX + lensW / 2) + gaze * 0.6, eyeY - 2);
-    ctx.lineTo(s * (R * 0.8), eyeY - 3);
+    ctx.moveTo(s * (eyeX + lensW) + gaze * 0.6, eyeY - R * 0.02);
+    ctx.lineTo(s * R * 0.82, eyeY - R * 0.03);
+    ctx.stroke();
+  }
+  // the restrained gold accent on the top rims
+  ctx.strokeStyle = 'rgba(233,196,106,0.55)';
+  ctx.lineWidth = sw(1.0 * k);
+  for (const s of [-1, 1]) {
+    const ex = s * eyeX + gaze * 0.6;
+    ctx.beginPath();
+    ctx.ellipse(ex, eyeY - R * 0.01, lensW, lensH, 0, Math.PI * 1.18, Math.PI * 1.82);
     ctx.stroke();
   }
   ctx.restore();
 }
+
 function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
