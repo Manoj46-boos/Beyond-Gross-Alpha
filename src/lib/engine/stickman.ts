@@ -107,7 +107,10 @@ function pt(x: number, y: number, angDeg: number, len: number): { x: number; y: 
 export function armIk(sx: number, sy: number, tx: number, ty: number, lenU: number, lenL: number, bend: 1 | -1 = 1): { aU: number; aL: number } {
   const dx = tx - sx, dy = ty - sy;
   let d = Math.hypot(dx, dy);
-  d = Math.min(d, (lenU + lenL) * 0.985);
+  // FIX C11/M2 — reach honesty: the IK clamps at 90% of arm length (was 98.5%,
+  // board-straight rods). Real gesture carriage keeps a visible elbow bend;
+  // only the pointer's length bridges the last distance to the target.
+  d = Math.min(d, (lenU + lenL) * 0.90);
   const base = Math.atan2(dx, dy) / D2R; // angle from vertical-down
   const cosA = clamp((lenU * lenU + d * d - lenL * lenL) / (2 * lenU * d), -1, 1);
   const a1 = Math.acos(cosA) / D2R;
@@ -1451,41 +1454,60 @@ export function drawStickman(
     // AUDIT C-02 — hands ×1.4 (7.2→10.0 near, 6.2→8.4 far): fingers resolve as
     // fingers at 1080p instead of a cream smudge
     drawHand(ctx, wrist.x, wrist.y, handAng, near ? 10.0 : 8.4, near, p.hand ?? 'open', W, inkW);
-    // AUDIT C-01 — the presentation pointer: a slim rod parented to the point
-    // hand, ~200px on screen at ANY rig scale (length is scale-compensated),
-    // ink shaft with a gold tip. Extends the reach contract so mid-distance
-    // targets are TOUCHED, not gestured at; beyond even the pointer, the data
-    // scenes draw the sight line (scenes-figure).
+    // FIX C11 — the presentation pointer is a REAL PROP: a presenter's baton
+    // with an ink shaft 7-9px wide on screen at any rig scale, a gold pommel,
+    // ferrule and tip with a rim-light catch, a 3° carriage droop, and a soft
+    // under-shadow so it carries weight — not a 2.1px needle the eye reads as
+    // an artifact line.
     if (near && (p.hand ?? 'open') === 'point') {
-      const pLen = clamp(200 / scale, 70, 150);
-      const tipP = pt(wrist.x, wrist.y, handAng, pLen);
-      const buttP = pt(wrist.x, wrist.y, handAng, -5);
+      const pLen = clamp(190 / scale, 70, 140);
+      const rodAng = handAng + 3; // carriage droop
+      const tipP = pt(wrist.x, wrist.y, rodAng, pLen);
+      const buttP = pt(wrist.x, wrist.y, rodAng, -6);
+      const rodW = clamp(8 / scale, 2.6, 5.2);
+      const ux = -Math.cos(rodAng * D2R), uy = Math.sin(rodAng * D2R); // under-edge normal (away from the upper-left key)
       ctx.lineCap = 'round';
-      // butt counterweight
-      ctx.strokeStyle = 'rgba(90,110,150,0.9)';
-      ctx.lineWidth = 3.6;
+      // soft under-shadow
+      ctx.strokeStyle = 'rgba(5,8,16,0.35)';
+      ctx.lineWidth = rodW * 1.15;
       ctx.beginPath();
-      ctx.moveTo(buttP.x, buttP.y);
-      ctx.lineTo(wrist.x, wrist.y);
+      ctx.moveTo(wrist.x + ux * rodW * 0.9, wrist.y + uy * rodW * 0.9);
+      ctx.lineTo(tipP.x + ux * rodW * 0.9, tipP.y + uy * rodW * 0.9);
       ctx.stroke();
       // ink shaft
       ctx.strokeStyle = INK;
-      ctx.lineWidth = 2.1;
+      ctx.lineWidth = rodW;
       ctx.beginPath();
-      ctx.moveTo(wrist.x + Math.sin(handAng * D2R) * 3, wrist.y + Math.cos(handAng * D2R) * 3);
+      ctx.moveTo(buttP.x, buttP.y);
       ctx.lineTo(tipP.x, tipP.y);
       ctx.stroke();
-      // gold business end — the light-catching tip
-      const gTip = pt(wrist.x, wrist.y, handAng, pLen - 12);
+      // lit top edge — one light, upper-left
+      ctx.strokeStyle = 'rgba(244,229,191,0.32)';
+      ctx.lineWidth = Math.max(0.9, rodW * 0.22);
+      ctx.beginPath();
+      ctx.moveTo(wrist.x - ux * rodW * 0.3, wrist.y - uy * rodW * 0.3);
+      ctx.lineTo(tipP.x - ux * rodW * 0.3, tipP.y - uy * rodW * 0.3);
+      ctx.stroke();
+      // gold pommel at the butt
+      ctx.fillStyle = PALETTE.goldDeep;
+      ctx.beginPath();
+      ctx.arc(buttP.x, buttP.y, rodW * 0.8, 0, Math.PI * 2);
+      ctx.fill();
+      // gold ferrule + tip ball at the business end
+      const ferS = pt(wrist.x, wrist.y, rodAng, pLen - rodW * 3.0);
       ctx.strokeStyle = rgba(PALETTE.goldBright, 0.95);
-      ctx.lineWidth = 2.7;
+      ctx.lineWidth = rodW * 1.02;
       ctx.beginPath();
-      ctx.moveTo(gTip.x, gTip.y);
+      ctx.moveTo(ferS.x, ferS.y);
       ctx.lineTo(tipP.x, tipP.y);
       ctx.stroke();
+      const tg = ctx.createRadialGradient(tipP.x - rodW * 0.3, tipP.y - rodW * 0.3, rodW * 0.1, tipP.x, tipP.y, rodW * 0.95);
+      tg.addColorStop(0, PALETTE.goldPale);
+      tg.addColorStop(0.6, PALETTE.goldBright);
+      tg.addColorStop(1, PALETTE.goldDeep);
+      ctx.fillStyle = tg;
       ctx.beginPath();
-      ctx.arc(tipP.x, tipP.y, 1.8, 0, Math.PI * 2);
-      ctx.fillStyle = PALETTE.goldPale;
+      ctx.arc(tipP.x, tipP.y, rodW * 0.88, 0, Math.PI * 2);
       ctx.fill();
     }
     return { wrist: { x: wrist.x, y: wrist.y } };
@@ -1716,5 +1738,5 @@ export function shoulderScreen(
 /** Maximum honest reach of the near arm in screen px: full arm extension
  *  (the armIk clamp) plus the presentation pointer's 200px when carried. */
 export function armReachPx(rigScale: number, pointerPx = 0): number {
-  return (U_ARM + L_ARM) * 0.985 * rigScale + pointerPx;
+  return (U_ARM + L_ARM) * 0.90 * rigScale + pointerPx;
 }
