@@ -1132,13 +1132,16 @@ export function drawStickman(
     // C-08 — sleeved knee: the shin starts 2.5px inside the joint (cloth
     // overlaps the joint) and a soft crease replaces the polished sphere
     const kSx = knee.x - Math.sin(thighAng * D2R) * 2.5, kSy = knee.y - Math.cos(thighAng * D2R) * 2.5;
-    bone(ctx, kSx, kSy, knee2.x, knee2.y, 2, { w0: W * 0.8, w1: W * 0.6, lit: SUIT.lit, dark: SUIT.dark, rim: near ? rim * 0.5 : 0, far: !near, ink: inkW, shade: 0.24 });
+    // FIX C4/M1 leg widths — shin widens at the break (W*0.6→W*0.68) so the
+    // trouser hem MEETS the shoe instead of ending above it (the 'socks' read)
+    bone(ctx, kSx, kSy, knee2.x, knee2.y, 2, { w0: W * 0.8, w1: W * 0.68, lit: SUIT.lit, dark: SUIT.dark, rim: near ? rim * 0.5 : 0, far: !near, ink: inkW, shade: 0.24 });
     // FIX C7 — rounded joint cap bridges the bone width step, then a smaller
     // crease reads as trouser cloth INSIDE the covered joint
     jointCap(ctx, knee.x, knee.y, W * 0.38, !near);
     clothCrease(ctx, knee.x + Math.sin((thighAng + kneeBend) * D2R) * 2.0, knee.y + Math.cos((thighAng + kneeBend) * D2R) * 2.0, thighAng + kneeBend - 90, W * 0.34);
-    // shoe — tailored profile: heel, vamp, toe cap, sole line, gold welt (D2).
-    // No more gold-outlined ellipse: the 'hoverboard ring' read is dead.
+    // shoe — tailored profile (FIX C5, frame audit): lengthened 21→~29 local
+    // units so a 340px figure stops reading 'socks', a visible stacked heel
+    // block, and the instep raised so the trouser hem breaks ON the shoe.
     ctx.save();
     ctx.translate(knee2.x + side * 1.1, knee2.y);
     ctx.rotate(Math.atan2(foot.y - knee2.y, foot.x - knee2.x));
@@ -1146,13 +1149,13 @@ export function drawStickman(
     sg.addColorStop(0, SHOE.lit);
     sg.addColorStop(1, SHOE.dark);
     ctx.beginPath();
-    ctx.moveTo(-3, -4.2);
-    ctx.quadraticCurveTo(6, -5.4, 11, -3.2);
-    ctx.quadraticCurveTo(15.5, -1.4, 15.5, 1.2);
-    ctx.quadraticCurveTo(15.5, 3.4, 12, 3.6);
-    ctx.lineTo(-4.5, 3.9);
-    ctx.quadraticCurveTo(-6.5, 3.8, -6, 1.5);
-    ctx.quadraticCurveTo(-5.5, -2.5, -3, -4.2);
+    ctx.moveTo(-8.2, -5.6);
+    ctx.quadraticCurveTo(3, -7.4, 11.5, -5.2);     // instep top — the hem breaks here
+    ctx.quadraticCurveTo(18.5, -2.8, 20.2, 0.2);   // toe spring
+    ctx.quadraticCurveTo(20.8, 3.0, 17, 3.5);      // toe cap down
+    ctx.lineTo(-7.5, 3.9);                         // sole
+    ctx.quadraticCurveTo(-9.6, 3.8, -9.2, 1.0);    // heel back
+    ctx.quadraticCurveTo(-9.2, -2.8, -8.2, -5.6);  // ankle back
     ctx.closePath();
     ctx.fillStyle = sg;
     ctx.fill();
@@ -1160,17 +1163,24 @@ export function drawStickman(
     ctx.strokeStyle = INK;
     ctx.lineWidth = inkW;
     ctx.stroke();
+    // C5 — the stacked heel block under the ankle
+    roundRectPath(ctx, -9.0, 3.2, 8.2, 3.2, 1.4);
+    ctx.fillStyle = SHOE.dark;
+    ctx.fill();
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = Math.max(0.9, inkW * 0.6);
+    ctx.stroke();
     ctx.strokeStyle = 'rgba(5,8,16,0.8)';
     ctx.lineWidth = 1.1;
     ctx.beginPath();
-    ctx.moveTo(-6, 3.2);
-    ctx.lineTo(15, 2.9);
+    ctx.moveTo(-8, 3.4);
+    ctx.lineTo(19.5, 3.0);
     ctx.stroke();
     ctx.strokeStyle = 'rgba(212,175,55,0.5)';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(-5.5, 1.6);
-    ctx.lineTo(14.8, 1.3);
+    ctx.moveTo(-7.5, 1.8);
+    ctx.lineTo(19.8, 1.4);
     ctx.stroke();
     ctx.restore();
   };
