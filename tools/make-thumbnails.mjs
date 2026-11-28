@@ -49,8 +49,8 @@ for (const w of ['400', '500', '600', '700', '800']) registerFont(path.join(F, `
 const { drawThumbnail } = require(path.join(BUILD, 'thumbnail.js'));
 
 fs.mkdirSync(OUT, { recursive: true });
-const NAMES = ['T1_split_statement', 'T2_not_reported_stamp', 'T3_the_gap', 'T4_principal_face_number'];
-for (let v = 0; v < 4; v++) {
+const NAMES = ['T1_split_statement', 'T2_not_reported_stamp', 'T3_the_gap', 'T4_principal_face_number', 'T5_principal_bust_numbers'];
+for (let v = 0; v < 5; v++) {
   const canvas = createCanvas(1280, 720);
   const ctx = canvas.getContext('2d');
   drawThumbnail(ctx, 1280, 720, v, 'Beyond Gross Alpha');

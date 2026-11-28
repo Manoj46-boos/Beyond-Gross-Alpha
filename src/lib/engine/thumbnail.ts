@@ -5,7 +5,7 @@
  * number, the dominant CTR pattern in finance-education feeds)
  */
 
-export type ThumbnailVariant = 0 | 1 | 2 | 3;
+export type ThumbnailVariant = 0 | 1 | 2 | 3 | 4;
 
 import { PALETTE, rgba, setFont, roundRect, glassCard, goldFillText, FONT_DISPLAY, FONT_UI } from './theme';
 import { poseAt, applyMood, drawStickman, companionArm } from './stickman';
@@ -131,6 +131,42 @@ export function drawThumbnail(ctx: CanvasRenderingContext2D, W: number, H: numbe
     const px = W * 0.185, groundY = H * 0.94, rigScale = 2.35;
     companionArm(pose, px, groundY, rigScale, { x: W * 0.47, y: H * 0.30 }, 'point');
     drawStickman(ctx, px, groundY, rigScale, 620, { pose, alpha: 1, faceScale: 1.6, rimBoost: 0.08, reflection: true }, 7);
+  } else if (variant === 4) {
+    // T5 — U6 (upgrade plan): the face LARGE on the left third, $13.7M/$8.6M
+    // stacked right, the $5.1M line as the only caption. The CTR pattern the
+    // audit's Figure 5 showed T4 was one step away from: the bust crop makes
+    // the gentleman the dominant element instead of the numbers.
+    const rg2 = ctx.createLinearGradient(0, H * 0.30, 0, H * 0.46);
+    rg2.addColorStop(0, '#F08A8D');
+    rg2.addColorStop(1, PALETTE.down);
+    setFont(ctx, 118, 900, FONT_DISPLAY);
+    ctx.textAlign = 'left';
+    goldFillText(ctx, '$13.7M', W * 0.52, H * 0.30, 118, 900, FONT_DISPLAY);
+    ctx.fillStyle = rg2;
+    ctx.fillText('$8.6M', W * 0.52, H * 0.52);
+    ctx.strokeStyle = rgba(PALETTE.gold, 0.55);
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.moveTo(W * 0.52, H * 0.36);
+    ctx.lineTo(W * 0.95, H * 0.36);
+    ctx.stroke();
+    setFont(ctx, 44, 800, FONT_UI);
+    try { (ctx as any).letterSpacing = '9px'; } catch { /* noop */ }
+    ctx.fillStyle = PALETTE.goldBright;
+    ctx.fillText('THE $5.1M LINE', W * 0.52, H * 0.70);
+    try { (ctx as any).letterSpacing = '0px'; } catch { /* noop */ }
+    // the gentleman at bust scale — face fills the left third, pointing right
+    // into the stacked numbers, spotlight pool anchoring the face
+    const spot5 = ctx.createRadialGradient(W * 0.20, H * 0.32, 10, W * 0.20, H * 0.32, W * 0.26);
+    spot5.addColorStop(0, rgba(PALETTE.gold, 0.22));
+    spot5.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = spot5;
+    ctx.fillRect(0, 0, W, H);
+    const pose5 = poseAt('thumb-bust', 620, 620, [], [], undefined, 'present');
+    applyMood(pose5, 'reveal', 620, 3);
+    const px5 = W * 0.205, groundY5 = H * 1.28, rigScale5 = 3.3;
+    companionArm(pose5, px5, groundY5, rigScale5, { x: W * 0.50, y: H * 0.30 }, 'point');
+    drawStickman(ctx, px5, groundY5, rigScale5, 620, { pose: pose5, alpha: 1, faceScale: 1.7, rimBoost: 0.08 }, 9);
   } else {
     // T3 — 92% vs 17% THE GAP
     setFont(ctx, 140, 900, FONT_DISPLAY);
@@ -157,6 +193,6 @@ export function drawThumbnail(ctx: CanvasRenderingContext2D, W: number, H: numbe
   setFont(ctx, 22, 700, FONT_UI);
   try { (ctx as any).letterSpacing = '4px'; } catch { /* noop */ }
   ctx.fillStyle = rgba(PALETTE.inkSoft, 0.8);
-  ctx.fillText(channelName.toUpperCase(), 40, variant === 3 ? H - 40 : 44);
+  ctx.fillText(channelName.toUpperCase(), 40, variant === 3 || variant === 4 ? H - 40 : 44);
   try { (ctx as any).letterSpacing = '0px'; } catch { /* noop */ }
 }
