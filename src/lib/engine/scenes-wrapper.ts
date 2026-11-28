@@ -780,7 +780,8 @@ export function elmVerdictScene(g: SceneCtx): void {
     ctx.save();
     ctx.globalAlpha *= ca;
     ctx.beginPath();
-    ctx.arc(w - 160, 300, 46, 0, Math.PI * 2);
+    // H2 — the medallion IS the '?' glyph's backdrop (owned)
+    tagGraphic('band', () => ctx.arc(w - 160, 300, 46, 0, Math.PI * 2));
     const cg = ctx.createLinearGradient(w - 200, 260, w - 120, 340);
     cg.addColorStop(0, '#F6E7BD');
     cg.addColorStop(1, PALETTE.goldDeep);

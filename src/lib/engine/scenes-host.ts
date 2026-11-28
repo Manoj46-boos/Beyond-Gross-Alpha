@@ -237,7 +237,7 @@ export function hostScene(g: SceneCtx): void {
       // mini statement card — the answers, held above the palm
       const lines: string[] = comp.lines ?? ['answered'];
       const cw = 320, chh = 96 + lines.length * 34;
-      const cx = palmRS.x + 90, cy = palmRS.y - 130 - chh / 2 + floatY(t, 5, 5, 4200);
+      const cx = palmRS.x + 90, cy = palmRS.y - 118 - chh / 2 + floatY(t, 5, 5, 4200); // GATE FIX — dropped 12px: on 2-line headlines the card's own lines sat Δ21px from the headline's second line
       glassCard(ctx, cx - cw / 2, cy, cw, chh, { r: 14, goldEdge: true });
       setFont(ctx, 28, 700, FONT_UI);
       try { (ctx as any).letterSpacing = '3px'; } catch { /* noop */ }

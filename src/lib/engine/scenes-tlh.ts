@@ -320,7 +320,8 @@ export function tlhMechanicScene(g: SceneCtx): void {
       g2.addColorStop(0, '#B8434A');
       g2.addColorStop(1, PALETTE.downDeep);
       ctx.beginPath();
-      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      // H2 — the stage circle IS the '-20%' label's own backdrop (owned)
+      tagGraphic('band', () => ctx.arc(0, 0, r, 0, Math.PI * 2));
       ctx.fillStyle = g2;
       ctx.fill();
       ctx.fillStyle = 'rgba(255,255,255,0.9)';
@@ -349,7 +350,8 @@ export function tlhMechanicScene(g: SceneCtx): void {
       ctx.translate(cx, cy);
       const r = 42;
       ctx.beginPath();
-      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      // H2 — the 'similar / not identical' circle owns its label (owned)
+      tagGraphic('band', () => ctx.arc(0, 0, r, 0, Math.PI * 2));
       const g3 = ctx.createLinearGradient(-r, -r, r, r);
       g3.addColorStop(0, hexLerp(PALETTE.up, '#0F3D2C', 0.2));
       g3.addColorStop(1, PALETTE.upDeep);

@@ -185,7 +185,7 @@ function splitStatement(
   // $5,100,000 numeral past CAPTION_SAFE_TOP (786), so the premium handoff is
   // a CROSS-FADE: as the delta block arrives (stage 2), the footnote yields
   // the band — the payoff number always owns the composition.
-  const fnYield = stage >= 2 ? 1 - stageA : 1;
+  const fnYield = stage >= 2 ? 1 - clamp01(stageA * 3) : 1; // GATE FIX — the footnote drops below the ghost floor BEFORE the kicker clears 0.35: no co-visibility window
   ctx.globalAlpha = alpha * 0.8 * fnYield;
   ctx.fillStyle = PALETTE.inkFaint;
   ctx.textAlign = 'left';
@@ -580,7 +580,7 @@ export function finalLinesScene(g: SceneCtx): void {
     ctx.save();
     ctx.globalAlpha = a;
     ctx.translate(0, rise);
-    setFont(ctx, i >= 2 ? 78 : 84, 700, FONT_DISPLAY);
+    setFont(ctx, i >= 2 ? 72 : 84, 700, FONT_DISPLAY); // GATE FIX — the 78px rows measured 1816px wide, crossing both 40px margins
     if (r.accent) {
       goldFillText(ctx, r.text, W / 2, H * 0.30 + i * 118, 84, 800, FONT_DISPLAY, 'center');
     } else {

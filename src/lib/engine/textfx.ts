@@ -4,7 +4,7 @@
  * signature reading experience of this film.
  */
 
-import { PALETTE, rgba, setFont, roundRect, glassCard, wrapText, FONT_DISPLAY, FONT_UI, fitText, goldRule, diamond, hexLerp, drawAlphaGlyph } from './theme';
+import { PALETTE, rgba, setFont, roundRect, glassCard, wrapText, FONT_DISPLAY, FONT_UI, fitText, goldRule, diamond, hexLerp, drawAlphaGlyph, tagGraphic } from './theme';
 import { clamp01, easeOutCubic, easeInOutSine, springTo, hash01, hashStr } from './easing';
 import { goldDust } from './fx';
 
@@ -150,7 +150,7 @@ export function drawSourceChip(
   // 1066). While captions paint, the chip moves up to y=960 in the left
   // column — horizontally clear of the centred pill — so the karaoke sweep
   // owns the caption line.
-  const x = MARGIN_X, y = capOn ? 960 : 1006;
+  const x = MARGIN_X, y = capOn ? 960 : 1000; // GATE FIX — baseline bottom clears the 40px frame margin (1040)
   ctx.save();
   ctx.globalAlpha = alpha;
   glassCard(ctx, x, y, w, h, { r: 10, shadow: false, fill: 'rgba(9,13,24,0.7)', border: rgba(PALETTE.gold, 0.3), sheen: false });
@@ -384,7 +384,8 @@ export function statementAnchor(
   horizon.addColorStop(0.72, rgba(PALETTE.gold, boost ? 0.26 + 0.08 * breathe : 0.10 + 0.05 * breathe));
   horizon.addColorStop(1, rgba(PALETTE.gold, 0));
   ctx.fillStyle = horizon;
-  ctx.fillRect(m, H * 0.78, W - 2 * m, H * 0.2);
+  // H2 — the horizon pool is room atmosphere, owned like paintStage
+  tagGraphic('glow', () => ctx.fillRect(m, H * 0.78, W - 2 * m, H * 0.2));
   ctx.strokeStyle = rgba(PALETTE.steel, hairA);
   ctx.lineWidth = 1;
   for (const vx of [m + 96, W - m - 96]) {

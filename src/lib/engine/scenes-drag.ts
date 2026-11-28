@@ -5,7 +5,7 @@
  */
 
 import { SceneCtx } from './scene-context';
-import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, kicker, chip, hexLerp, dimRect, takeaway } from './theme';
+import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, kicker, chip, hexLerp, dimRect, takeaway, tagGraphic } from './theme';
 import { clamp01, easeOutCubic, springTo, hash01, fmtComma, fmtMoney } from './easing';
 import { goldDust, impactRing, softBloom, glowLine, spinToken, floatY, focusPing, impactPuff } from './fx';
 import { panelTitle, lineChart, column, statCard, barRow } from './charts';
@@ -206,7 +206,8 @@ export function memoCardScene(g: SceneCtx): void {
     let sx = x + 52;
     for (const seg of segs) {
       const w = ctx.measureText(seg).width;
-      if (/^\[/.test(seg)) ctx.fillRect(sx - 2, y + 160 + i * 64 - 20, w + 4, 26);
+      // H2 — the redaction bar is the joke: it covers the text ON PURPOSE
+      if (/^\[/.test(seg)) tagGraphic('band', () => ctx.fillRect(sx - 2, y + 160 + i * 64 - 20, w + 4, 26));
       sx += w;
     }
     ctx.restore();
@@ -569,7 +570,9 @@ export function signatureCurveScene(g: SceneCtx): void {
   const badgeP = clamp01((t - 3000) / 600);
   if (badgeP > 0) {
     const bw = 330, bh = 110;
-    const bx = chartX + chartW + 50, by = chartY + 60;
+    // GATE FIX — the badge sat 136px past the 1880 margin (its card to x=2016);
+    // pulled to the chart's inner edge
+    const bx = chartX + chartW - 260, by = chartY + 60;
     ctx.save();
     ctx.globalAlpha = badgeP;
     const ent = springTo(0.8, 1, (t - 3000), 170, 16);
@@ -593,14 +596,16 @@ export function signatureCurveScene(g: SceneCtx): void {
   }
   const holdP = clamp01((t - (s.hold ?? 4200)) / 1200);
   if (holdP > 0) {
-    const bx = chartX + chartW + 50;
+    // GATE FIX — the hold note centred at x=1856 spilled to x=2034; re-centred
+    // under the pulled-in badge
+    const bx = chartX + chartW - 260;
     ctx.save();
     ctx.globalAlpha = holdP * 0.9;
     setFont(ctx, 30, 600, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.inkSoft;
     ctx.textAlign = 'center';
     wrapText(ctx, 'It isn’t a scare number. It’s arithmetic.', 340, 30, 600, FONT_DISPLAY).forEach((ln, i) => {
-      ctx.fillText(ln, bx + 170, 560 + i * 40);
+      ctx.fillText(ln, bx + 165, 560 + i * 40);
     });
     ctx.textAlign = 'left';
     ctx.restore();

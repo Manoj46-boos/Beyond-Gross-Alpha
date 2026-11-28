@@ -41,7 +41,7 @@
  * gentleman" without captions or numbers. Verify after every silhouette edit.
  */
 
-import { PALETTE, rgba, hexLerp } from './theme';
+import { PALETTE, rgba, hexLerp, tagGraphic } from './theme';
 import { clamp01, clamp, lerp, springTo, hashStr, hash01, easeOutCubic, easeInOutSine } from './easing';
 
 // ── rig constants ────────────────────────────────────────────────────────────
@@ -1035,7 +1035,8 @@ export function drawReflection(
   ctx.save();
   ctx.globalAlpha = 0.5;
   ctx.fillStyle = fg;
-  ctx.fillRect(cx - 78 * scale, groundY - 2, 156 * scale, fadeH);
+  // H2 — the ground pool is the figure's own contact shadow (owned)
+  tagGraphic('shadow', () => ctx.fillRect(cx - 78 * scale, groundY - 2, 156 * scale, fadeH));
   ctx.restore();
 }
 
