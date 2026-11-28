@@ -852,6 +852,13 @@ export function secCaseScene(g: SceneCtx): void {
     mood: 'urgent',
     avoid: t > 3200,
     impactT: 3200,
-    focal: (si) => (si <= 3 ? { x: W * 0.20 + W * 0.5 - 110, y: 194 + 3 * 74 + 20 } : null),
+    // U2 re-aim — the aim was the card's LOCAL row-3 y (436); the card renders
+    // through the spring transform (translate centre → scale → translate back),
+    // which lands row 3's line end at screen y ≈ 656. The baton pointed 220px
+    // above the datum. Aim now matches the transformed card at rest (ent→1):
+    // x = card right edge − 110, y = y + h/2 + (rowY + 20 − h/2).
+    focal: (si) => (si <= 3
+      ? { x: x + w / 2 + (w - 110 - w / 2), y: y + h / 2 + (194 + 3 * 74 + 20 - h / 2) }
+      : null),
   });
 }

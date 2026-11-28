@@ -16,7 +16,7 @@
 import { SceneCtx } from './scene-context';
 import { poseAt, drawStickman, applyMood, companionArm, companionArmL, palmPosition, shoulderScreen, armReachPx } from './stickman';
 import { PALETTE, rgba } from './theme';
-import { clamp01 } from './easing';
+import { clamp01, clamp, easeOutCubic } from './easing';
 
 export interface FigureOpts {
   /** focal target per playing sentence (screen coords); null = idle stance */
@@ -49,6 +49,15 @@ export function dataSceneFigure(g: SceneCtx, rigScale: number, opts: FigureOpts)
 
   const si = sentenceIdx ?? 0;
   const focal = opts.focal(si);
+  // U2 Law 3 (upgrade plan) — LOOK-THEN-REACH: the eyes + head tilt arrive at
+  // the new datum ≥200ms before the hand. Two mechanics make it deliberate:
+  // (1) the gaze is DATUM-DRIVEN — pose.look saccades (80ms) to the focal's
+  // screen direction at sentence onset instead of its idle 3.4s wander; (2)
+  // during the first 200ms of the sentence the ARM still holds the previous
+  // sentence's target — the hand departs only after the eyes have landed.
+  const LOOK_LEAD_MS = 200;
+  const prevFocal = (si > 0) ? opts.focal(si - 1) : null;
+  const armFocal = (sentenceT != null && sentenceT < LOOK_LEAD_MS && prevFocal) ? prevFocal : focal;
   // FIX D1 (frame audit) — the pointer NEVER floats: the drawn rod's length in
   // screen px (same clamp as the draw pass), the honest arm+rod reach, and a
   // bounded walk of the figure toward far data (≤56px, still inside the left
@@ -71,7 +80,11 @@ export function dataSceneFigure(g: SceneCtx, rigScale: number, opts: FigureOpts)
     // duck out of the way — arms in, weight back (the incoming SEC stamp)
     pose.lean -= 2.6; pose.torsoTilt -= 1.6; pose.rAU -= 12; pose.lAU += 10;
   } else if (focal) {
-    companionArm(pose, px, groundY, rigScale, focal, opts.mode ?? 'point', { tipLen: tipLenLocal });
+    // Law 3 — the eyes saccade to the datum at sentence onset (the head tilt
+    // rides the same lead via vel's head-lag channel)
+    const lookTgt = clamp((focal.x - px) / 520, -1, 1);
+    pose.look = pose.look + (lookTgt - pose.look) * easeOutCubic(clamp01((sentenceT ?? t) / 80));
+    companionArm(pose, px, groundY, rigScale, armFocal, opts.mode ?? 'point', { tipLen: tipLenLocal });
     if (opts.weigh) {
       const next = opts.focal(si + 1) ?? focal;
       companionArmL(pose, px, groundY, rigScale, { x: Math.max(px - 175, next.x - 260), y: next.y }, 'present');
@@ -106,18 +119,18 @@ export function dataSceneFigure(g: SceneCtx, rigScale: number, opts: FigureOpts)
   // now ALWAYS gets the line + the ON-datum contact dot (the presenter's
   // baton-line-dot read), because the alternative — a baton pointing into
   // empty sky — is the one thing the panel called a signature-device killer.
-  if (focal && !opts.avoid) {
+  if (armFocal && !opts.avoid) {
     const sh = shoulderScreen(pose, px, groundY, rigScale);
     const reach = armReachPx(rigScale, pointerPx);
-    const dist = Math.hypot(focal.x - sh.x, focal.y - sh.y);
+    const dist = Math.hypot(armFocal.x - sh.x, armFocal.y - sh.y);
     if (dist > reach) {
       const tip = palmPosition(pose, 1, px, groundY, rigScale, 5 + tipLenLocal);
       const a = clamp01((sentenceT ?? 0) / 200) * (speaking ? 0.62 : 0.3);
       if (a > 0.02) {
-        const dx = focal.x - tip.x, dy = focal.y - tip.y;
+        const dx = armFocal.x - tip.x, dy = armFocal.y - tip.y;
         const l = Math.hypot(dx, dy) || 1;
-        const endX = focal.x - (dx / l) * 12;
-        const endY = focal.y - (dy / l) * 12;
+        const endX = armFocal.x - (dx / l) * 12;
+        const endY = armFocal.y - (dy / l) * 12;
         ctx.save();
         const slg = ctx.createLinearGradient(tip.x, tip.y, endX, endY);
         slg.addColorStop(0, rgba(PALETTE.goldBright, a * 0.25));
