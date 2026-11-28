@@ -294,7 +294,7 @@ export function coldOpenScene(g: SceneCtx): void {
       tagGraphic('band', () => ctx.fillRect(W / 2 - bw / 2, bandY - 34, bw, 68));
       ctx.strokeStyle = rgba(PALETTE.goldBright, 0.75);
       ctx.lineWidth = 1.6;
-      ctx.strokeRect(W / 2 - bw / 2, bandY - 34, bw, 68);
+      tagGraphic('band', () => ctx.strokeRect(W / 2 - bw / 2, bandY - 34, bw, 68));
       setFont(ctx, 30, 800, FONT_UI);
       try { (ctx as any).letterSpacing = '6px'; } catch { /* noop */ }
       ctx.fillStyle = PALETTE.goldBright;
