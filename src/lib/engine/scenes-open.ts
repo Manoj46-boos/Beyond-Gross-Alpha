@@ -5,7 +5,7 @@
  */
 
 import { SceneCtx } from './scene-context';
-import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, goldRule, chip, fitText, kicker, diamond } from './theme';
+import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, goldRule, chip, fitText, kicker, diamond, tagGraphic } from './theme';
 import { clamp01, easeOutCubic, easeInOutCubic, springTo, hash01, fmtMoney } from './easing';
 import { goldDust, impactRing, softBloom, microShake, spinToken, floatY, focusPing, lightBlade, godRays } from './fx';
 import { drawStatement, statementAnchor } from './textfx';
@@ -290,7 +290,8 @@ export function coldOpenScene(g: SceneCtx): void {
       ctx.save();
       ctx.globalAlpha = restage;
       ctx.fillStyle = rgba(PALETTE.gold, 0.14);
-      ctx.fillRect(W / 2 - bw / 2, bandY - 34, bw, 68);
+      // H2 — the tax-line band IS its label's backdrop (owned)
+      tagGraphic('band', () => ctx.fillRect(W / 2 - bw / 2, bandY - 34, bw, 68));
       ctx.strokeStyle = rgba(PALETTE.goldBright, 0.75);
       ctx.lineWidth = 1.6;
       ctx.strokeRect(W / 2 - bw / 2, bandY - 34, bw, 68);
