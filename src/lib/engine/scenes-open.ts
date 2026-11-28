@@ -367,8 +367,14 @@ export function gapBarsScene(g: SceneCtx): void {
     if (ga > 0) {
       ctx.save();
       ctx.globalAlpha = ga * 0.9;
-      const dy2 = y + rh + 70 + rh * 0.5;
-      const dx2 = Math.max(tipB + 90, x + w * 0.30);
+      // FIX E3 (frame audit) — the diamond sat in the row's vertical CENTER,
+      // the same band as the 17% value (tipB+16..tipB+101 after the D4 value
+      // rule), and anchored only 90px past the tip: at phone size the value
+      // and the annotation read as one jammed line. Anchored at
+      // max(tipB+150, x+w*0.34) with the diamond dropped to the row's lower
+      // third — the value and the annotation own separate bands.
+      const dy2 = y + rh + 70 + rh * 0.78;
+      const dx2 = Math.max(tipB + 150, x + w * 0.34);
       diamond(ctx, dx2, dy2, 11, PALETTE.inkMuted);
       setFont(ctx, 26, 600, FONT_UI);
       ctx.fillStyle = PALETTE.inkMuted;
@@ -455,6 +461,10 @@ export function rehookScene(g: SceneCtx): void {
   ctx.textAlign = 'left';
   ctx.restore();
   // a quiet question-mark diamond row: five ticks, the promise made visual
+  // FIX E2 (frame audit) — the row sat at H*0.70 (756) with numerals at 814:
+  // the caption pill's top (~796, CAPTION_SAFE_TOP 786) half-covered the
+  // numbers whenever captions ran. Lifted to H*0.66 — numerals now clear the
+  // pill by ~15px and the row keeps its breathing room above the caption zone.
   const ta = clamp01((t - 800) / 700);
   if (ta > 0) {
     ctx.save();
@@ -463,7 +473,7 @@ export function rehookScene(g: SceneCtx): void {
       const dx = W / 2 + (i - 2) * 74;
       const ds = 12 + 2.2 * Math.sin(t / 2200 + i * 1.4);
       ctx.save();
-      ctx.translate(dx, H * 0.70);
+      ctx.translate(dx, H * 0.66);
       ctx.rotate(Math.PI / 4);
       ctx.fillStyle = rgba(PALETTE.gold, 0.85);
       ctx.fillRect(-ds / 2, -ds / 2, ds, ds);
@@ -474,7 +484,7 @@ export function rehookScene(g: SceneCtx): void {
       setFont(ctx, 26, 700, FONT_UI);
       ctx.fillStyle = PALETTE.inkSoft;
       ctx.textAlign = 'center';
-      ctx.fillText(String(i + 1), dx, H * 0.70 + 58);
+      ctx.fillText(String(i + 1), dx, H * 0.66 + 58);
       ctx.textAlign = 'left';
     }
     ctx.restore();
