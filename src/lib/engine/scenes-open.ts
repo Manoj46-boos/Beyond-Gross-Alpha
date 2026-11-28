@@ -179,7 +179,14 @@ function splitStatement(
     }
   }
   const baseSize = 28, supSize = Math.round(baseSize * 0.62), supRaise = Math.round(baseSize * 0.38);
-  ctx.globalAlpha = alpha * 0.8;
+  // FIX E1 (frame audit) — the footnote sat 14px under the stage-2 delta
+  // kicker with ~190px x-overlap: the film's most important number landed in
+  // a pile of overlapping text. Moving the delta block lower would push the
+  // $5,100,000 numeral past CAPTION_SAFE_TOP (786), so the premium handoff is
+  // a CROSS-FADE: as the delta block arrives (stage 2), the footnote yields
+  // the band — the payoff number always owns the composition.
+  const fnYield = stage >= 2 ? 1 - stageA : 1;
+  ctx.globalAlpha = alpha * 0.8 * fnYield;
   ctx.fillStyle = PALETTE.inkFaint;
   ctx.textAlign = 'left';
   const totalW = runs.reduce((acc, r) => {
