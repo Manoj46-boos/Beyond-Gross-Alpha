@@ -1,9 +1,11 @@
-/**
+/** 
  * SCRIPT — "After-Tax Returns: The Metric Most Advisors Ignore" (Episode 3).
  * VO blocks are verbatim from After-Tax_Returns_MASTER_SCRIPT.md.
  * Every statistic carries its source chip (the script's retention device);
  * musicOut marks the score-drop moments (Betterment story, final lines).
  */
+
+import { splitSentences } from './easing';
 
 export interface BeatSpec {
   vo: string;
@@ -484,6 +486,44 @@ export const TAGS = [
   'direct indexing', 'exchange funds', 'high net worth', 'wealth management', 'tax drag',
   'ETF vs mutual fund taxes', 'step up basis', 'financial advisor questions',
 ];
+
+// ── U3 (upgrade plan) — gesture coverage + signature gestures ────────────────
+// Every figure-bearing SENTENCE now declares a pool gesture, so the body
+// never falls back to the random sentenceHash pick on narrated speech. The
+// mapper is deterministic and content-aware, and it reaches into the four
+// SIGNATURE gestures the audience learns across the film:
+//   leanin (the secret lean-in) · verdict (both-palms-open) ·
+//   behind (hand-behind-back at quiet moments) · pointcount (enumerations).
+const FIGURE_SCENE_TYPES = new Set([
+  'host', 'growthCurves', 'signatureCurve', 'locationMap', 'trapTile', 'iraSplit',
+  'bpsCompare', 'waterfall', 'vendorCompare', 'wealthfrontCase', 'secCase',
+  'distribBars', 'benchmarkBar', 'pitchDeck', 'exchangeFund', 'fiveQuestions', 'gapBars',
+]);
+
+function gestureFor(text: string, idx: number, sceneType: string): string {
+  const t = text.toLowerCase();
+  if (/\b(secret|nobody|never told|quietly|whisper|between us)\b/.test(t)) return 'leanin';
+  if (/\b(that's the|the difference|the whole game|bottom line|in other words|only what you kept)\b/.test(t) || /\bverdict\b/.test(t)) return 'verdict';
+  if (/\?/.test(text) || /\b(imagine|think about|consider|ask yourself)\b/.test(t)) return 'open';
+  if (/\b(but|however|on the other hand|versus|vs\.?|instead|the catch)\b/.test(t)) return 'sweep';
+  if (/\b(first|second|third|fourth|fifth|finally)\b/.test(t) || /\b(one|two|three|five|seven|nine|ten)\b.*\b(questions|things|reasons|steps|list)\b/.test(t)) return 'pointcount';
+  if (/[$%]|\b\d/.test(t)) return 'present';
+  if (/\b(hold|silence|quiet|pause|sit with)\b/.test(t)) return 'behind';
+  if (/\b(compare|weigh|balance|trade|versus)\b/.test(t)) return 'weigh';
+  if (/\b(think|consider the|reflect|remember)\b/.test(t)) return 'chin';
+  // quiet narrative sentences on host beats take the hand-behind-back stance
+  if (sceneType === 'host' && idx % 3 === 2 && text.split(/\s+/).length < 9) return 'behind';
+  return idx % 2 === 0 ? 'explain' : 'rest';
+}
+
+SCRIPT.forEach((chapter) => chapter.beats.forEach((b) => {
+  if (!FIGURE_SCENE_TYPES.has(b.scene.type)) return;
+  const sentences = splitSentences(b.vo);
+  if (!b.gestures) b.gestures = {};
+  sentences.forEach((s, i) => {
+    if (b.gestures![i] == null) b.gestures![i] = gestureFor(s, i, b.scene.type);
+  });
+}));
 
 export function totalBeats(): number {
   return SCRIPT.reduce((a, c) => a + c.beats.length, 0);

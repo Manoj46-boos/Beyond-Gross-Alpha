@@ -353,6 +353,16 @@ const GESTURES: Gesture[] = [
   { name: 'chin',      rAU: 64, rAL: 118, lAU: -6, lAL: 8, lean: -1, torsoTilt: 3, shoulderTilt: 2, headTilt: 4, brow: -0.15, smile: 0.1 },
   { name: 'rest',      rAU: 8, rAL: 10, lAU: -13, lAL: 11, lean: 0, torsoTilt: 0.5, shoulderTilt: 0, headTilt: 0, brow: 0, smile: 0.08 },
   { name: 'sweep',     rAU: 60, rAL: 34, lAU: -30, lAL: -34, lean: 2.5, torsoTilt: 1, shoulderTilt: 3, headTilt: 2, brow: 0.3, smile: 0.18 },
+  // U3 — the four SIGNATURE gestures the audience learns (the body's brand):
+  { name: 'leanin',    rAU: 30, rAL: 40, lAU: -18, lAL: 20, lean: 5.5, torsoTilt: 4, shoulderTilt: 5, headTilt: 3, brow: 0.3, smile: 0.2 },
+  // the secret lean-in — a real 5.5° forward lean held for the secret's duration
+  { name: 'verdict',   rAU: 22, rAL: 16, lAU: -22, lAL: -14, lean: 1, torsoTilt: 0, shoulderTilt: 1, headTilt: 0, brow: 0.4, smile: 0.22 },
+  // both-palms-open verdict — nothing hidden, the frame's conclusion
+  { name: 'behind',    rAU: -14, rAL: -20, lAU: -10, lAL: 12, lean: -0.5, torsoTilt: 0, shoulderTilt: -1, headTilt: 1, brow: 0, smile: 0.06 },
+  // hand-behind-back at the quiet beat — the held-silence stance
+  { name: 'pointcount', rAU: 55, rAL: 60, lAU: -8, lAL: 10, lean: 1.8, torsoTilt: 1.5, shoulderTilt: 3, headTilt: 2, brow: 0.15, smile: 0.1 },
+  // point-count on enumerated lists — the index taps once per item through the
+  // accent-driven wrist channel (each word strike snaps the pointing hand)
 ];
 
 const STOPWORDS = new Set(['the', 'and', 'a', 'an', 'of', 'to', 'in', 'is', 'it', 'that', 'you', 'your', 'for', 'on', 'with', 'as', 'are', 'this', 'but', 'not', 'at', 'be', 'we', 'so', 'if', 'one', 'what']);
@@ -538,11 +548,12 @@ export function walkPose(phase: number, speed: number): Pose {
   const s = Math.sin(pp);
   const s2 = Math.sin(pp + Math.PI); // other leg
   // arm carriage: swing with the stride, elbows easing as the arm passes the body
-  // M-01 — arm counter-swing ±30° with a REAL elbow flex of 8–26° across the
+  // M-01 — arm counter-swing with a REAL elbow flex of 8–26° across the
   // cycle (speed-independent — the old 14..30·speed read as straight tubes)
-  p.rAU = 8 + s * 30 * speed;
+  // U3 — swing amplitude +25% (±30°→±37.5°): the carriage must read at 1080p
+  p.rAU = 8 + s * 37.5 * speed;
   p.rAL = 26 - 18 * (0.5 + 0.5 * s);
-  p.lAU = -8 + s2 * 30 * speed;
+  p.lAU = -8 + s2 * 37.5 * speed;
   p.lAL = 26 - 18 * (0.5 + 0.5 * s2);
   // (legs are driven from walkPhase inside legDraw — same phase, same source of truth)
   // swing = fraction of the cycle this leg is OFF the ground (cos < 0); the
@@ -552,10 +563,11 @@ export function walkPose(phase: number, speed: number): Pose {
   p.lKnee = Math.max(0, Math.cos(pp)) * 44 * speed + 5;
   p.rAnkle = 0; p.lAnkle = 0;
   // pelvis height: HIGH at mid-stance (ph 0/.5), LOW at double support —
-  // AUDIT C-09 — the hip drop at contact is 6px so the weight-shift actually
-  // registers on film at 1080p
+  // AUDIT C-09 — the hip drop at contact registers the weight-shift at 1080p;
+  // U3 — drop 6px→8px + a visible head-bob nod at contact
   const contact = Math.max(0, -Math.cos(pp * 2));
-  p.rootY = (-6 * (0.5 + 0.5 * Math.cos(pp * 2)) + 6 * contact) * speed;
+  p.rootY = (-8 * (0.5 + 0.5 * Math.cos(pp * 2)) + 8 * contact) * speed;
+  p.headNod = contact * 2.2 * speed; // the contact nod — weight you can see
   p.lean = 1.5 * speed;
   p.torsoTilt = 1.5 * speed;
   // AUDIT C-09 — shoulder counter-rotation 7° (was 4° — buried; 7° reads as a
@@ -1292,15 +1304,15 @@ export function drawStickman(
   // AUDIT C-09 — coat-hem secondary motion: two trailing cloth flaps hang from
   // the hem. FIX M5 — the flaps are ALWAYS ON: the walk cycle lags them by
   // ~90ms (phase-shifted), and standing gestures now drive them through the
-  // word-accent envelope at film-visible gain (±3.2° per strike) plus a quiet
+  // word-accent envelope at film-visible gain (±5.0° per strike — U3 retune) plus a quiet
   // breathing sway — the jacket answers every gesture, not just strides.
   {
     const accM5 = r.wordTimes && r.wordTexts ? accentEnv(r.beatT ?? t, r.wordTimes, r.wordTexts) : 0;
     const flap = clamp(
       (p.walkPhase >= 0 ? -Math.sin(p.walkPhase * Math.PI * 2 + 0.9) * 2.6 * Math.max(0.62, p.walkSpeed) : 0)
-      + accM5 * 3.2 + Math.sin(t / 2400) * 0.5,
-      -7, 7,
-    );
+      + accM5 * 5.0 + Math.sin(t / 2400) * 0.5,
+      -10, 10,
+    ); // U3 — strike gain 3.2→5.0, clamp ±7→±10 degrees
     for (const s of [-1, 1]) {
       ctx.save();
       ctx.translate(s * (HIP_HW + 5), hipY + 6);
@@ -1356,7 +1368,7 @@ export function drawStickman(
   const velLean = r.vel?.lean ?? 0;
   const velBob = r.vel?.rootY ?? 0;
   const accTie = r.wordTimes && r.wordTexts ? accentEnv(r.beatT ?? t, r.wordTimes, r.wordTexts) : 0;
-  const tieSwayDeg = clamp(velLean * -3.2 + velBob * -1.8 + accTie * 6.5, -24, 24);
+  const tieSwayDeg = clamp(velLean * -5.0 + velBob * -1.8 + accTie * 6.5, -24, 24); // U3 — lean gain 3.2→5.0
   const tieBendDeg = clamp(tieSwayDeg * 0.45 + velBob * -1.2 + accTie * 2.4, -14, 14);
   // Phase 1 — burgundy silk: gold is reserved for the pocket-watch chain,
   // the one signature accessory of the gentleman arbitrageur
@@ -1695,7 +1707,7 @@ export function drawStickman(
   const headY = neckY2 - NECK - HEAD_R * 0.92 + p.headNod * -3;
   // overlapping action (D4): the head trails the torso — it arrives ~80ms late,
   // which is the classic animator's tell that the body has weight
-  const lagLean = p.lean - (r.vel?.lean ?? 0) * 5.6; // M-04 — head lag 3.5×
+  const lagLean = p.lean - (r.vel?.lean ?? 0) * 8.5; // M-04 — head lag 3.5×; U3 — multiplier 5.6→8.5: the counter-tilt must register at phone brightness
   const headX = neckX2 + Math.sin((p.headTilt + lagLean) * D2R) * 6;
 
   // (C-03 — the old floating shoulder spheres are gone; the deltoid sleeve
