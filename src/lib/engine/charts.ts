@@ -276,12 +276,20 @@ export function barRow(ctx: CanvasRenderingContext2D, o: BarRowOpts): number {
   setFont(ctx, o.valueSize ?? 38, 800, FONT_DISPLAY);
   const vw = ctx.measureText(vText).width;
   const frac = (value / maxV) * grow;
-  if (fw > 4 && frac > 0.7 && vw + 34 < fw) {
+  // FIX F2 (frame audit) — white-on-gold fails at phone size: for the bright
+  // gold tone the value ALWAYS prints outside the fill in ink (the
+  // long-fill clamp keeps it inside the track); the dark fills (platinum,
+  // up/down/steel) keep the white-inside rule, with the cap zone strengthened
+  // 0.5→0.75 so the white value stays legible on the platinum gradient.
+  if (fw > 4 && frac > 0.7 && tone === 'gold') {
+    ctx.fillStyle = PALETTE.ink;
+    ctx.fillText(vText, Math.min(bx + fw + 16, bx + bw - vw - 8), y + h * 0.5 + 12);
+  } else if (fw > 4 && frac > 0.7 && vw + 34 < fw) {
     // dark cap zone under the value
     const capW = Math.min(fw * 0.5, vw + 52);
     const cg = ctx.createLinearGradient(bx + fw - capW, 0, bx + fw, 0);
     cg.addColorStop(0, 'rgba(10,14,26,0)');
-    cg.addColorStop(1, 'rgba(10,14,26,0.5)');
+    cg.addColorStop(1, 'rgba(10,14,26,0.75)');
     roundRect(ctx, bx + fw - capW, y + h * 0.18, capW, h * 0.64, 8);
     ctx.fillStyle = cg;
     ctx.fill();
