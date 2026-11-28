@@ -5,7 +5,7 @@
  * sub-boom shake. All pure functions of (t, seed) — scrub-exact.
  */
 
-import { PALETTE, rgba, roundRect, glowBlob } from './theme';
+import { PALETTE, rgba, roundRect, glowBlob, tagGraphic } from './theme';
 import { clamp01, easeOutCubic, easeInOutSine, hash01, hashRange } from './easing';
 
 // ── camera state (published by director.ts, consumed here for parallax) ──────
@@ -68,12 +68,14 @@ export function bokehField(ctx: CanvasRenderingContext2D, W: number, H: number, 
     if (a < 0.008) continue;
     const col = gold && i % 3 === 0 ? PALETTE.gold : PALETTE.steel;
     glowBlob(ctx, x, y, r, col, a);
-    // ring edge — the lens feel
-    ctx.beginPath();
-    ctx.arc(x, y, r * 0.62, 0, Math.PI * 2);
-    ctx.strokeStyle = rgba(col, a * 0.9);
-    ctx.lineWidth = 1.4;
-    ctx.stroke();
+    // ring edge — the lens feel (H2 — atmosphere, owned)
+    tagGraphic('glow', () => {
+      ctx.beginPath();
+      ctx.arc(x, y, r * 0.62, 0, Math.PI * 2);
+      ctx.strokeStyle = rgba(col, a * 0.9);
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+    });
   }
 }
 
@@ -265,18 +267,21 @@ export function impactRing(ctx: CanvasRenderingContext2D, cx: number, cy: number
   if (age < 0 || age > 620) return;
   const p = clamp01(age / 620);
   const rr = (r * 0.2 + r * easeOutCubic(p)) * scale;
-  ctx.beginPath();
-  ctx.arc(cx, cy, rr, 0, Math.PI * 2);
-  ctx.strokeStyle = rgba(col, 0.8 * (1 - p));
-  ctx.lineWidth = 14 * (1 - p) + 1.5;
-  ctx.stroke();
-  if (scale > 1.2) {
+  // H2 — rings circle their own datum by design: owned for the proximity rule
+  tagGraphic('ring', () => {
     ctx.beginPath();
-    ctx.arc(cx, cy, rr * 0.7, 0, Math.PI * 2);
-    ctx.strokeStyle = rgba('#FFF3D6', 0.4 * (1 - p));
-    ctx.lineWidth = 3;
+    ctx.arc(cx, cy, rr, 0, Math.PI * 2);
+    ctx.strokeStyle = rgba(col, 0.8 * (1 - p));
+    ctx.lineWidth = 14 * (1 - p) + 1.5;
     ctx.stroke();
-  }
+    if (scale > 1.2) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, rr * 0.7, 0, Math.PI * 2);
+      ctx.strokeStyle = rgba('#FFF3D6', 0.4 * (1 - p));
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+  });
 }
 
 // ── AUDIT §2.4 — contact punctuation ─────────────────────────────────────────

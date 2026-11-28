@@ -5,7 +5,7 @@
  */
 
 import { SceneCtx } from './scene-context';
-import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, kicker, chip, hexLerp, fitText, dimRect } from './theme';
+import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, kicker, chip, hexLerp, fitText, dimRect, tagGraphic } from './theme';
 import { clamp01, easeOutCubic, easeInOutCubic, springTo, hash01 } from './easing';
 import { goldDust, impactRing, softBloom, glowLine, spinToken, floatY, microShake, focusPing } from './fx';
 import { panelTitle, barRow, statCard, lineChart } from './charts';
@@ -342,7 +342,8 @@ export function pitchDeckScene(g: SceneCtx): void {
     ctx.globalAlpha *= 0.9;
     ctx.strokeStyle = rgba(PALETTE.gold, 0.4);
     ctx.lineWidth = 1.4;
-    ctx.strokeRect(8, 8, w - 64, 240);
+    // H2 — the deck-mock frame is the tile title's own backdrop (owned)
+    tagGraphic('band', () => ctx.strokeRect(8, 8, w - 64, 240));
     ctx.restore();
     setFont(ctx, 40, 700, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.ink;

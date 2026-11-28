@@ -142,7 +142,9 @@ export function feeChipsScene(g: SceneCtx): void {
     if (dimSqueeze) dimRect(ctx, x2, y2, 620, 244);
     ctx.save();
     ctx.globalAlpha = hotIdx === 1 || hotIdx < 0 ? 0.55 : 1;
-    chip(ctx, 'tax management — expensive to deliver, invisible when done', x2 + 60, y2 + 262, { size: 28, gold: true, maxW: W - (x2 + 60) - 40, alpha: hotIdx === 1 || hotIdx < 0 ? 0.55 : 1 });
+    // GATE FIX — maxW now reserves 52px on the right: the chip painted to
+    // x=1885, 5px past the 40px frame margin.
+    chip(ctx, 'tax management — expensive to deliver, invisible when done', x2 + 60, y2 + 262, { size: 28, gold: true, maxW: W - (x2 + 60) - 52, alpha: hotIdx === 1 || hotIdx < 0 ? 0.55 : 1 });
     ctx.restore();
     if (hotIdx === 1) focusPing(ctx, x2 + 310, y2 + 160, g.sentenceT, 96);
     if (hotIdx === 2) focusPing(ctx, x2 + 360, y2 + 286, g.sentenceT, 120);
@@ -379,11 +381,15 @@ export function growthCurvesScene(g: SceneCtx): void {
   if (epA > 0) {
     ctx.save();
     ctx.globalAlpha = epA;
-    glassCard(ctx, chartX + chartW - 10, chartY + 6, 240, 62, { r: 10, goldEdge: true, shadow: false, fill: 'rgba(12,16,30,0.85)', sheen: false });
-    goldFillText(ctx, '$469,970', chartX + chartW + 6, chartY + 46, 28, 800, FONT_DISPLAY);
+    // GATE FIX — the endpoint card sat 6px right of the chart edge while the
+    // last data point's 36px hit-zone reaches 18px past it: the value overlapped
+    // the dot by 12px, and the gap-verdict column ran to x=1914 (34px past the
+    // 40px frame margin). Whole right column shifted in and tightened.
+    glassCard(ctx, chartX + chartW + 14, chartY + 6, 240, 62, { r: 10, goldEdge: true, shadow: false, fill: 'rgba(12,16,30,0.85)', sheen: false });
+    goldFillText(ctx, '$469,970', chartX + chartW + 26, chartY + 46, 28, 800, FONT_DISPLAY);
     setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
-    ctx.fillText('low turnover', chartX + chartW + 8, chartY - 6 + 8);
+    ctx.fillText('low turnover', chartX + chartW + 28, chartY - 6 + 8);
     ctx.restore();
   }
   // the gap verdict
@@ -391,12 +397,12 @@ export function growthCurvesScene(g: SceneCtx): void {
   if (va > 0) {
     ctx.save();
     ctx.globalAlpha = va;
-    const gapW = 420;
-    glassCard(ctx, chartX + chartW + 40, chartY + 170, gapW, 170, { r: 16, goldEdge: true });
+    const gapW = 400;
+    glassCard(ctx, chartX + chartW + 6, chartY + 170, gapW, 170, { r: 16, goldEdge: true });
     setFont(ctx, 28, 700, FONT_UI);
     ctx.fillStyle = PALETTE.inkFaint;
-    ctx.fillText('30% OF THE ENDING WEALTH', chartX + chartW + 70, chartY + 216);
-    goldFillText(ctx, '−$139,780', chartX + chartW + 70, chartY + 290, 62, 800, FONT_DISPLAY);
+    ctx.fillText('30% OF THE ENDING WEALTH', chartX + chartW + 36, chartY + 216);
+    goldFillText(ctx, '−$139,780', chartX + chartW + 36, chartY + 290, 62, 800, FONT_DISPLAY);
     ctx.restore();
   }
   // S-05 — the Principal walks to the growing gap and points at it: the hand

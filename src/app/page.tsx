@@ -14,6 +14,7 @@ import { prepareProject, PreparedProject, PipelineProgress, VoiceSettings } from
 import { drawFrame, RenderOptions } from '@/lib/engine/director';
 import { drawThumbnail, ThumbnailVariant } from '@/lib/engine/thumbnail';
 import { renderVideo, pickSaveTarget } from '@/lib/engine/encode';
+import { runTextCheck, TextCheckReport } from '@/lib/engine/textcheck';
 import { youtubeChapters } from '@/lib/engine/timeline';
 import { VIDEO_TITLE, CHANNEL_NAME_DEFAULT, NEXT_VIDEO_TITLE, TAGS, DESCRIPTION_BODY } from '@/lib/engine/upload-kit';
 
@@ -36,6 +37,8 @@ export default function Studio() {
   const [error, setError] = useState<string | null>(null);
   const [prepared, setPrepared] = useState<PreparedProject | null>(null);
   const [settingsHash, setSettingsHash] = useState<string>('');
+  // U5 (frame audit) — the render button is gated on a green text check
+  const [textCheck, setTextCheck] = useState<TextCheckReport | null>(null);
 
   const [voice, setVoice] = useState('en-US-AndrewMultilingualNeural');
   const [pace, setPace] = useState(-4);
@@ -65,6 +68,15 @@ export default function Studio() {
     ];
     Promise.all(faces.map((f) => document.fonts.load(f))).catch(() => undefined);
   }, []);
+
+  // ── U5 frame-law gate — sampled frames × the three QA laws, offscreen ──
+  useEffect(() => {
+    if (!prepared || phase !== 'ready') return;
+    let alive = true;
+    setTextCheck(null);
+    runTextCheck(prepared, renderOptions).then((r) => { if (alive) setTextCheck(r); }).catch(() => { if (alive) setTextCheck({ checked: 0, violations: [], ok: true }); });
+    return () => { alive = false; };
+  }, [prepared, captionsMode, watermark, progressBar]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── preview loop ──
   const drawAt = useCallback(
@@ -292,10 +304,29 @@ export default function Studio() {
 
           <div className="card">
             <h2>3 · Build &amp; render</h2>
-            <button className="secondary" onClick={renderTest} disabled={phase !== 'ready'}>Test render · 6s</button>
-            <button onClick={renderFull} disabled={phase !== 'ready'}>
-              {phase === 'rendering' ? 'Rendering… keep this tab visible' : 'Render full MP4'}
+            {/* U5 (frame audit) — render gated on a green text check */}
+            {(() => {
+              const gateBad = textCheck != null && !textCheck.ok;
+              const gateLabel = textCheck == null
+                ? (phase === 'ready' ? 'frame law: checking…' : '')
+                : textCheck.ok
+                  ? `frame law: ✓ clean (${textCheck.checked} frames)`
+                  : `frame law: ✗ ${textCheck.violations.length} violation(s) — fix before render`;
+              return gateLabel ? (
+                <div className="detail" style={{ color: gateBad ? '#e5484d' : '#8fd6b4' }}>{gateLabel}</div>
+              ) : null;
+            })()}
+            <button className="secondary" onClick={renderTest} disabled={phase !== 'ready' || (textCheck != null && !textCheck.ok)}>Test render · 6s</button>
+            <button onClick={renderFull} disabled={phase !== 'ready' || (textCheck != null && !textCheck.ok)}>
+              {phase === 'rendering' ? 'Rendering… keep this tab visible' : textCheck != null && !textCheck.ok ? 'Blocked by frame law — fix collisions' : 'Render full MP4'}
             </button>
+            {textCheck != null && !textCheck.ok && (
+              <div className="detail" style={{ maxHeight: 120, overflowY: 'auto' }}>
+                {textCheck.violations.slice(0, 8).map((v, i) => (
+                  <div key={i}>t={v.t.toFixed(1)}s {v.kind}: {v.detail}</div>
+                ))}
+              </div>
+            )}
             {phase === 'rendering' && (
               <div>
                 <div className="progress-line"><div style={{ width: `${(progress.done / Math.max(1, progress.total)) * 100}%` }} /></div>

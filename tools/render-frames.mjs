@@ -63,6 +63,7 @@ const { drawFrame, drawIdleFrame } = require(path.join(BUILD, 'director.js'));
 const { SCRIPT } = require(path.join(BUILD, 'script-data.js'));
 const { buildTimeline } = require(path.join(BUILD, 'timeline.js'));
 const { splitSentences } = require(path.join(BUILD, 'easing.js'));
+const { GRAPHIC_PROBE } = require(path.join(BUILD, 'theme.js'));
 
 // synthetic manifest — word-timing estimates, no TTS needed for QA
 function estWords(text) {
@@ -110,6 +111,8 @@ const ctx = canvas.getContext('2d');
 // are excluded. --check-text turns any violation into a non-zero exit.
 const CHECK_TEXT = process.argv.includes('--check-text');
 const textBoxes = [];
+const graphicBoxes = [];
+const seenDraws = new Set();
 let textViolations = 0;
 if (CHECK_TEXT) {
   // manual affine matrix — mirrors every translate/scale/rotate/transform
@@ -141,7 +144,6 @@ if (CHECK_TEXT) {
   ctx.restore = () => { const m = stack.pop(); if (m) Object.assign(M, m); return origRestore(); };
   const origFill = ctx.fillText.bind(ctx);
   const origStroke = ctx.strokeText.bind(ctx);
-  const seenDraws = new Set();
   const record = (text, x, y) => {
     const s = String(text);
     if (!s.trim()) return;
@@ -163,6 +165,40 @@ if (CHECK_TEXT) {
   };
   ctx.fillText = (t, x, y, ...rest) => { record(t, x, y); origFill(t, x, y, ...rest); };
   ctx.strokeText = (t, x, y, ...rest) => { record(t, x, y); origStroke(t, x, y, ...rest); };
+  // FIX H2 (frame audit) — graphic-vs-text proximity: record rect/circle
+  // graphics with their engine ownership tag (GRAPHIC_PROBE.tag — cards,
+  // veils, tracks, rings own their overlaps; bare diamonds, dots, tiles and
+  // props do not), so text sitting on a non-owned graphic is a violation.
+  const toScreen = (x, y, w, h) => {
+    const px = [x, x + w, x, x + w], py = [y, y, y + h, y + h];
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    for (let k = 0; k < 4; k++) {
+      const sx = px[k] * M[0] + py[k] * M[2] + M[4];
+      const sy = px[k] * M[1] + py[k] * M[3] + M[5];
+      x0 = Math.min(x0, sx); x1 = Math.max(x1, sx);
+      y0 = Math.min(y0, sy); y1 = Math.max(y1, sy);
+    }
+    return { x0, x1, y0, y1 };
+  };
+  const recordGraphic = (box) => {
+    if ((ctx.globalAlpha ?? 1) < 0.35) return;
+    const w = box.x1 - box.x0, h = box.y1 - box.y0;
+    if (w < 8 || h < 8) return; // hairlines and dots are not proximity hazards
+    if (w * h > 600000) return; // full-screen washes / stage gradients
+    if (box.x1 < 0 || box.x0 > 1920 || box.y1 < 0 || box.y0 > 1080) return;
+    const traceW = Number(process.env.GATE_TRACE || 0);
+    if (traceW > 0 && w >= traceW) console.log(`  [trace tag=${GRAPHIC_PROBE.tag} ${w.toFixed(0)}×${h.toFixed(0)} @${box.x0.toFixed(0)},${box.y0.toFixed(0)}]\n`, new Error().stack.split('\n').slice(2, 6).join('\n'));
+    graphicBoxes.push({ ...box, tag: GRAPHIC_PROBE.tag });
+  };
+  const origFillRect = ctx.fillRect.bind(ctx);
+  const origStrokeRect = ctx.strokeRect.bind(ctx);
+  const origArc = ctx.arc.bind(ctx);
+  ctx.fillRect = (x, y, w, h, ...rest) => { recordGraphic(toScreen(x, y, w, h)); return origFillRect(x, y, w, h, ...rest); };
+  ctx.strokeRect = (x, y, w, h, ...rest) => { recordGraphic(toScreen(x, y, w, h)); return origStrokeRect(x, y, w, h, ...rest); };
+  ctx.arc = (x, y, r, a0, a1, ...rest) => {
+    if (r >= 8 && (a1 ?? Math.PI * 2) - a0 >= Math.PI * 1.9) recordGraphic(toScreen(x - r, y - r, r * 2, r * 2));
+    return origArc(x, y, r, a0, a1, ...rest);
+  };
 }
 function auditTextFrame(tMs, sceneType) {
   if (!CHECK_TEXT) return;
@@ -180,6 +216,37 @@ function auditTextFrame(tMs, sceneType) {
       }
     }
   }
+  // FIX H2 rule A — off-canvas: no text bbox may cross the frame edge minus
+  // 40px (also catches clipped numerals like the old D5/T1 thumbnail bug).
+  for (const a of textBoxes) {
+    const top = a.base - a.fs * 0.78, bot = a.base + a.fs * 0.28;
+    if (a.x0 < 40 || a.x1 > 1880 || top < 40 || bot > 1040) {
+      textViolations++;
+      console.log(`  ⚠ EDGE CROSSING t=${(tMs / 1000).toFixed(1)}s [${sceneType}] "${a.text}" bbox x(${a.x0.toFixed(0)}..${a.x1.toFixed(0)}) y(${top.toFixed(0)}..${bot.toFixed(0)}) inside the 40px frame margin`);
+    }
+  }
+  // FIX H2 rule B — graphic proximity: no text bbox may overlap a NON-OWNED
+  // graphic's bbox by more than 8px (owned = cards, veils, tracks, rings —
+  // tagged by the engine while it draws them).
+  for (const a of textBoxes) {
+    const ty0 = a.base - a.fs * 0.78, ty1 = a.base + a.fs * 0.28;
+    for (const g of graphicBoxes) {
+      if (g.tag !== 'none') continue; // owned backdrop / intentional ring
+      const ox = Math.min(a.x1, g.x1) - Math.max(a.x0, g.x0);
+      const oy = Math.min(ty1, g.y1) - Math.max(ty0, g.y0);
+      if (ox > 8 && oy > 8) {
+        textViolations++;
+        console.log(`  ⚠ GRAPHIC PROXIMITY t=${(tMs / 1000).toFixed(1)}s [${sceneType}] "${a.text}" overlaps a graphic g(${(g.x1 - g.x0).toFixed(0)}×${(g.y1 - g.y0).toFixed(0)} @${g.x0.toFixed(0)},${g.y0.toFixed(0)}) by ${ox.toFixed(0)}×${oy.toFixed(0)}px`);
+      }
+    }
+  }
+  // FIX H1 (frame audit) — the sweep was blind: seenDraws (stroke+fill dedupe)
+  // was built once per PROCESS and never reset, so after the first frame every
+  // recurring string was skipped and the comparison set emptied — a 293-frame
+  // sweep reported zero violations while a single-frame run caught 3. Reset
+  // both registries every frame.
+  seenDraws.clear();
+  graphicBoxes.length = 0;
   textBoxes.length = 0;
 }
 

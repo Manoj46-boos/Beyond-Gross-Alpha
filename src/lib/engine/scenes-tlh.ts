@@ -5,7 +5,7 @@
  */
 
 import { SceneCtx } from './scene-context';
-import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, kicker, chip, hexLerp, dimRect } from './theme';
+import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, kicker, chip, hexLerp, dimRect, tagGraphic } from './theme';
 import { clamp01, easeOutCubic, easeInOutCubic, springTo, hash01, fmtComma } from './easing';
 import { goldDust, impactRing, softBloom, glowLine, spinToken, floatY, microShake, focusPing, impactPuff } from './fx';
 import { panelTitle, waterfall, donut, column, dotGrid, barRow, statCard, lineChart } from './charts';
@@ -785,10 +785,11 @@ export function secCaseScene(g: SceneCtx): void {
     ctx.globalAlpha = la;
     if (ln.hot) {
       ctx.fillStyle = rgba(PALETTE.gold, 0.12);
-      ctx.fillRect(40, 190 + i * 74, w - 90, 54);
+      // H2 — the hot-row tile is the text's own backdrop (owned)
+      tagGraphic('band', () => ctx.fillRect(40, 190 + i * 74, w - 90, 54));
       ctx.strokeStyle = rgba(PALETTE.gold, 0.5);
       ctx.lineWidth = 1.2;
-      ctx.strokeRect(40, 190 + i * 74, w - 90, 54);
+      tagGraphic('band', () => ctx.strokeRect(40, 190 + i * 74, w - 90, 54));
     }
     setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = ln.hot ? PALETTE.goldBright : PALETTE.inkSoft;

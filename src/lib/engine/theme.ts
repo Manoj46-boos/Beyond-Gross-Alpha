@@ -7,6 +7,19 @@
 
 import { clamp01, easeOutCubic, hash01 } from './easing';
 
+// ── FIX H2 (frame audit) — graphic ownership probe ───────────────────────────
+// While the engine draws INTENTIONAL backdrops (dim veils, bar tracks/fills,
+// impact rings) it sets GRAPHIC_PROBE.tag; the QA text harness (tools/
+// render-frames.mjs) reads it per graphic draw, so text overlapping an
+// UNTAGGED graphic (bare diamonds, dots, tiles, props) is a violation while
+// text on a card/veil/track stays legal. Zero cost in the browser build.
+export const GRAPHIC_PROBE = { tag: 'none' };
+export function tagGraphic<T>(tag: string, fn: () => T): T {
+  const prev = GRAPHIC_PROBE.tag;
+  GRAPHIC_PROBE.tag = tag;
+  try { return fn(); } finally { GRAPHIC_PROBE.tag = prev; }
+}
+
 // ── palette ──────────────────────────────────────────────────────────────────
 export const PALETTE = {
   // the room (rich navy — never pure black)
@@ -148,7 +161,8 @@ export function glowBlob(ctx: CanvasRenderingContext2D, x: number, y: number, r:
   g.addColorStop(0.55, rgba(color, alpha * 0.4));
   g.addColorStop(1, rgba(color, 0));
   ctx.fillStyle = g;
-  ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  // H2 — glow is room atmosphere, owned like the veil (text sits over it by design)
+  tagGraphic('glow', () => ctx.fillRect(x - r, y - r, r * 2, r * 2));
 }
 
 /**
@@ -303,7 +317,8 @@ export function dimRect(
   // #101A30) at a matching strength — elements sink INTO the room and stay
   // visibly present, exactly the recede state the design calls for.
   ctx.fillStyle = rgba(PALETTE.bg2, 0.38 * Math.min(1, Math.max(0, k)));
-  ctx.fillRect(x, y, w, h);
+  // H2 — the veil is an owned backdrop: text under it is intentional.
+  tagGraphic('veil', () => ctx.fillRect(x, y, w, h));
   ctx.restore();
 }
 

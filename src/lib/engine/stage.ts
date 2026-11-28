@@ -6,7 +6,7 @@
  * band that drifts across like light off polished marble.
  */
 
-import { PALETTE, rgba, glowBlob } from './theme';
+import { PALETTE, rgba, glowBlob, tagGraphic } from './theme';
 import { clamp01, easeInOutSine, hash01, drift } from './easing';
 
 export interface StageOpts {
@@ -22,7 +22,17 @@ export interface StageOpts {
   keyLight?: { x: number; y: number; r: number };
 }
 
+/** The room. H2 — everything the stage draws (base, floor, glows, lattice,
+ *  sheen) is OWNED backdrop: scenes and captions sit on it by design, so the
+ *  text harness treats all of it as one owned surface. */
 export function paintStage(
+  ctx: CanvasRenderingContext2D, W: number, H: number, t: number,
+  opts: StageOpts = {}
+): void {
+  return tagGraphic('stage', () => paintStageRoom(ctx, W, H, t, opts));
+}
+
+function paintStageRoom(
   ctx: CanvasRenderingContext2D, W: number, H: number, t: number,
   opts: StageOpts = {}
 ): void {

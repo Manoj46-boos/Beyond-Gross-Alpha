@@ -2,14 +2,15 @@
   "name": "beyond-gross-alpha-studio",
   "version": "1.0.0",
   "private": true,
-  "description": "AURUM studio — renders the After-Tax Returns episode as a premium midnight-ledger explainer video (frame by frame, YouTube-ready MP4)",
+  "description": "AURUM studio \u2014 renders the After-Tax Returns episode as a premium midnight-ledger explainer video (frame by frame, YouTube-ready MP4)",
   "scripts": {
     "dev": "next dev -p 3001",
     "build": "next build",
     "start": "next start -p 3001",
-    "qa": "node tools/render-frames.mjs",
+    "qa": "node tools/render-frames.mjs --times 45000,130000,230000,335000,403000,530000,638000,722000,909850,1018000,1120000,1303000 --check-text --contact-sheet",
     "preview": "node tools/make-preview.mjs",
-    "typecheck": "node tools/typecheck.mjs"
+    "typecheck": "node tools/typecheck.mjs",
+    "qa:full": "node tools/render-frames.mjs --step 5 --check-text --contact-sheet"
   },
   "dependencies": {
     "@andresaya/edge-tts": "^1.9.1",
