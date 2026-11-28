@@ -7,6 +7,38 @@
  *
  * All coordinates are LOCAL units (origin = ground under the figure, y up is
  * negative). drawStickman applies the world transform.
+ *
+ * ── CHARACTER LAW (U1, upgrade plan — the one-page lock) ─────────────────────
+ * The silhouette below IS the brand. Any edit that touches hair, tie, chain,
+ * hands or shoes must re-pass this page or the change is rejected.
+ *
+ * 1. HAIR — charcoal-silver, HAIR.lit #8E99AC / HAIR.dark #4A5468. A closed
+ *    swept-back shape, NOT clipped to the skull: visible forehead band (the
+ *    front hairline sits ~0.05-0.14R above the brow ridge — skin between hair
+ *    and brows), a stepped parting on HIS LEFT with a darker seam origin, nape
+ *    mass behind the head that breaks the skull's parallel, and three tapered
+ *    silver strand groups ≥1.3px wide clipped to the silhouette (brushed along
+ *    the crown, never vertical pins). The quiff rides the accent shear ≤1.1°.
+ * 2. TIE — burgundy gradient #6E2430→#3A121B, blade BL = TORSO * 0.52 (tip
+ *    ~46 local units above the hem at every lean — a tailored tie, never a
+ *    strap over the trousers), kite knot with a drawn dimple. The tie is the
+ *    one warm accent on the figure: it stays burgundy, never gold.
+ * 3. CHAIN — a detail discovered on pause, not a silhouette element:
+ *    cy2 = 24 (short drape to the watch pocket), chainHalfW ≤ 1.3 tapering to
+ *    0.8, alpha 0.8, fob medallion ≤ 2.6px. If the chain reads at 340px width,
+ *    it is too big.
+ * 4. HANDS — near 12.5 / far 10.5. Every finger is a two-value capsule pair
+ *    (warm shadow pass under the lit pass); the index in 'point' is TWO
+ *    segments with a 12° knuckle bend; 'cup' cradles with curled fingers, a
+ *    thick opposing thumb, and a thumb-wrap contact shadow under the prop.
+ * 5. SHOES — ~28-unit tailored profile: lengthened footprint, stacked heel
+ *    block under the ankle, instep raised so the trouser hem BREAKS ON the
+ *    shoe (never 'socks'), gold welt line retained.
+ * 6. ONE GOLD RULE — the figure carries exactly one planned gold accent
+ *    (the glasses rims). Chain steps back (see 3); no jewellery spill.
+ *
+ * Acceptance: the T4 thumbnail at 320px wide reads as "the Beyond Gross Alpha
+ * gentleman" without captions or numbers. Verify after every silhouette edit.
  */
 
 import { PALETTE, rgba, hexLerp } from './theme';
@@ -1755,6 +1787,20 @@ function drawHand(
     ctx.moveTo(-size * 0.22, -size * 0.44);
     ctx.quadraticCurveTo(size * 0.2, -size * 0.8, size * 0.56, -size * 0.4);
     ctx.stroke();
+    // U1 (upgrade plan) — the cup gains a visible THUMB-WRAP SHADOW: a soft
+    // two-value shade where the thumb crosses over the prop's near edge, so a
+    // resting prop reads as genuinely gripped (weight) instead of balanced on
+    // an open palm. A wide low-alpha capsule tucked under the thumb line.
+    ctx.save();
+    ctx.globalAlpha *= 0.5;
+    ctx.strokeStyle = hexLerp(SKIN.dark, '#1A1420', 0.55);
+    ctx.lineWidth = size * 0.30;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(size * 0.02, -size * 0.30);
+    ctx.quadraticCurveTo(size * 0.30, -size * 0.46, size * 0.54, -size * 0.22);
+    ctx.stroke();
+    ctx.restore();
   } else if (mode === 'point') {
     // AUDIT C-02 — the index is TWO segments with a 12° knuckle bend: the
     // pointing read becomes a gesture with a real joint, not a straight spike
