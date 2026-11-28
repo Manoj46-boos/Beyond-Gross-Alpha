@@ -5,7 +5,7 @@
  */
 
 import { SceneCtx } from './scene-context';
-import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, kicker, chip, hexLerp, dimRect } from './theme';
+import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, kicker, chip, hexLerp, dimRect, takeaway } from './theme';
 import { clamp01, easeOutCubic, springTo, hash01, fmtComma, fmtMoney } from './easing';
 import { goldDust, impactRing, softBloom, glowLine, spinToken, floatY, focusPing, impactPuff } from './fx';
 import { panelTitle, lineChart, column, statCard, barRow } from './charts';
@@ -150,6 +150,9 @@ export function feeChipsScene(g: SceneCtx): void {
     if (hotIdx === 2) focusPing(ctx, x2 + 360, y2 + 286, g.sentenceT, 120);
     ctx.restore();
   }
+
+  // FIX G1 — bottom device: the beat's takeaway anchors the dead bottom band (baseline 740, inside CAPTION_SAFE_TOP 786)
+  takeaway(ctx, W * 0.10, 740, W * 0.80, 'The fee you can see is not the fee you pay.', clamp01((t - 2400) / 600));
 }
 
 // ── compliance memo (redactions + E&O stamp) ────────────────────────────────
@@ -659,6 +662,9 @@ export function benchmarkBarScene(g: SceneCtx): void {
       focusPing(ctx, x + w + 160, 460, g.sentenceT, 96);
     }
   }
+
+  // FIX G1 — bottom device: the beat's takeaway anchors the dead bottom band (baseline 740, inside CAPTION_SAFE_TOP 786)
+  takeaway(ctx, W * 0.10, 740, W * 0.80, 'The floor is after-tax: beat it before you buy complexity.', clamp01((t - 2400) / 600));
 }
 
 export { spinToken, hash01, fmtComma, hexLerp, floatY };

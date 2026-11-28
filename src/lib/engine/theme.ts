@@ -339,6 +339,28 @@ export function kicker(ctx: CanvasRenderingContext2D, text: string, x: number, y
   ctx.restore();
 }
 
+// ── FIX G1 (frame audit) — the bottom device ─────────────────────────────────
+/** A gold rule with the beat's takeaway, anchored at the bottom band
+ *  (baseline ≈ 740 — inside CAPTION_SAFE_TOP 786, clear of the caption pill).
+ *  Eight scenes ended their content between y=600 and 700, leaving a 200-300px
+ *  empty band above the caption zone; this device anchors the bottom third so
+ *  the frame answers "what changed in the last 5 seconds?" to the last pixel. */
+export function takeaway(
+  ctx: CanvasRenderingContext2D, x: number, y: number, w: number,
+  text: string, alpha: number, size = 28
+): void {
+  if (alpha <= 0.01) return;
+  ctx.save();
+  setFont(ctx, size, 600, FONT_UI);
+  const tw = Math.min(ctx.measureText(text).width, w);
+  // the rule draws outward from the left edge as the line fades in
+  goldRule(ctx, x + tw / 2, y + 18, tw * Math.min(1, alpha * 1.4), alpha, 0.85, 2.2);
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = PALETTE.inkMuted;
+  ctx.fillText(text, x, y);
+  ctx.restore();
+}
+
 /** serif scene headline (the AURUM editorial headline) */
 export function headline(
   ctx: CanvasRenderingContext2D, text: string, x: number, y: number,

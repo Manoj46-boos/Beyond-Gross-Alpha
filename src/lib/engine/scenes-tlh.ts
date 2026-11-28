@@ -5,7 +5,7 @@
  */
 
 import { SceneCtx } from './scene-context';
-import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, kicker, chip, hexLerp, dimRect, tagGraphic } from './theme';
+import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, goldFillText, FONT_DISPLAY, FONT_UI, kicker, chip, hexLerp, dimRect, tagGraphic, takeaway } from './theme';
 import { clamp01, easeOutCubic, easeInOutCubic, springTo, hash01, fmtComma } from './easing';
 import { goldDust, impactRing, softBloom, glowLine, spinToken, floatY, microShake, focusPing, impactPuff } from './fx';
 import { panelTitle, waterfall, donut, column, dotGrid, barRow, statCard, lineChart } from './charts';
@@ -93,6 +93,7 @@ export function trapTileScene(g: SceneCtx): void {
   const { ctx, W, H, t, s } = g;
   paintStage(ctx, W, H, t, {});
   panelTitle(ctx, 'Two traps the pros still step in', W * 0.10, 210, W * 0.8, t / 2400, { kickerText: 'Lever 1 · Traps' });
+  // inside spring transforms; a takeaway inside them would land off-canvas)
   // AUDIT §3.2 — D17 sentence-cadence wiring: sentences 0-1 walk the trap
   // card, 2+ the verdict — the listening zone lifts, the other recedes.
   const zi = g.sentenceIdx != null && g.sentenceIdx >= 0 ? (g.sentenceIdx <= 1 ? 0 : 1) : -1;
@@ -165,6 +166,9 @@ export function trapTileScene(g: SceneCtx): void {
     ctx.restore();
   }
   ctx.restore();
+
+  // FIX G1 — bottom device: the beat's takeaway anchors the dead bottom band (baseline 740, inside CAPTION_SAFE_TOP 786)
+  takeaway(ctx, W * 0.10, 740, W * 0.80, 'A muni in an IRA shelters income that was already tax-free.', clamp01((t - 2400) / 600));
 }
 
 // ── IRA reality donut ($700k yours / $300k theirs) ───────────────────────────
@@ -274,6 +278,9 @@ export function bpsCompareScene(g: SceneCtx): void {
     });
     ctx.restore();
   }
+
+  // FIX G1 — bottom device: the beat's takeaway anchors the dead bottom band (baseline 740, inside CAPTION_SAFE_TOP 786)
+  takeaway(ctx, W * 0.10, 740, W * 0.80, 'Harvesting is real money — modest, and capped at $3,000 a year.', clamp01((t - 2400) / 600));
 }
 
 // ── TLH mechanic (sell red → gold token → replacement) ───────────────────────
@@ -617,6 +624,9 @@ export function vendorCompareScene(g: SceneCtx): void {
     ctx.restore();
     if (i === hotCard) focusPing(ctx, c.x + W * 0.18, 545, g.sentenceT, 100);
   });
+
+  // FIX G1 — bottom device: the beat's takeaway anchors the dead bottom band (baseline 740, inside CAPTION_SAFE_TOP 786)
+  takeaway(ctx, W * 0.10, 740, W * 0.80, 'Same exposure — 9 bps of fee can hide 45+ bps of tax drag.', clamp01((t - 2400) / 600));
 }
 
 // ── Wealthfront production case ──────────────────────────────────────────────
@@ -668,6 +678,9 @@ export function wealthfrontCaseScene(g: SceneCtx): void {
     ctx.fillText('— THE 3 DAYS', x, cardY + 192);
     ctx.restore();
   }
+
+  // FIX G1 — bottom device: the beat's takeaway anchors the dead bottom band (baseline 740, inside CAPTION_SAFE_TOP 786)
+  takeaway(ctx, W * 0.10, 740, W * 0.80, 'Published results are gross until taxed — ask for the after-tax column.', clamp01((t - 2400) / 600));
 }
 
 // ── decay curve (tax alpha decays) ───────────────────────────────────────────
