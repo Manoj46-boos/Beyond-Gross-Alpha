@@ -208,11 +208,11 @@ export function distribBarsScene(g: SceneCtx): void {
   // S-05 — bars shift right of the figure margin (figure spans x≈90..330)
   const x = W * 0.30, w = W * 0.42;
   ctx.save();
-  ctx.globalAlpha = hotZone === 1 || hotZone === 2 ? 0.45 : 1;
+  ctx.globalAlpha = hotZone === 1 || hotZone === 2 ? 0.55 : 1;
   barRow(ctx, { x, y: 345, w, h: 120, label: 'Equity mutual funds', value: 57, maxV: 100, p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'down', valueText: '57%' });
   ctx.restore();
   ctx.save();
-  ctx.globalAlpha = hotZone === 0 || hotZone === 2 ? 0.45 : 1;
+  ctx.globalAlpha = hotZone === 0 || hotZone === 2 ? 0.55 : 1;
   // FIX F3 — barRow returns the ETF row's FILLED TIP: the punchline's contact
   // devices anchor to it instead of painting over the verdict text.
   const tipEtf = barRow(ctx, { x, y: 535, w, h: 120, label: 'Equity ETFs', value: 6, maxV: 100, p: clamp01((t - 1300) / 900), t, landT: 2250, tone: 'up', valueText: '6%' });
@@ -225,7 +225,7 @@ export function distribBarsScene(g: SceneCtx): void {
   const ma = clamp01((t - 2200) / 500);
   if (ma > 0) {
     ctx.save();
-    ctx.globalAlpha = ma * (hotZone === 0 || hotZone === 1 ? 0.45 : 1);
+    ctx.globalAlpha = ma * (hotZone === 0 || hotZone === 1 ? 0.55 : 1);
     setFont(ctx, 40, 800, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.goldBright;
     ctx.fillText('A structural moat.', x + w + 60, 660);
@@ -268,11 +268,11 @@ export function taxManagedScene(g: SceneCtx): void {
   // to end at y≈650 leaving a ~300px dead band; now it carries to 730 with
   // the scene's punchline (7.16 − 6.76 = 0.40%/yr) inside the card.
   ctx.save();
-  ctx.globalAlpha = hotZone === 1 ? 0.45 : 1;
+  ctx.globalAlpha = hotZone === 1 ? 0.55 : 1;
   barRow(ctx, { x, y: 345, w, h: 150, label: 'Tax-managed small-cap', value: 7.16, maxV: 8, p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'gold', valueText: '7.16%', sub: '10-yr after-tax return' });
   ctx.restore();
   ctx.save();
-  ctx.globalAlpha = hotZone === 0 ? 0.45 : 1;
+  ctx.globalAlpha = hotZone === 0 ? 0.55 : 1;
   barRow(ctx, { x, y: 555, w, h: 150, label: 'Plain small-cap index', value: 6.76, maxV: 8, p: clamp01((t - 1300) / 900), t, landT: 2250, tone: 'platinum', valueText: '6.76%', sub: '10-yr after-tax return' });
   ctx.restore();
   // the zone a sentence does NOT own recedes; the hot zone gets a fresh gold
@@ -489,11 +489,11 @@ export function diDecayScene(g: SceneCtx): void {
   const hotZone = siDD < 0 ? -1 : siDD <= 1 ? 2 : siDD <= 3 ? 3 : siDD === 4 ? 0 : siDD === 5 ? 1 : 2;
   const fresh = g.sentenceT != null ? clamp01(1 - g.sentenceT / 900) : 0;
   ctx.save();
-  ctx.globalAlpha = hotZone === 1 ? 0.45 : hotZone === 2 ? 0.45 : 1;
+  ctx.globalAlpha = hotZone === 1 ? 0.55 : hotZone === 2 ? 0.55 : 1;
   barRow(ctx, { x, y: 345, w, h: 120, label: 'Years 1–5', value: 69, maxV: 80, p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'up', valueText: '69 bps/yr', sub: 'average tax benefit' });
   ctx.restore();
   ctx.save();
-  ctx.globalAlpha = hotZone === 0 ? 0.45 : hotZone === 2 ? 0.45 : 1;
+  ctx.globalAlpha = hotZone === 0 ? 0.55 : hotZone === 2 ? 0.55 : 1;
   barRow(ctx, { x, y: 590, w, h: 120, label: 'Years 6–10', value: 9, maxV: 80, p: clamp01((t - 1300) / 900), t, landT: 2250, tone: 'down', valueText: '9 bps/yr', sub: 'as the portfolio appreciates' });
   ctx.restore();
   if (hotZone === 0) dimRect(ctx, x, 590, w, 120);

@@ -297,7 +297,12 @@ export function dimRect(
   ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, k = 1
 ): void {
   ctx.save();
-  ctx.fillStyle = `rgba(5,8,15,${0.30 * Math.min(1, Math.max(0, k))})`;
+  // FIX F1 (frame audit) — the old veil multiplied alpha toward BLACK
+  // (rgba(5,8,15,0.30)): on the navy room the receded element read as
+  // missing, not receded. The veil now shifts toward the ROOM HUE (bg2,
+  // #101A30) at a matching strength — elements sink INTO the room and stay
+  // visibly present, exactly the recede state the design calls for.
+  ctx.fillStyle = rgba(PALETTE.bg2, 0.38 * Math.min(1, Math.max(0, k)));
   ctx.fillRect(x, y, w, h);
   ctx.restore();
 }

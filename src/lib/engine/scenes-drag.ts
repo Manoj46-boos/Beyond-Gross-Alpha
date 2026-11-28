@@ -440,13 +440,13 @@ export function characterMatrixScene(g: SceneCtx): void {
     glassCard(ctx, x, y, w, 72, {
       r: 12,
       shadow: false,
-      alpha: stripped ? 0.4 : 1,
+      alpha: stripped ? 0.55 : 1,
       fill: hot ? rgba(PALETTE.gold, 0.07 + 0.05 * fresh) : 'rgba(255,255,255,0.045)',
       border: hot ? rgba(PALETTE.gold, 0.35 + 0.35 * fresh) : undefined,
     });
     setFont(ctx, 29, 700, FONT_UI);
     ctx.fillStyle = hot ? PALETTE.ink : PALETTE.inkSoft;
-    ctx.globalAlpha = ent * (stripped ? 0.4 : 1);
+    ctx.globalAlpha = ent * (stripped ? 0.55 : 1);
     ctx.fillText(r.label, x + 36, y + 45);
     if (!stripped) {
       chip(ctx, r.tag, x + 430, y + 18, { size: 28, gold: hot, dot: r.tone === 'down' ? PALETTE.down : PALETTE.up });
@@ -623,7 +623,7 @@ export function benchmarkBarScene(g: SceneCtx): void {
   // U1.4: maxV = 0.5 so the honest 0.3% stub fills ~60% of the track — the
   // bar reads as a measured floor, and the value rides the dark cap zone.
   ctx.save();
-  ctx.globalAlpha = hotZone === 1 ? 0.45 : 1;
+  ctx.globalAlpha = hotZone === 1 ? 0.55 : 1;
   barRow(ctx, {
     x, y: 370, w, h: 130, label: 'Plain index ETF, held for decades', value: 0.3, maxV: 0.5,
     p: clamp01((t - 300) / 900), t, landT: 1250, tone: 'gold', valueText: '≈ 0.3%/yr',

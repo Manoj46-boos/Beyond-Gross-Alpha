@@ -187,13 +187,15 @@ export function fiveQuestionsScene(g: SceneCtx): void {
     ctx.save();
     // AUDIT R-03 — strip to the hot element: asked questions recede to a
     // quiet card while the one being asked carries the frame.
-    ctx.globalAlpha = ent * (asked && !hot && qIdx >= 0 ? 0.45 : 1);
+    // FIX F1 (frame audit) — recede floor 0.45→0.55: text-bearing cards never
+    // drop below the 0.55 legibility floor on the navy room.
+    ctx.globalAlpha = ent * (asked && !hot && qIdx >= 0 ? 0.55 : 1);
     // S-05 — question cards shift right of the figure margin (461..1727)
     const x = W * 0.24, y = 320 + i * 110, w = W * 0.66, h = 92;
     glassCard(ctx, x, y, w, h, {
       r: 14,
       shadow: false,
-      alpha: asked && !hot && qIdx >= 0 ? 0.45 : 1,
+      alpha: asked && !hot && qIdx >= 0 ? 0.55 : 1,
       fill: hot ? rgba(PALETTE.gold, 0.10) : 'rgba(255,255,255,0.045)',
       border: hot ? rgba(PALETTE.gold, 0.55) : undefined,
     });

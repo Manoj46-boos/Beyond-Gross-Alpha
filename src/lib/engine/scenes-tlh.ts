@@ -411,9 +411,12 @@ export function washSaleScene(g: SceneCtx): void {
     const ca = clamp01((t - 300 - i * 14) / 200);
     if (ca <= 0) continue;
     ctx.save();
-    ctx.globalAlpha = ca * (hotZone === 1 ? 0.45 : 1);
+    // FIX F1 (frame audit) — recede floor 0.45→0.55 and the day cells shift
+    // toward the room hue (steel, 0.30) instead of a 0.18 wash: the calendar
+    // read as a row of missing cells on the navy room.
+    ctx.globalAlpha = ca * (hotZone === 1 ? 0.55 : 1);
     const isSale = i === saleIdx;
-    ctx.fillStyle = isSale ? PALETTE.goldBright : rgba(PALETTE.inkSoft, 0.18);
+    ctx.fillStyle = isSale ? PALETTE.goldBright : rgba(PALETTE.steel, 0.30);
     roundRect(ctx, x + i * cellW + 1, y, cellW - 2, 44, 3);
     ctx.fill();
     ctx.restore();
