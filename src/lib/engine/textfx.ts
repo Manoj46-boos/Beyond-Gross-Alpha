@@ -334,7 +334,8 @@ export function sceneTransition(ctx: CanvasRenderingContext2D, W: number, H: num
  *  which on a phone in daylight reads as a playback error. */
 export function statementAnchor(
   ctx: CanvasRenderingContext2D, W: number, H: number,
-  chapterIdx: number, tMs: number, ghost?: string
+  chapterIdx: number, tMs: number, ghost?: string,
+  opts: { glowBoost?: boolean } = {}
 ): void {
   const a = clamp01(tMs / 700);
   // U4.2 — hairline gold rule frame inset 90 px (report spec)
@@ -343,16 +344,20 @@ export function statementAnchor(
   // error in daylight): a horizon glow pooling above the floor, two quiet
   // vertical hairlines flanking the text zone, and five drifting dust motes
   // inside the ruled frame — all deterministic.
+  // FIX F4 (frame audit) — `glowBoost` (the quiet-beat contract): the glow,
+  // hairlines and ruled frame run at full strength so held silence never
+  // collapses into a near-black playback-error frame.
+  const boost = opts.glowBoost === true;
   const breathe = 0.5 + 0.5 * Math.sin(tMs / 3000);
   ctx.save();
   ctx.globalAlpha = a;
   const horizon = ctx.createLinearGradient(0, H * 0.78, 0, H * 0.98);
   horizon.addColorStop(0, rgba(PALETTE.gold, 0));
-  horizon.addColorStop(0.72, rgba(PALETTE.gold, 0.10 + 0.05 * breathe));
+  horizon.addColorStop(0.72, rgba(PALETTE.gold, boost ? 0.26 + 0.08 * breathe : 0.10 + 0.05 * breathe));
   horizon.addColorStop(1, rgba(PALETTE.gold, 0));
   ctx.fillStyle = horizon;
   ctx.fillRect(m, H * 0.78, W - 2 * m, H * 0.2);
-  ctx.strokeStyle = rgba(PALETTE.steel, 0.22);
+  ctx.strokeStyle = rgba(PALETTE.steel, boost ? 0.34 : 0.22);
   ctx.lineWidth = 1;
   for (const vx of [m + 96, W - m - 96]) {
     ctx.beginPath();
@@ -372,7 +377,7 @@ export function statementAnchor(
   ctx.restore();
   // ruled frame + gold corner ticks
   ctx.save();
-  ctx.globalAlpha = 0.55 * a;
+  ctx.globalAlpha = (boost ? 0.8 : 0.55) * a;
   ctx.strokeStyle = rgba(PALETTE.steel, 0.38);
   ctx.lineWidth = 1;
   ctx.strokeRect(m, m, W - 2 * m, H - 2 * m);

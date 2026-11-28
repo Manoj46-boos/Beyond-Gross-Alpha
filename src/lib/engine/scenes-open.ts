@@ -531,12 +531,16 @@ export function turnCardScene(g: SceneCtx): void {
 // ── quiet beat (held silence with a whisper line) ────────────────────────────
 export function quietBeatScene(g: SceneCtx): void {
   const { ctx, W, H, t, s } = g;
-  statementAnchor(ctx, W, H, g.chapterIdx, t, s.ghost);
+  // FIX F4 (frame audit) — the quiet beat read as a playback error: a
+  // near-black room with one dim 44px line, the ruled frame and horizon glow
+  // invisible. The label rises to 52px ink and the anchor's horizon glow runs
+  // at FULL strength on quiet beats (the room stays alive through the silence).
+  statementAnchor(ctx, W, H, g.chapterIdx, t, s.ghost, { glowBoost: true });
   const a = clamp01(t / 700) * clamp01((g.d - t) / 500);
   ctx.save();
-  ctx.globalAlpha = a * 0.85;
-  setFont(ctx, 44, 500, FONT_DISPLAY);
-  ctx.fillStyle = PALETTE.inkMuted;
+  ctx.globalAlpha = a * 0.92;
+  setFont(ctx, 52, 500, FONT_DISPLAY);
+  ctx.fillStyle = PALETTE.ink;
   ctx.textAlign = 'center';
   ctx.fillText(s.label ?? '', W / 2, H * 0.52);
   ctx.textAlign = 'left';
