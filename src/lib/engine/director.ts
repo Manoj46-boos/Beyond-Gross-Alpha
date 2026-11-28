@@ -6,7 +6,7 @@
 
 import { Timeline, beatAt, chapterAt } from './timeline';
 import { BeatSpec } from './script-data';
-import { CaptionLine, drawCaptions, drawSourceChip, drawWatermark, drawProgressBar, CaptionStyle } from './textfx';
+import { CaptionLine, drawCaptions, drawSourceChip, drawWatermark, drawBrandLockup, drawProgressBar, CaptionStyle } from './textfx';
 import { PALETTE, rgba, setFont } from './theme';
 import { clamp01, easeOutCubic, easeInOutSine, drift } from './easing';
 import { paintStage, toneOf } from './stage';
@@ -379,8 +379,17 @@ export function drawFrame(
     }
   }
 
-  // watermark + progress
-  if (opts.watermark && t < tl.durationMs - 8000) drawWatermark(ctx, W, opts.channelName);
+  // U4 (upgrade plan) — identity lock: ONE brand element on screen at a time.
+  // Layered/text scenes keep the top-left watermark; data scenes carry the
+  // bottom-right brand lockup (glyph + name, 60% alpha) instead — never both.
+  if (opts.watermark && t < tl.durationMs - 8000) {
+    const isTextScene = ['statement', 'finalLines', 'turnCard', 'policyRisk', 'quietBeat', 'titleCard'].includes(type);
+    if (isTextScene || (beat && ['host', 'coldOpen', 'endScreen', 'chapterCard'].includes(type))) {
+      drawWatermark(ctx, W, opts.channelName);
+    } else {
+      drawBrandLockup(ctx, W, H, opts.channelName);
+    }
+  }
   if (opts.progressBar) {
     const chapterFracs = tl.chapters.map((c) => c.startMs / tl.durationMs);
     drawProgressBar(ctx, W, H, t / tl.durationMs, chapterFracs);

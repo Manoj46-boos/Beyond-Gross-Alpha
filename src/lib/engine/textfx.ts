@@ -188,6 +188,28 @@ export function drawWatermark(ctx: CanvasRenderingContext2D, W: number, channelN
   ctx.restore();
 }
 
+// ── U4 (upgrade plan) — the brand lockup ─────────────────────────────────────
+/** Bottom-right lower-third with the alpha glyph + channel name at 60% alpha.
+ *  During DATA scenes the lockup REPLACES the top-left watermark — one brand
+ *  element on screen at a time, never two. Right-aligned so the karaoke
+ *  caption pill (centred, ≤1100px wide) can never reach it. */
+export function drawBrandLockup(ctx: CanvasRenderingContext2D, W: number, H: number, channelName: string): void {
+  ctx.save();
+  ctx.globalAlpha = 0.6;
+  setFont(ctx, 24, 700, FONT_UI);
+  try { (ctx as any).letterSpacing = '4px'; } catch { /* noop */ }
+  const name = channelName.toUpperCase();
+  const tw = ctx.measureText(name).width;
+  const right = W - 64, baseY = H - 58;
+  ctx.fillStyle = rgba(PALETTE.inkSoft, 0.9);
+  ctx.textAlign = 'right';
+  ctx.fillText(name, right, baseY);
+  ctx.textAlign = 'left';
+  try { (ctx as any).letterSpacing = '0px'; } catch { /* noop */ }
+  drawAlphaGlyph(ctx, right - tw - 38, baseY - 8, 24, rgba(PALETTE.gold, 0.9), 2.8);
+  ctx.restore();
+}
+
 // ── progress bar with diamond chapter markers ────────────────────────────────
 export function drawProgressBar(
   ctx: CanvasRenderingContext2D, W: number, H: number,

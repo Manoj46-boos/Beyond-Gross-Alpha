@@ -13,7 +13,7 @@
  * D6 (expression): the face is keyed to the beat's voStyle — no fixed grin.
  */
 import { SceneCtx } from './scene-context';
-import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, drawAlphaGlyph, chip, FONT_DISPLAY, FONT_UI, kicker, headline } from './theme';
+import { PALETTE, rgba, setFont, wrapText, glassCard, roundRect, drawAlphaGlyph, chip, FONT_DISPLAY, FONT_UI, kicker, headline, goldRule } from './theme';
 import { clamp, clamp01, easeOutCubic, easeInOutSine } from './easing';
 import { goldDust, godRays, bokehField, floatY, impactRing, lightBlade } from './fx';
 import { poseAt, drawStickman, walkIn, applyMood, companionArm, companionArmL, palmPosition, type Pose } from './stickman';
@@ -142,6 +142,11 @@ export function hostScene(g: SceneCtx): void {
   ctx.globalAlpha = headEnt;
   const hLines = wrapText(ctx, s.headline ?? 'After-tax returns.', headMaxW, 78, 700, FONT_DISPLAY);
   setFont(ctx, 78, 700, FONT_DISPLAY);
+  // U4 frame law (upgrade plan) — host scenes answer "what changed in the last
+  // 5 seconds?": each playing sentence advances a fresh gold highlight under
+  // the corresponding headline line (the D17 hot-zone restage for host beats).
+  const hlIdx = g.sentenceIdx != null && g.sentenceIdx >= 0
+    ? Math.min(g.sentenceIdx, hLines.length - 1) : -1;
   hLines.forEach((ln, i) => {
     const a = clamp01((t - 380 - i * 180) / 520);
     ctx.save();
@@ -149,6 +154,18 @@ export function hostScene(g: SceneCtx): void {
     ctx.fillStyle = PALETTE.ink;
     ctx.fillText(ln, headX, 356 + i * 96);
     ctx.restore();
+    if (i === hlIdx && a > 0.5) {
+      const lw = Math.min(ctx.measureText(ln).width, headMaxW);
+      const fresh = g.sentenceT != null ? clamp01(g.sentenceT / 500) : clamp01((t - 500) / 500);
+      // a quiet gold wash + rule, redrawn fresh at every sentence boundary
+      ctx.save();
+      ctx.globalAlpha = a * 0.16;
+      roundRect(ctx, headX - 14, 356 + i * 96 - 62, lw + 28, 78, 10);
+      ctx.fillStyle = rgba(PALETTE.gold, 0.5);
+      ctx.fill();
+      ctx.restore();
+      goldRule(ctx, headX + lw / 2, 356 + i * 96 + 22, lw * fresh, fresh, 0.9, 3.2);
+    }
   });
   ctx.restore();
 
