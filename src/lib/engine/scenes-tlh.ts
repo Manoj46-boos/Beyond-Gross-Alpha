@@ -72,14 +72,16 @@ export function locationMapScene(g: SceneCtx): void {
         ctx.fillStyle = PALETTE.goldBright;
         ctx.fillText('the growth is', x + 62, y + 240);
         ctx.fillText('never taxed again', x + 62, y + 274);
-        setFont(ctx, 22, 600, FONT_UI);
-        ctx.fillStyle = PALETTE.inkSoft;
+        setFont(ctx, 26, 600, FONT_UI);
+        ctx.fillStyle = PALETTE.inkMuted;
         ctx.fillText('the highest-leverage slot', x + 62, y + 304);
         ctx.restore();
       }
     }
-    setFont(ctx, 24, 500, FONT_UI);
-    ctx.fillStyle = dim ? PALETTE.inkFaint : PALETTE.inkSoft;
+    setFont(ctx, 26, 500, FONT_UI);
+    // FIX F3 — the dimmed column note floors at inkMuted (inkFaint dropped
+    // below the phone contrast floor)
+    ctx.fillStyle = dim ? PALETTE.inkMuted : PALETTE.inkSoft;
     ctx.fillText(c.note, x + 36, y + h - 32);
     ctx.restore();
     if (i === hotIdx) focusPing(ctx, x + colW / 2, y - 16, g.sentenceT, 92);
@@ -365,11 +367,13 @@ export function tlhMechanicScene(g: SceneCtx): void {
     ctx.textAlign = 'center';
     ctx.fillText(st.label, cx, y + 196);
     ctx.textAlign = 'left';
-    // slot 3: two reserved sub lines, y+226 / y+250, ≥40px above the card foot
-    setFont(ctx, 20, 500, FONT_UI);
-    ctx.fillStyle = PALETTE.inkFaint;
-    wrapText(ctx, st.sub, stepW - 60, 20, 500, FONT_UI).forEach((ln, li) => {
-      ctx.fillText(ln, x + 30, y + 226 + li * 24);
+    // slot 3: two reserved sub lines, y+226 / y+256, ≥34px above the card foot
+    // FIX F3 (frame audit) — 20px inkFaint is below the engine's own phone
+    // legibility floor: narration-critical sub-labels floor at 26px inkMuted.
+    setFont(ctx, 26, 500, FONT_UI);
+    ctx.fillStyle = PALETTE.inkMuted;
+    wrapText(ctx, st.sub, stepW - 60, 26, 500, FONT_UI).forEach((ln, li) => {
+      ctx.fillText(ln, x + 30, y + 226 + li * 30);
     });
     ctx.restore();
     // connector — rides the visual row
@@ -491,7 +495,8 @@ export function waterfallScene(g: SceneCtx): void {
     glassCard(ctx, W * 0.82, 400, 300, 220, { r: 14, alpha: wi >= 2 ? 0.55 : 1 });
     setFont(ctx, 28, 600, FONT_UI);
     ctx.fillStyle = PALETTE.inkSoft;
-    wrapText(ctx, 'Monthly harvesting · 500 largest US stocks · 1926–2018', 250, 22, 600, FONT_UI).forEach((ln, i) => {
+    // FIX F3 — the spec caption wraps at 26px (was 22px, below the floor)
+    wrapText(ctx, 'Monthly harvesting · 500 largest US stocks · 1926–2018', 250, 26, 600, FONT_UI).forEach((ln, i) => {
       ctx.fillText(ln, W * 0.82 + 26, 450 + i * 34);
     });
     ctx.restore();
