@@ -317,15 +317,18 @@ export function turnoverBarsScene(g: SceneCtx): void {
   // L-02 — raised to 746 so it clears the caption pill's 30px risk band)
   // AUDIT T-05 — dropped to y=712: at 690 the 44px gold verdict painted
   // directly over the second bar's sub-label ("normal for many active funds",
-  // baseline 681). At 712 the verdict's cap-line starts at ~680 and the two
-  // ink zones no longer share pixels.
+  // baseline 681).
+  // FIX E4 (frame audit) — at 712 the 44px verdict's cap-line (~680) still
+  // TOUCHED the sub-label's 681 baseline: two ink zones sharing pixels.
+  // Verdict baseline y=724 puts the cap-line at ~692 — an 11px clear channel
+  // below the sub-label, still above the caption pill's risk band.
   const ma = clamp01((t - 2300) / 500);
   if (ma > 0) {
     ctx.save();
     ctx.globalAlpha = ma;
     setFont(ctx, 44, 800, FONT_DISPLAY);
     ctx.fillStyle = PALETTE.goldBright;
-    ctx.fillText('≈ 3× the drag', x + 8, 712);
+    ctx.fillText('≈ 3× the drag', x + 8, 724);
     ctx.restore();
   }
 }
