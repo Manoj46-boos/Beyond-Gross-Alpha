@@ -494,13 +494,15 @@ export function rehookScene(g: SceneCtx): void {
 // ── full-frame statement (serif) ─────────────────────────────────────────────
 export function statementScene(g: SceneCtx): void {
   const { ctx, W, H, t, s } = g;
-  drawStatement(ctx, W, H, t, s.lines ?? ['—'], { accentWords: s.accent ?? [], sub: s.sub, ghost: s.ghost, size: s.size, chapterIdx: g.chapterIdx });
+  // FIX G2 — the statement family anchors at the stronger frame alpha
+  drawStatement(ctx, W, H, t, s.lines ?? ['—'], { accentWords: s.accent ?? [], sub: s.sub, ghost: s.ghost, size: s.size, chapterIdx: g.chapterIdx, voidBoost: true });
 }
 
 // ── turn card ("Research, not vibes.") ──────────────────────────────────────
 export function turnCardScene(g: SceneCtx): void {
   const { ctx, W, H, t, s } = g;
-  statementAnchor(ctx, W, H, g.chapterIdx, t, s.ghost);
+  // FIX G2 — turn card anchors at the stronger frame alpha
+  statementAnchor(ctx, W, H, g.chapterIdx, t, s.ghost, { frameBoost: true });
   const lines = s.lines ?? ['—'];
   ctx.save();
   ctx.textAlign = 'center';
@@ -550,7 +552,7 @@ export function quietBeatScene(g: SceneCtx): void {
 // ── policy risk statement (Build on it. Don't worship it.) ───────────────────
 export function policyRiskScene(g: SceneCtx): void {
   const { ctx, W, H, t, s } = g;
-  drawStatement(ctx, W, H, t, s.lines ?? ['—'], { accentWords: s.accent ?? [], size: 104, sub: '$48B is a policy choice, not a law of physics.', chapterIdx: g.chapterIdx });
+  drawStatement(ctx, W, H, t, s.lines ?? ['—'], { accentWords: s.accent ?? [], size: 104, sub: '$48B is a policy choice, not a law of physics.', chapterIdx: g.chapterIdx, voidBoost: true });
 }
 
 // ── the final lines (earned vs kept) ─────────────────────────────────────────

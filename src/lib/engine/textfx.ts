@@ -357,7 +357,7 @@ export function sceneTransition(ctx: CanvasRenderingContext2D, W: number, H: num
 export function statementAnchor(
   ctx: CanvasRenderingContext2D, W: number, H: number,
   chapterIdx: number, tMs: number, ghost?: string,
-  opts: { glowBoost?: boolean } = {}
+  opts: { glowBoost?: boolean; frameBoost?: boolean } = {}
 ): void {
   const a = clamp01(tMs / 700);
   // U4.2 — hairline gold rule frame inset 90 px (report spec)
@@ -370,6 +370,12 @@ export function statementAnchor(
   // hairlines and ruled frame run at full strength so held silence never
   // collapses into a near-black playback-error frame.
   const boost = opts.glowBoost === true;
+  // FIX G2 (frame audit) — statement beats must not float in voids: the
+  // statement family runs the anchor at a stronger frame + ghost alpha.
+  const frame = opts.frameBoost === true;
+  const frameA = boost ? 0.8 : frame ? 0.72 : 0.55;
+  const ghostA = boost ? 0.34 : frame ? 0.40 : 0.31;
+  const hairA = boost ? 0.34 : frame ? 0.30 : 0.22;
   const breathe = 0.5 + 0.5 * Math.sin(tMs / 3000);
   ctx.save();
   ctx.globalAlpha = a;
@@ -379,7 +385,7 @@ export function statementAnchor(
   horizon.addColorStop(1, rgba(PALETTE.gold, 0));
   ctx.fillStyle = horizon;
   ctx.fillRect(m, H * 0.78, W - 2 * m, H * 0.2);
-  ctx.strokeStyle = rgba(PALETTE.steel, boost ? 0.34 : 0.22);
+  ctx.strokeStyle = rgba(PALETTE.steel, hairA);
   ctx.lineWidth = 1;
   for (const vx of [m + 96, W - m - 96]) {
     ctx.beginPath();
@@ -399,7 +405,7 @@ export function statementAnchor(
   ctx.restore();
   // ruled frame + gold corner ticks
   ctx.save();
-  ctx.globalAlpha = (boost ? 0.8 : 0.55) * a;
+  ctx.globalAlpha = frameA * a;
   ctx.strokeStyle = rgba(PALETTE.steel, 0.38);
   ctx.lineWidth = 1;
   ctx.strokeRect(m, m, W - 2 * m, H - 2 * m);
@@ -422,7 +428,7 @@ export function statementAnchor(
   // Phase 4.4 law #2 — the ghost's 0.34→0.28 gradient wash is now an explicit
   // globalAlpha multiplier (identical ~31% effective ink) so the QA text gate
   // sees what the eye sees: a designed decorative ghost, not reading text.
-  ctx.globalAlpha = a * 0.31;
+  ctx.globalAlpha = a * ghostA;
   setFont(ctx, 500, 800, FONT_DISPLAY);
   ctx.textAlign = 'right';
   const num = ghost ?? String((chapterIdx % 10) + 1).padStart(2, '0');
@@ -452,13 +458,14 @@ export function statementAnchor(
 
 export function drawStatement(
   ctx: CanvasRenderingContext2D, W: number, H: number, tMs: number,
-  lines: string[], opts: { sub?: string; accentWords?: string[]; size?: number; ghost?: string; chapterIdx?: number } = {}
+  lines: string[], opts: { sub?: string; accentWords?: string[]; size?: number; ghost?: string; chapterIdx?: number; voidBoost?: boolean } = {}
 ): void {
   const size = opts.size ?? 88;
   const accent = new Set((opts.accentWords || []).map((w) => w.toLowerCase()));
   const total = lines.length;
   // D11 — anchor the rest beat: numeral + ruled frame + gold object
-  statementAnchor(ctx, W, H, opts.chapterIdx ?? 0, tMs, opts.ghost);
+  // FIX G2 — the statement family anchors at the stronger frame alpha
+  statementAnchor(ctx, W, H, opts.chapterIdx ?? 0, tMs, opts.ghost, { frameBoost: opts.voidBoost === true });
   ctx.save();
   lines.forEach((ln, i) => {
     const local = tMs - i * 320;
@@ -475,7 +482,8 @@ export function drawStatement(
     const y = H * 0.44 + i * size * 1.22;
     for (const w of words) {
       const ww = ctx.measureText(w).width;
-      if (accent.has(w.toLowerCase().replace(/[^a-z$%]/g, ''))) {
+      const isAccent = accent.has(w.toLowerCase().replace(/[^a-z$%]/g, ''));
+      if (isAccent) {
         const gg = ctx.createLinearGradient(0, y - size, 0, y + 10);
         gg.addColorStop(0, PALETTE.goldPale);
         gg.addColorStop(1, PALETTE.gold);
@@ -483,7 +491,18 @@ export function drawStatement(
       } else {
         ctx.fillStyle = PALETTE.ink;
       }
-      ctx.fillText(w, x, y);
+      // FIX G2 — accent words strike at 1.06x and settle to 1: the hit you feel
+      if (isAccent) {
+        const strike = 1 + 0.06 * Math.pow(1 - clamp01((local - 240) / 700), 2);
+        ctx.save();
+        ctx.translate(x + ww / 2, y - size * 0.36);
+        ctx.scale(strike, strike);
+        ctx.translate(-(x + ww / 2), -(y - size * 0.36));
+        ctx.fillText(w, x, y);
+        ctx.restore();
+      } else {
+        ctx.fillText(w, x, y);
+      }
       x += ww + ctx.measureText(' ').width;
     }
     ctx.restore();
